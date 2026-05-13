@@ -18,6 +18,12 @@
 - **把 Todoist 带进笔记** - 可以导入已有 Todoist 任务，也可以用 `sync-todoist` 查询块渲染实时筛选列表。
 - **桌面和移动端都可用** - 网络请求使用 Obsidian 的 `requestUrl()`，不是 Node-only SDK。
 
+## 0.1.0 基线版本
+
+`0.1.0` 是导入 upstream Syncist 历史之后，Sync Todoist 的第一个独立 release 版本线。它不是继续沿用 upstream 的 release tags。
+
+和 upstream Syncist 基线相比，这个版本已经作为 **Sync Todoist** 重新打包，Obsidian plugin ID 是 `sync-todoist`，并且有独立的 tag/release 计划；release assets 也按当前 Obsidian 要求准备。README 同时说明了这个仓库当前已有的 Sync Todoist 功能：子任务、Todoist 任务导入、项目元数据、双向标签同步、主查询块语言 `sync-todoist`、迁移别名 `syncist`，以及 `include_completed` 等已完成任务查询选项。
+
 ## 从 Markdown 同步
 
 给任意 Markdown 任务加上同步标签：

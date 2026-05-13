@@ -18,6 +18,12 @@
 - **Bring Todoist into notes** - import existing Todoist tasks and render live Todoist filters with `sync-todoist` query blocks.
 - **Works on desktop and mobile** - network calls use Obsidian's `requestUrl()` API instead of a Node-only SDK.
 
+## 0.1.0 Baseline
+
+`0.1.0` is the first independent Sync Todoist release line after importing the upstream Syncist history. It is not a continuation of upstream release tags.
+
+Compared with the upstream Syncist baseline, this version is packaged as **Sync Todoist** with the Obsidian plugin ID `sync-todoist`, an independent tag/release plan, and release assets that follow Obsidian's current requirements. It also documents the Sync Todoist feature set now present in this repo: subtasks, Todoist task import, project metadata, bidirectional labels, the primary `sync-todoist` query block language, the `syncist` migration alias, and completed-task query options such as `include_completed`.
+
 ## Sync from Markdown
 
 Add the sync tag to any Markdown task:
