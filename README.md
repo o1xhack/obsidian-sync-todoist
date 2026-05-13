@@ -27,14 +27,14 @@ When you add the `#todoist` tag to a task (or checkbox item) it will automatical
 
 #### Manual Installation
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases)
-2. Create a folder `obsidian-sync-todoist` in your vault's `.obsidian/plugins/` directory
+2. Create a folder `sync-todoist` in your vault's `.obsidian/plugins/` directory
 3. Copy `main.js`, `manifest.json`, and `styles.css` into that folder
 4. Enable the plugin in Obsidian settings
 
 #### From Source (Development)
 1. Clone this repository
 2. Run `npm install` and `npm run build`
-3. Copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/obsidian-sync-todoist/` in a test vault
+3. Copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/sync-todoist/` in a test vault
 4. Enable Community plugins in Settings → Community plugins
 5. Enable the "Sync Todoist" plugin
 

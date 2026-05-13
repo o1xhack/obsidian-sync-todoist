@@ -1946,7 +1946,7 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
         const appWithSettings = this.app;
         if (appWithSettings.setting) {
           appWithSettings.setting.open();
-          appWithSettings.setting.openTabById("obsidian-sync-todoist");
+          appWithSettings.setting.openTabById("sync-todoist");
         }
       }
     });
