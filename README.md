@@ -12,8 +12,9 @@
 
 Sync Todoist is currently recommended through **BRAT** while community-plugin submission is being prepared.
 
-## What's New in 0.6.0
+## What's New in 0.6.1
 
+- Cleans up Community Plugin review issues for Obsidian `minAppVersion`, bundled built-in modules, and typed settings persistence.
 - Adds a Daily Note sub-option for completed recurring tasks.
 - Keeps completed recurring occurrences in today's Daily Note when **Include completed tasks** is enabled.
 - Uses Todoist activity logs to recover the completed occurrence because Todoist moves recurring tasks to their next due date after completion.

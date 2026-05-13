@@ -288,18 +288,22 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
       });
       button.onclick = () => {
         this.activeTab = tabId;
-        this.plugin.app.saveLocalStorage(ACTIVE_TAB_STORAGE_KEY, tabId);
+        this.saveActiveTab(tabId);
         this.display();
       };
     }
   }
 
   private loadActiveTab(): SettingsTabId {
-    const raw: unknown = this.plugin.app.loadLocalStorage(ACTIVE_TAB_STORAGE_KEY);
-    if (typeof raw === 'string' && (SETTINGS_TABS as string[]).includes(raw)) {
+    const raw = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+    if (raw && (SETTINGS_TABS as string[]).includes(raw)) {
       return raw as SettingsTabId;
     }
     return 'general';
+  }
+
+  private saveActiveTab(tabId: SettingsTabId): void {
+    window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tabId);
   }
 
   private renderDailyNoteSettings(containerEl: HTMLElement): void {

@@ -502,17 +502,20 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
       });
       button.onclick = () => {
         this.activeTab = tabId;
-        this.plugin.app.saveLocalStorage(ACTIVE_TAB_STORAGE_KEY, tabId);
+        this.saveActiveTab(tabId);
         this.display();
       };
     }
   }
   loadActiveTab() {
-    const raw = this.plugin.app.loadLocalStorage(ACTIVE_TAB_STORAGE_KEY);
-    if (typeof raw === "string" && SETTINGS_TABS.includes(raw)) {
+    const raw = window.localStorage.getItem(ACTIVE_TAB_STORAGE_KEY);
+    if (raw && SETTINGS_TABS.includes(raw)) {
       return raw;
     }
     return "general";
+  }
+  saveActiveTab(tabId) {
+    window.localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, tabId);
   }
   renderDailyNoteSettings(containerEl) {
     new import_obsidian2.Setting(containerEl).setName(this.tr("daily.enable.name")).setDesc(this.tr("daily.enable.desc")).addToggle(
@@ -2823,6 +2826,9 @@ function renderQueryBlock(source, el, plugin) {
 }
 
 // src/main.ts
+function isRecord(value) {
+  return typeof value === "object" && value !== null;
+}
 var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
   constructor() {
     super(...arguments);
@@ -2986,10 +2992,10 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
    */
   async loadSettings() {
     var _a, _b;
-    const data = await this.loadData();
+    const data = await this.loadPluginData();
     this.settings = {
       ...DEFAULT_SETTINGS,
-      ...data != null ? data : {},
+      ...data,
       dailyNote: {
         ...DEFAULT_SETTINGS.dailyNote,
         ...(_a = data == null ? void 0 : data.dailyNote) != null ? _a : {}
@@ -3004,12 +3010,12 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
    * Save plugin settings
    */
   async saveSettings() {
-    var _a, _b, _c;
-    const data = (_a = await this.loadData()) != null ? _a : {};
+    var _a, _b;
+    const data = await this.loadPluginData();
     await this.saveData({
       ...data,
       ...this.settings,
-      syncState: (_c = (_b = this.syncEngine) == null ? void 0 : _b.getSyncState()) != null ? _c : this.syncState
+      syncState: (_b = (_a = this.syncEngine) == null ? void 0 : _a.getSyncState()) != null ? _b : this.syncState
     });
     if (this.settings.apiToken) {
       this.todoistService.initialize(this.settings.apiToken);
@@ -3023,17 +3029,19 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
    */
   async loadSyncState() {
     var _a;
-    const data = await this.loadData();
+    const data = await this.loadPluginData();
     this.syncState = (_a = data == null ? void 0 : data.syncState) != null ? _a : { ...DEFAULT_SYNC_STATE };
   }
   /**
    * Save sync state
    */
   async saveSyncState() {
-    var _a;
-    const data = (_a = await this.loadData()) != null ? _a : {};
-    data.syncState = this.syncEngine.getSyncState();
-    await this.saveData({ ...this.settings, syncState: data.syncState });
+    const syncState = this.syncEngine.getSyncState();
+    await this.saveData({ ...this.settings, syncState });
+  }
+  async loadPluginData() {
+    const data = await this.loadData();
+    return isRecord(data) ? data : {};
   }
   /**
    * Get current sync state

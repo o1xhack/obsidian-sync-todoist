@@ -23,6 +23,14 @@ import {
   DailyNoteSyncResult,
 } from './types';
 
+type PersistedPluginData = Partial<TodoistSyncSettings> & {
+  syncState?: SyncState;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 /**
  * Todoist Sync Plugin for Obsidian
  * 
@@ -238,10 +246,10 @@ export default class TodoistSyncPlugin extends Plugin {
    * Load plugin settings
    */
   async loadSettings(): Promise<void> {
-    const data = await this.loadData() as Partial<TodoistSyncSettings> | null;
+    const data = await this.loadPluginData();
     this.settings = {
       ...DEFAULT_SETTINGS,
-      ...(data ?? {}),
+      ...data,
       dailyNote: {
         ...DEFAULT_SETTINGS.dailyNote,
         ...(data?.dailyNote ?? {}),
@@ -257,7 +265,7 @@ export default class TodoistSyncPlugin extends Plugin {
    * Save plugin settings
    */
   async saveSettings(): Promise<void> {
-    const data = await this.loadData() ?? {};
+    const data = await this.loadPluginData();
     await this.saveData({
       ...data,
       ...this.settings,
@@ -278,7 +286,7 @@ export default class TodoistSyncPlugin extends Plugin {
    * Load sync state
    */
   private async loadSyncState(): Promise<void> {
-    const data = await this.loadData();
+    const data = await this.loadPluginData();
     this.syncState = data?.syncState ?? { ...DEFAULT_SYNC_STATE };
   }
 
@@ -286,9 +294,13 @@ export default class TodoistSyncPlugin extends Plugin {
    * Save sync state
    */
   async saveSyncState(): Promise<void> {
-    const data = await this.loadData() ?? {};
-    data.syncState = this.syncEngine.getSyncState();
-    await this.saveData({ ...this.settings, syncState: data.syncState });
+    const syncState = this.syncEngine.getSyncState();
+    await this.saveData({ ...this.settings, syncState });
+  }
+
+  private async loadPluginData(): Promise<PersistedPluginData> {
+    const data: unknown = await this.loadData();
+    return isRecord(data) ? data : {};
   }
 
   /**
