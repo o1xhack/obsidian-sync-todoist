@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  buildCompletedRecurringTaskSnapshots,
   extractTodoistIdsFromMarkerRegion,
   filterDailyNoteTasks,
   isMarkerRegionValid,
@@ -206,6 +207,37 @@ function runDailyNoteTests(): void {
     block,
     `${START}\n- [ ] Write release notes #todoist #Writing 📁 Work 🔺 📅 2026-05-13 <!-- todoist-id:match -->\n${END}`
   );
+
+  const recurringActive = task({
+    id: 'recurring',
+    content: 'Weekly review',
+    due: { date: '2026-05-20', isRecurring: true },
+  });
+  const recurringSnapshot = buildCompletedRecurringTaskSnapshots(
+    [recurringActive, task({ id: 'plain', due: { date: '2026-05-20' } })],
+    [
+      {
+        objectId: 'recurring',
+        eventDate: '2026-05-13T18:30:00Z',
+        extraData: { content: 'Weekly review', last_due_date: '2026-05-13' },
+      },
+      {
+        objectId: 'plain',
+        eventDate: '2026-05-13T18:30:00Z',
+        extraData: { content: 'Plain task' },
+      },
+    ],
+    '2026-05-13'
+  );
+  assert.equal(recurringSnapshot.length, 1);
+  assert.equal(recurringSnapshot[0].id, 'recurring');
+  assert.equal(recurringSnapshot[0].isCompleted, true);
+  assert.equal(recurringSnapshot[0].completedAt, '2026-05-13T18:30:00Z');
+  assert.deepEqual(recurringSnapshot[0].due, {
+    date: '2026-05-13',
+    datetime: undefined,
+    isRecurring: true,
+  });
 }
 
 runDailyNoteTests();

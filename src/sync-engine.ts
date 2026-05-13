@@ -2,6 +2,7 @@ import { App, moment, normalizePath, TFile } from 'obsidian';
 import { TodoistService } from './todoist-service';
 import {
   buildDailyNoteParsedTask,
+  buildCompletedRecurringTaskSnapshots,
   extractTodoistIdsFromMarkerRegion,
   filterDailyNoteTasks,
   localTodayISODate,
@@ -334,9 +335,20 @@ export class SyncEngine {
       until,
     });
 
+    let completedRecurringTasks: TodoistTask[] = [];
+    if (this.settings.dailyNote.includeCompletedRecurring) {
+      try {
+        const completedActivities = await this.todoistService.getCompletedTaskActivities(since, until);
+        completedRecurringTasks = buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today);
+      } catch (error) {
+        console.warn('Todoist Sync: Failed to fetch completed recurring task activities:', error);
+      }
+    }
+
     const byId = new Map<string, TodoistTask>();
     for (const task of activeTasks) byId.set(task.id, task);
     for (const task of completedTasks) byId.set(task.id, task);
+    for (const task of completedRecurringTasks) byId.set(task.id, task);
     return [...byId.values()];
   }
 

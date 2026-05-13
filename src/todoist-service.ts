@@ -22,6 +22,21 @@ export interface CompletedTaskQueryOptions {
   until: Date;
 }
 
+export interface TodoistActivityEvent {
+  objectId: string;
+  v2ObjectId?: string;
+  eventDate: string;
+  extraData: Record<string, unknown> | null;
+}
+
+interface TodoistApiRawActivityEvent {
+  object_id: string;
+  v2_object_id?: string;
+  event_type: string;
+  event_date: string;
+  extra_data?: Record<string, unknown> | null;
+}
+
 interface TodoistApiRawLabel {
   id: string;
   name: string;
@@ -440,6 +455,52 @@ export class TodoistService {
     } while (cursor);
 
     return allTasks;
+  }
+
+  async getCompletedTaskActivities(since: Date, until: Date): Promise<TodoistActivityEvent[]> {
+    if (!this.apiToken) throw new Error('Todoist API not initialized');
+
+    const allActivities: TodoistActivityEvent[] = [];
+    let cursor: string | null = null;
+
+    do {
+      const params = new URLSearchParams({
+        date_from: since.toISOString(),
+        date_to: until.toISOString(),
+        limit: '100',
+      });
+      params.append('object_event_types', 'item:completed');
+      if (cursor) params.set('cursor', cursor);
+
+      const resp = await requestUrl({
+        url: `${API_BASE}/activities?${params.toString()}`,
+        headers: this.headers(),
+        throw: false,
+      });
+
+      if (resp.status !== 200) {
+        throw new Error(`Completed activity request failed, status ${resp.status}`);
+      }
+
+      const data = resp.json as {
+        results?: TodoistApiRawActivityEvent[];
+        items?: TodoistApiRawActivityEvent[];
+        next_cursor?: string | null;
+      };
+      const rawItems = data.results ?? data.items ?? [];
+      for (const raw of rawItems) {
+        if (raw.event_type !== 'completed') continue;
+        allActivities.push({
+          objectId: raw.object_id,
+          v2ObjectId: raw.v2_object_id,
+          eventDate: raw.event_date,
+          extraData: raw.extra_data ?? null,
+        });
+      }
+      cursor = data.next_cursor ?? null;
+    } while (cursor);
+
+    return allActivities;
   }
 
   static fromTodoistPriority(priority: number): TodoistPriority {

@@ -21,6 +21,7 @@ Sync Todoist has an independent release line. Upstream Syncist tags and releases
 - `0.5.0`: Daily Note polish release. Adds English/Simplified Chinese settings UI, configurable Daily Note primary sorting, completed-task inclusion for today's Daily Note, and a bilingual marker overwrite warning.
 - `0.5.1`: Daily Note completed-task fix. Treats "Include completed tasks" as tasks completed today, regardless of due date.
 - `0.5.2`: Daily Note due-date fix. Treats Todoist due datetimes that fall today as due today, so timed tasks and current recurring occurrences are not missed.
+- `0.6.0`: Daily Note recurring completion release. Adds a nested "Include completed recurring tasks" option under "Include completed tasks", uses Todoist activity logs to keep completed recurring occurrences in today's Daily Note, and rewrites the README structure.
 - `1.0.0`: first community-submission candidate after the test release line is stable.
 
 ## 0.1.0 Scope
@@ -64,4 +65,4 @@ Compared with the upstream Syncist baseline, `0.1.0` includes:
 - The repository name remains `obsidian-sync-todoist`.
 - The Obsidian plugin id is `sync-todoist`.
 - The Obsidian plugin display name is `Sync Todoist`.
-- Deferred Daily Note item: evaluate whether completed recurring task occurrences need an Activity Log fallback after `0.5.2`; do not add a separate recurring-task setting until the due-today datetime fix is verified in real use.
+- Completed recurring Daily Note occurrences are intentionally behind a nested setting because Todoist moves recurring tasks to their next occurrence after completion and the plugin must use the Activity Log fallback to recover today's completed occurrence.

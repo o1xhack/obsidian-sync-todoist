@@ -1,59 +1,127 @@
 # Sync Todoist
 
-[![版本](https://img.shields.io/badge/version-0.5.2-7c3aed)](../../RELEASE.md)
+[![版本](https://img.shields.io/github/v/release/o1xhack/obsidian-sync-todoist?label=version&color=7c3aed)](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest)
+[![下载量](https://img.shields.io/github/downloads/o1xhack/obsidian-sync-todoist/total?label=downloads&color=7c3aed)](https://github.com/o1xhack/obsidian-sync-todoist/releases)
 [![许可证](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](../../LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![插件 ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](../../manifest.json)
 
-**Sync Todoist 在 Obsidian Markdown 任务和 Todoist 任务之间做双向同步，同时保留本地笔记、嵌套任务、标签、项目和实时筛选视图。**
+**Sync Todoist 在 Obsidian Markdown 任务和 Todoist 任务之间做双向同步，同时保留本地笔记、嵌套任务、项目、标签、查询块和 Daily Note 计划流。**
 
 > 语言：[English](../../README.md) · **简体中文**
 
----
+Sync Todoist 目前推荐通过 **BRAT** 安装；Community Plugins 提交流程正在准备中。
+
+## 0.6.0 新功能
+
+- Daily Note 增加“包含已完成的循环任务”子选项。
+- 当 **同步已完成任务** 开启时，可以把今天完成的循环任务保留在 Daily Note 中。
+- Todoist 在循环任务完成后会把任务移动到下一次出现，因此 Sync Todoist 会通过活动日志恢复今天完成的这一轮。
+- README 补充 Daily Note 扁平化显示、已完成任务逻辑和 Query Block completed 查询窗口说明。
 
 ## 为什么用它？
 
-- **在思考的位置写任务** - 给 Obsidian checkbox 加上 `#todoist`，它就会成为 Todoist 任务。
-- **保留任务层级** - 同步父任务下面的缩进子项会自动成为 Todoist 子任务。
-- **把 Todoist 带进笔记** - 可以导入已有 Todoist 任务，也可以用 `sync-todoist` 查询块渲染实时筛选列表。
-- **在 Daily Note 里做每日计划** - 把今天匹配的 Todoist 任务写入 Daily Note 中受控的标记区间。
-- **桌面和移动端都可用** - 网络请求使用 Obsidian 的 `requestUrl()`，不是 Node-only SDK。
+- **📝 在思考的位置写任务** - 给 Obsidian checkbox 加上 `#todoist`，它就会成为 Todoist 任务。
+- **🔁 双向同步** - 完成状态、标题、截止日期、优先级、标签和项目会在 Obsidian 与 Todoist 之间同步。
+- **🌳 保留嵌套任务** - 缩进的 Markdown 子任务会成为 Todoist 子任务。
+- **📥 把 Todoist 带回笔记** - 可以在光标位置导入 Todoist 任务和子任务。
+- **🔎 渲染实时 Todoist 视图** - 用 `sync-todoist` 查询块显示筛选后的任务列表。
+- **📅 从 Daily Note 做计划** - 把今天的 Todoist 任务写入受控的 Daily Note marker 区间。
+- **📱 桌面和移动端都可用** - 网络请求使用 Obsidian 的 `requestUrl()`，不是 Node-only SDK。
 
-## 0.1.0 基线版本
+## 安装
 
-`0.1.0` 是导入 upstream Syncist 历史之后，Sync Todoist 的第一个独立 release 版本线。它不是继续沿用 upstream 的 release tags。
+### BRAT（推荐）
 
-和 upstream Syncist 基线相比，这个版本已经作为 **Sync Todoist** 重新打包，Obsidian plugin ID 是 `sync-todoist`，并且有独立的 tag/release 计划；release assets 也按当前 Obsidian 要求准备。README 同时说明了这个仓库当前已有的 Sync Todoist 功能：子任务、Todoist 任务导入、项目元数据、双向标签同步、主查询块语言 `sync-todoist`、迁移别名 `syncist`，以及 `include_completed` 等已完成任务查询选项。
+Sync Todoist 还在等待 Obsidian Community Plugins 审核，当前推荐先用 BRAT 安装。
 
-## 从 Markdown 同步
+1. 打开 **Settings -> Community plugins**。
+2. 安装并启用 [BRAT](https://github.com/TfTHacker/obsidian42-brat)。
+3. 运行 **BRAT: Add a beta plugin for testing**。
+4. 输入 `https://github.com/o1xhack/obsidian-sync-todoist`。
+5. 启用 **Sync Todoist**，并配置 Todoist API token。
 
-给任意 Markdown 任务加上同步标签：
+### Pending: Community Plugins
+
+Sync Todoist 目前还没有上架 Obsidian Community Plugins。审核通过后，可从 **Settings -> Community plugins -> Browse** 安装。
+
+### Manual Release
+
+1. 从 [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest) 下载 `main.js`、`manifest.json` 和 `styles.css`。
+2. 在 vault 中创建 `.obsidian/plugins/sync-todoist/`。
+3. 把三个文件放进去。
+4. 重启 Obsidian，在 Community plugins 中启用 **Sync Todoist**。
+
+### Build from Source
+
+```bash
+git clone https://github.com/o1xhack/obsidian-sync-todoist.git
+cd obsidian-sync-todoist
+npm install
+npm run build
+```
+
+然后把 `main.js`、`manifest.json` 和 `styles.css` 复制到 `.obsidian/plugins/sync-todoist/`。
+
+## 快速上手
+
+1. 从 [Todoist Settings -> Integrations -> Developer](https://todoist.com/app/settings/integrations/developer) 获取 Todoist API token。
+2. 打开 **Settings -> Community plugins -> Sync Todoist**。
+3. 填入 token，然后点击 **Verify**。
+4. 给 Markdown checkbox 加上 `#todoist`。
+5. 运行 **Sync Todoist: Sync now**。
 
 ```markdown
 - [ ] Buy groceries #todoist
-- [ ] Meeting with team #todoist 📅 2026-01-28 ⏫
 ```
 
-同步后，Sync Todoist 会把 Todoist 任务 ID 写入 HTML 注释，之后的编辑会更新同一个任务：
+同步后，Sync Todoist 会把 Todoist 任务 ID 写入 HTML 注释：
 
 ```markdown
 - [ ] Buy groceries #todoist <!-- todoist-id:8765432109 -->
 ```
 
-完成状态、标题修改、截止日期、优先级、标签、项目和冲突处理都会在同步时双向处理。
+## 同步格式
 
-## 子任务、项目和标签
+Sync Todoist 读取和写入普通 Markdown task line。`todoist-id` 注释是 Obsidian 行和 Todoist task 之间的稳定连接。
 
-把任务缩进到带 `#todoist` 的父任务下。子任务会从父任务继承同步关系，不需要每一行都写同步标签：
+| 标记 | 含义 | Todoist 映射 |
+|---|---|---|
+| `#todoist` | 同步标记 | 标记顶层任务需要同步 |
+| `<!-- todoist-id:... -->` | 任务身份 | 后续同步继续关联同一个 Todoist 任务 |
+| `📅 2026-01-28` | 截止日期 | Todoist due date |
+| `due:2026-01-28` | 截止日期 | Todoist due date |
+| `🔺` | 紧急优先级 | Priority 4 |
+| `⏫` | 高优先级 | Priority 3 |
+| `🔼` | 中优先级 | Priority 2 |
+| `🔽` | 普通优先级 | Priority 1 |
+| `📁 Work` | 项目 | 名为 `Work` 的 Todoist 项目 |
+| `#label` | 标签 | Todoist 标签，同步标签除外 |
+
+## 子任务
+
+带同步标签的父任务下面，缩进的 Markdown 任务会成为 Todoist 子任务。子任务不需要自己写 `#todoist`，它会从父级 outline 继承同步关系。
 
 ```markdown
-- [ ] Plan launch #todoist 📁 Work #marketing 📅 2026-03-05
+- [ ] Plan launch #todoist 📁 Work #marketing 📅 2026-06-01
   - [ ] Draft announcement
   - [ ] Review screenshots
   - [ ] Publish release notes
 ```
 
-`📁 ProjectName` 会把任务放进对应 Todoist 项目；除同步标签外的 hashtags 会作为 Todoist 标签同步。子任务层级通过 Todoist `parentId` 关系保留。
+继承规则：
+
+- 父任务携带同步标签。
+- 子任务创建时会带 Todoist `parentId`。
+- 子任务创建时会继承父任务所在 Todoist 项目。
+- 子任务自己的内容、完成状态、截止日期、优先级和标签会作为自己的字段继续同步。
+
+## 项目和标签
+
+- 用 `📁 ProjectName` 把任务放进指定 Todoist 项目。
+- 如果没有写项目，新任务会进入默认项目或 Inbox。
+- 除同步标签外的 hashtags 会成为 Todoist 标签。
+- Todoist 里的项目移动和标签变化，在冲突策略允许时会同步回 Obsidian。
 
 ## 查询块
 
@@ -65,135 +133,11 @@ filter: today | overdue
 ```
 ````
 
-查询块使用 [Todoist filter syntax](https://todoist.com/help/articles/introduction-to-filters-702348ff)，会在 Obsidian 中渲染 checkbox、刷新按钮和最近更新时间。原来的 `syncist` 代码块语言仍作为迁移别名保留。
+查询块使用 [Todoist filter syntax](https://todoist.com/help/articles/introduction-to-filters-702348ff)，会渲染 checkbox、刷新按钮和最近更新时间。原来的 `syncist` 代码块语言仍作为迁移别名保留。
 
-也可以把已完成任务合并进查询结果：
+### 查询块里的已完成任务
 
-````markdown
-```sync-todoist
-filter: @writing
-include_completed: true
-completed_by: completion_date
-completed_since: 30d
-```
-````
-
-## Daily Notes
-
-Sync Todoist 可以把今天匹配的 Todoist 任务写入当天的 Obsidian Daily Note。请先启用 Obsidian 核心插件 **Daily notes**，然后打开 **Settings -> Sync Todoist -> 每日 Daily Note**。
-
-插件只会写入 marker 区间，默认使用 source mode 可见的注释标记：
-
-```markdown
-%% sync-todoist:daily:start %%
-- [ ] Review launch tasks #todoist 📁 Work 🔺 📅 2026-05-13 <!-- todoist-id:123456 -->
-%% sync-todoist:daily:end %%
-```
-
-你可以自定义 start/end marker，并通过项目、标签、优先级三个多选维度决定哪些任务进入 Daily Note。某个维度为空表示该维度选择 **全部**。Daily Note 任务支持 **时间优先** 或 **重要程度优先** 的嵌套排序；另一个维度会作为第二级排序，最后用项目/内容顺序保证无时间、普通优先级任务的稳定位置。
-
-Daily Note 区块会在普通同步时刷新，也可以手动运行 **Sync Todoist: Sync today's daily note**。开启 **同步已完成任务** 后，今天标记完成的 Todoist 任务会继续留在区块中，并按照排序规则保留在对应位置，不要求截止日期是今天。
-
-Sync Todoist 在同步时会完整重写 Daily Note marker 之间的所有内容。不要在 marker 区间内手动编辑；尚未同步的改动可能会被覆盖。
-
-## 快速上手
-
-1. 使用 BRAT 安装插件。
-2. 从 [Todoist Settings -> Integrations -> Developer](https://todoist.com/app/settings/integrations/developer) 获取 Todoist API token。
-3. 打开 **Settings -> Community plugins -> Sync Todoist**，填入 token，然后点击 **Verify**。
-4. 给 Markdown 任务加上 `#todoist`，运行 **Sync Todoist: Sync now**。
-
-## 安装
-
-<details>
-<summary><b>BRAT（推荐）</b></summary>
-
-Sync Todoist 还在等待 Obsidian Community Plugins 审核，当前推荐先用 BRAT 安装。
-
-1. 打开 **Settings -> Community plugins**。
-2. 安装并启用 [BRAT](https://github.com/TfTHacker/obsidian42-brat)。
-3. 运行 **BRAT: Add a beta plugin for testing**。
-4. 输入 `https://github.com/o1xhack/obsidian-sync-todoist`。
-5. 启用 **Sync Todoist**，并配置 Todoist API token。
-
-</details>
-
-<details>
-<summary><b>Pending: Community Plugins</b></summary>
-
-Sync Todoist 目前还没有上架 Obsidian Community Plugins。审核通过后：
-
-1. 打开 **Settings -> Community plugins**。
-2. 点击 **Browse**，搜索 **Sync Todoist**。
-3. 安装并启用插件。
-4. 在插件设置里配置 Todoist API token。
-
-</details>
-
-<details>
-<summary><b>Manual Release</b></summary>
-
-1. 从 [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest) 下载 `main.js`、`manifest.json` 和 `styles.css`。
-2. 在 vault 中创建 `.obsidian/plugins/sync-todoist/`。
-3. 把三个 release 文件复制进去。
-4. 重启 Obsidian，在 Community plugins 中启用 **Sync Todoist**。
-
-</details>
-
-<details>
-<summary><b>Build from Source</b></summary>
-
-```bash
-git clone https://github.com/o1xhack/obsidian-sync-todoist.git
-cd obsidian-sync-todoist
-npm install
-npm run build
-```
-
-然后把 `main.js`、`manifest.json` 和 `styles.css` 复制到测试 vault 的 `.obsidian/plugins/sync-todoist/`。
-
-</details>
-
-## 配置
-
-| 设置 | 默认值 | 说明 |
-|---|---|---|
-| Todoist API token | 空 | 调用 Todoist API 所需的 token，存储在本地 Obsidian 插件数据中。 |
-| 界面语言 | 英语 | 设置界面语言，支持英语和简体中文。 |
-| Sync tag | `#todoist` | 标记顶层同步任务的 Markdown 标签。 |
-| Default project | Inbox | 新任务默认进入的 Todoist 项目，除非任务写了 `📁 ProjectName`。 |
-| Sync interval | `5` 分钟 | 自动同步频率。设为 `0` 可关闭自动同步。 |
-| Conflict resolution | `Todoist wins` | Obsidian 和 Todoist 同时改动同一任务时的处理策略。 |
-| Daily Note filters | 全部 | 控制今天 Daily Note 区块的项目、标签和优先级筛选。 |
-| Daily Note 首要排序 | `时间优先` | Daily Note 任务按时间再按优先级排序，或按优先级再按时间排序。 |
-| 同步已完成任务 | 关 | 将今天标记完成的 Todoist 任务保留在 Daily Note 区块中，不要求截止日期是今天。 |
-| Manual sync notices | 开 | 手动同步后显示简短的 `Sync Todoist:` 完成通知。 |
-| Automatic sync notices | 开 | 桌面端和移动端的定时同步都会显示通知，包括 0 变化的摘要。 |
-
-## 命令
-
-| 命令 | 作用 |
-|---|---|
-| **Create task from current line** | 把当前 Markdown 任务转换成已同步的 Todoist 任务。 |
-| **Import task from todoist** | 搜索打开的 Todoist 任务，并把选中的任务和子任务插入光标位置。 |
-| **Sync now** | 手动运行同步。 |
-| **Sync today's daily note** | 刷新今天 Daily Note 中受控的任务区块。 |
-| **Open settings** | 打开 Sync Todoist 设置页。 |
-
-## 支持的任务元数据
-
-| 标记 | 含义 | Todoist 映射 |
-|---|---|---|
-| `📅 2026-01-28` | 截止日期 | Task due date |
-| `due:2026-01-28` | 截止日期 | Task due date |
-| `🔺` | Urgent priority | Priority 4 |
-| `⏫` | High priority | Priority 3 |
-| `🔼` | Medium priority | Priority 2 |
-| `🔽` | Normal priority | Priority 1 |
-| `📁 Work` | 项目 | 名为 `Work` 的 Todoist 项目 |
-| `#label` | 标签 | Todoist 标签，同步标签除外 |
-
-## 查询块参考
+`include_completed` 会额外发起一次已完成任务查询，并把结果合并到 `filter` 返回的未完成任务中。它不自动等于“今天完成”。
 
 | 选项 | 说明 |
 |---|---|
@@ -203,18 +147,12 @@ npm run build
 | `completed_by: completion_date` | 按完成时间搜索已完成任务。 |
 | `completed_since: 30d` | 已完成任务窗口开始：`30d`、`6w`、`3m`、`today`、`yesterday` 或 `YYYY-MM-DD`。 |
 | `completed_until: today` | 已完成任务窗口结束：`today`、`now` 或 `YYYY-MM-DD`。 |
-| `completed_range: today` | 单个有界范围快捷写法：`today`、`yesterday`、`YYYY-MM-DD`、`30d`、`6w` 或 `3m`。 |
+| `completed_range: today` | 单个有界范围：`today`、`yesterday`、`YYYY-MM-DD`、`30d`、`6w` 或 `3m`。 |
 
-Todoist 已完成任务归档接口要求有边界的日期窗口。如果没有配置窗口，Sync Todoist 会对 `completed_by: due_date` 使用最近 6 周，对 `completed_by: completion_date` 使用最近 30 天。
+如果省略 `completed_by`，Sync Todoist 会自动推断：
 
-`include_completed` 不等于“今天完成”。它只是额外启用一次已完成任务查询，并把结果合并到 `filter` 返回的未完成任务里。
-
-用 `completed_by` 选择已完成任务的日期维度：
-
-- `completed_by: due_date` 表示已完成任务的 Todoist 截止日期落在 completed 窗口内。
-- `completed_by: completion_date` 表示任务是在 completed 窗口内被标记完成。
-
-如果省略 `completed_by`，Sync Todoist 会根据 filter 自动推断默认值。`today`、`overdue`、`due before...` 这类日期意图 filter 默认使用 `due_date`。`@writing` 或 `#Work` 这类标签/项目 filter 默认使用 `completion_date`。
+- `today`、`overdue`、`due before...` 这类日期意图 filter 默认使用 `due_date`。
+- `@writing` 或 `#Work` 这类标签/项目 filter 默认使用 `completion_date`。
 
 示例：
 
@@ -227,7 +165,7 @@ completed_range: today
 ```
 ````
 
-这表示显示今天截止的未完成任务，并合并截止日期也是今天的已完成任务。
+显示今天截止的未完成任务，并合并截止日期也是今天的已完成任务。
 
 ````markdown
 ```sync-todoist
@@ -238,7 +176,73 @@ completed_range: today
 ```
 ````
 
-这表示显示未完成的 `@writing` 任务，并合并今天完成的 `@writing` 任务。如果写的是 `filter: today`，这里的 `today` 仍然是 Todoist 的今天截止 filter，不会自动变成今天完成。
+显示未完成的 `@writing` 任务，并合并今天完成的 `@writing` 任务。
+
+## Daily Notes
+
+Sync Todoist 可以把今天匹配的 Todoist 任务写入当天的 Obsidian Daily Note。请先启用 Obsidian 核心插件 **Daily notes**，然后打开 **Settings -> Sync Todoist -> Daily Note**。
+
+Daily Note 可控制：
+
+- 启用或关闭 Daily Note 同步。
+- 自定义 source mode 可见的 start / end marker。
+- 按项目、标签、优先级筛选任务。
+- 选择首要排序：时间优先或重要程度优先。
+- 同步今天完成的任务。
+- 在同步已完成任务开启时，额外包含今天完成的循环任务。
+- 手动运行 **Sync today** 刷新。
+
+默认 marker 区间：
+
+```markdown
+%% sync-todoist:daily:start %%
+- [ ] Review launch tasks #todoist 📁 Work 🔺 📅 2026-05-13 <!-- todoist-id:123456 -->
+%% sync-todoist:daily:end %%
+```
+
+重要行为：
+
+- Sync Todoist 在同步时会完整重写 marker 之间的所有内容。
+- 不要在 marker 区间内手动编辑，除非你接受这些编辑可能被覆盖。
+- Daily Note 输出是 **扁平列表**，不会把 Todoist 父任务展开成嵌套子任务结构。
+- 如果某个 Todoist 子任务自己符合 Daily Note 筛选条件，它可能作为独立顶层行出现。
+- Daily Note 每一行复制的是该任务自己的内容、完成状态、截止日期、优先级、标签和项目显示。
+- 普通 Markdown 子任务继承逻辑不会应用到 Daily Note 生成区间中。
+
+已完成和循环任务：
+
+- 未完成任务在当前 Todoist 截止日期落在今天时进入 Daily Note。
+- 带时间的 due date 和当前循环任务 occurrence，只要本地日期是今天，就会算作今天。
+- 开启 **同步已完成任务** 后，今天完成的普通任务会以 checked 状态保留。
+- 开启 **包含已完成的循环任务** 后，Sync Todoist 会额外查询活动日志，把今天完成的循环任务这一轮以 checked 状态保留。
+- Todoist 在循环任务完成后会把任务移动到下一次出现，因此需要活动日志 fallback 才能保留今天完成的这一轮。
+
+## 设置
+
+| 设置 | 默认值 | 说明 |
+|---|---|---|
+| 界面语言 | 英语 | 设置界面语言，支持英语和简体中文。 |
+| Todoist API token | 空 | 调用 Todoist API 所需的 token，存储在本地 Obsidian 插件数据中。 |
+| Sync tag | `#todoist` | 标记顶层同步任务的 Markdown 标签。 |
+| Default project | Inbox | 新任务默认进入的 Todoist 项目，除非任务写了 `📁 ProjectName`。 |
+| Sync interval | `5` 分钟 | 自动同步频率。设为 `0` 可关闭自动同步。 |
+| Conflict resolution | `Todoist wins` | Obsidian 和 Todoist 同时改动同一任务时的处理策略。 |
+| Daily Note filters | 全部 | 控制今天 Daily Note 区块的项目、标签和优先级筛选。 |
+| Daily Note 首要排序 | `时间优先` | Daily Note 任务按时间再按优先级排序，或按优先级再按时间排序。 |
+| 同步已完成任务 | 关 | 将今天完成的 Todoist 任务保留在 Daily Note 区块中。 |
+| 包含已完成的循环任务 | 关 | 只在同步已完成任务开启时显示。通过活动日志补回今天完成的循环任务。 |
+| Manual sync notices | 开 | 手动同步后显示简短的 `Sync Todoist:` 完成通知。 |
+| Automatic sync notices | 开 | 桌面端和移动端的定时同步都会显示通知，包括 0 变化摘要。 |
+
+## 命令
+
+| 命令 | 作用 |
+|---|---|
+| **Create task from current line** | 把当前 Markdown 任务转换成已同步的 Todoist 任务。 |
+| **Import task from todoist** | 搜索打开的 Todoist 任务，并把选中的任务和子任务插入光标位置。 |
+| **Sync now** | 手动运行同步。 |
+| **Sync today's daily note** | 刷新今天 Daily Note 中受控的任务区块。 |
+| **Open settings** | 打开 Sync Todoist 设置页。 |
 
 ## 开发
 
@@ -247,34 +251,26 @@ npm install
 npm run lint
 npm run build
 npx tsc --noEmit
+npm test
 ```
 
-当前没有配置自动化测试框架。请使用 [test/TEST_SPEC_v2.0.0.md](../../test/TEST_SPEC_v2.0.0.md) 在测试 vault 和 Todoist 账号中做手动 QA。
+请使用 [test/TEST_SPEC_v2.0.0.md](../../test/TEST_SPEC_v2.0.0.md) 在测试 vault 和 Todoist 账号中做手动 QA。
 
 Release tag 必须和 `manifest.json` 的 `version` 完全一致，每个公开 release 都必须附带 `main.js`、`manifest.json` 和 `styles.css`。详见 [RELEASE.md](../../RELEASE.md)。
 
 ## 常见问题
 
-<details>
-<summary><b>为什么仓库叫 <code>obsidian-sync-todoist</code>，插件 ID 却是 <code>sync-todoist</code>？</b></summary>
+### 为什么仓库叫 `obsidian-sync-todoist`，插件 ID 却是 `sync-todoist`？
 
 GitHub 仓库保留描述性名称。Obsidian 插件 ID 使用 `sync-todoist`，因为 Obsidian 插件 ID 不能包含 `obsidian`。
 
-</details>
-
-<details>
-<summary><b>我的 Todoist API token 存在哪里？</b></summary>
+### 我的 Todoist API token 存在哪里？
 
 它存储在当前 vault 的 Obsidian 插件数据文件中。运行时的 `data.json` 会被 gitignore，避免提交 token。
 
-</details>
-
-<details>
-<summary><b>这个插件使用第三方 Todoist SDK 吗？</b></summary>
+### 这个插件使用第三方 Todoist SDK 吗？
 
 不使用。Sync Todoist 通过 Obsidian 的 `requestUrl()` 直接调用 Todoist API v1，以兼容桌面端和移动端。
-
-</details>
 
 ## 参与贡献
 
@@ -284,18 +280,15 @@ GitHub 仓库保留描述性名称。Obsidian 插件 ID 使用 `sync-todoist`，
 npm run lint
 npm run build
 npx tsc --noEmit
+npm test
 ```
 
 涉及行为变更时，也请走一遍 [test/TEST_SPEC_v2.0.0.md](../../test/TEST_SPEC_v2.0.0.md) 中相关的手动测试。
 
 ## 致谢
 
-Sync Todoist 基于 Bastiaan Schönhage 的 [Syncist](https://github.com/bastiaanschonhage/syncist)，按 MIT License 使用。本仓库保留上游历史、版权声明和 license 文本，同时加入独立的 Sync Todoist release 线、`sync-todoist` 插件 ID、子任务、导入、项目、标签、查询块和已完成任务查询。
+Sync Todoist 基于 Bastiaan Schönhage 的 [Syncist](https://github.com/bastiaanschonhage/syncist)，按 MIT License 使用。本仓库保留上游历史、版权声明和 license 文本，同时加入独立的 Sync Todoist release 线、`sync-todoist` 插件 ID、子任务、导入、项目、标签、查询块、Daily Notes 和已完成任务支持。
 
 ## 许可证
 
 MIT - 见 [LICENSE](../../LICENSE)。
-
----
-
-作者：[o1xhack](https://github.com/o1xhack)

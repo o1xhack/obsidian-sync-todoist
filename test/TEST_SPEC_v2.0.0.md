@@ -495,6 +495,17 @@ Test each of these query blocks (create one block per filter):
 4. **Expected**: The same warning appears in Simplified Chinese.
 - [ ] **PASS** / **FAIL**
 
+### G10. Daily Note completed recurring inclusion
+
+1. Create or choose a recurring Todoist task whose current occurrence is due today.
+2. Enable **Include completed tasks** in Daily Note settings.
+3. **Expected**: The nested **Include completed recurring tasks** setting appears.
+4. Disable **Include completed recurring tasks**, complete the recurring task in Todoist, then sync today's Daily Note.
+5. **Expected**: The completed recurring occurrence is not kept as a checked row after Todoist moves the task to the next occurrence.
+6. Enable **Include completed recurring tasks** and sync today's Daily Note again.
+7. **Expected**: Today's completed recurring occurrence appears as a checked row in the marker block.
+- [ ] **PASS** / **FAIL**
+
 ---
 
 ## Test Summary
@@ -507,10 +518,10 @@ Test each of these query blocks (create one block per filter):
 | D. Projects & Labels | 6 | | |
 | E. Query Blocks | 10 | | |
 | F. Edge Cases | 6 | | |
-| G. Daily Notes & Notices | 9 | | |
-| **Total** | **50** | | |
+| G. Daily Notes & Notices | 10 | | |
+| **Total** | **51** | | |
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.5.2
+**Plugin version**: 0.6.0
 **Obsidian version**: ___________________

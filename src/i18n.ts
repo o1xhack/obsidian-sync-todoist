@@ -60,6 +60,8 @@ export type I18nKey =
   | 'daily.sort.priority'
   | 'daily.includeCompleted.name'
   | 'daily.includeCompleted.desc'
+  | 'daily.includeCompletedRecurring.name'
+  | 'daily.includeCompletedRecurring.desc'
   | 'daily.syncNow.name'
   | 'daily.syncNow.desc'
   | 'daily.syncNow.button'
@@ -141,6 +143,8 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.sort.priority': 'Priority first',
     'daily.includeCompleted.name': 'Include completed tasks',
     'daily.includeCompleted.desc': 'Keep Todoist tasks completed today in the Daily Note block and sorted in place, regardless of due date.',
+    'daily.includeCompletedRecurring.name': 'Include completed recurring tasks',
+    'daily.includeCompletedRecurring.desc': 'Also keep recurring tasks completed today. Todoist moves recurring tasks to their next occurrence, so Sync Todoist uses the activity log to keep today\'s completed occurrence.',
     'daily.syncNow.name': 'Sync Daily Note now',
     'daily.syncNow.desc': 'Refresh today\'s Daily Note using the current filter settings.',
     'daily.syncNow.button': 'Sync today',
@@ -221,6 +225,8 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.sort.priority': '重要程度优先',
     'daily.includeCompleted.name': '同步已完成任务',
     'daily.includeCompleted.desc': '将今天标记完成的 Todoist 任务保留在 Daily Note 区间中，并按排序规则放在原位置，不要求截止日期是今天。',
+    'daily.includeCompletedRecurring.name': '包含已完成的循环任务',
+    'daily.includeCompletedRecurring.desc': '同时保留今天完成的循环任务。Todoist 会把循环任务移动到下一次出现，因此 Sync Todoist 会用活动日志保留今天完成的这一轮。',
     'daily.syncNow.name': '立即同步 Daily Note',
     'daily.syncNow.desc': '使用当前筛选设置刷新今天的 Daily Note。',
     'daily.syncNow.button': '同步今天',

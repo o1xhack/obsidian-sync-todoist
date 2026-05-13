@@ -1,59 +1,127 @@
 # Sync Todoist
 
-[![Version](https://img.shields.io/badge/version-0.5.2-7c3aed)](RELEASE.md)
+[![Version](https://img.shields.io/github/v/release/o1xhack/obsidian-sync-todoist?label=version&color=7c3aed)](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/o1xhack/obsidian-sync-todoist/total?label=downloads&color=7c3aed)](https://github.com/o1xhack/obsidian-sync-todoist/releases)
 [![License](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![Plugin ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](manifest.json)
 
-**Sync Todoist keeps Markdown tasks in Obsidian and Todoist tasks in sync both ways, without giving up local notes, nested task outlines, labels, projects, or live filtered task views.**
+**Sync Todoist keeps Obsidian Markdown tasks and Todoist tasks in sync, while preserving local notes, nested outlines, project metadata, labels, query blocks, and Daily Note planning.**
 
 > Language: **English** · [简体中文](docs/i18n/README.zh-CN.md)
 
----
+Sync Todoist is currently recommended through **BRAT** while community-plugin submission is being prepared.
 
-## Why?
+## What's New in 0.6.0
 
-- **Write tasks where you think** - add `#todoist` to an Obsidian checkbox and it becomes a Todoist task.
-- **Keep hierarchy intact** - indented children under a synced parent become Todoist subtasks automatically.
-- **Bring Todoist into notes** - import existing Todoist tasks and render live Todoist filters with `sync-todoist` query blocks.
-- **Plan from your Daily Note** - write today's matching Todoist tasks into a managed Daily Note region for daily review.
-- **Works on desktop and mobile** - network calls use Obsidian's `requestUrl()` API instead of a Node-only SDK.
+- Adds a Daily Note sub-option for completed recurring tasks.
+- Keeps completed recurring occurrences in today's Daily Note when **Include completed tasks** is enabled.
+- Uses Todoist activity logs to recover the completed occurrence because Todoist moves recurring tasks to their next due date after completion.
+- Clarifies Daily Note flat rendering, completed-task behavior, and Query Block completed-task date windows in the documentation.
 
-## 0.1.0 Baseline
+## Why Use It?
 
-`0.1.0` is the first independent Sync Todoist release line after importing the upstream Syncist history. It is not a continuation of upstream release tags.
+- **📝 Write tasks where you think** - add `#todoist` to an Obsidian checkbox and it becomes a Todoist task.
+- **🔁 Sync both ways** - completion, title, due date, priority, labels, and project changes flow between Obsidian and Todoist.
+- **🌳 Keep nested work intact** - indented Markdown child tasks become Todoist subtasks.
+- **📥 Bring Todoist back into notes** - import existing Todoist tasks, including subtasks, at the cursor.
+- **🔎 Render live Todoist views** - use `sync-todoist` query blocks for filtered task lists.
+- **📅 Plan from Daily Notes** - write today's Todoist tasks into a managed Daily Note marker region.
+- **📱 Work on desktop and mobile** - HTTP calls use Obsidian's `requestUrl()` API, not a Node-only SDK.
 
-Compared with the upstream Syncist baseline, this version is packaged as **Sync Todoist** with the Obsidian plugin ID `sync-todoist`, an independent tag/release plan, and release assets that follow Obsidian's current requirements. It also documents the Sync Todoist feature set now present in this repo: subtasks, Todoist task import, project metadata, bidirectional labels, the primary `sync-todoist` query block language, the `syncist` migration alias, and completed-task query options such as `include_completed`.
+## Installation
 
-## Sync from Markdown
+### BRAT (recommended)
 
-Add the sync tag to any Markdown task:
+Use BRAT while Sync Todoist is pending review for the Obsidian Community Plugins directory.
+
+1. Open **Settings -> Community plugins**.
+2. Install and enable [BRAT](https://github.com/TfTHacker/obsidian42-brat).
+3. Run **BRAT: Add a beta plugin for testing**.
+4. Enter `https://github.com/o1xhack/obsidian-sync-todoist`.
+5. Enable **Sync Todoist** and configure your Todoist API token.
+
+### Pending: Community Plugins
+
+Sync Todoist is not yet listed in the Obsidian Community Plugins directory. After approval, install it from **Settings -> Community plugins -> Browse**.
+
+### Manual Release
+
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest).
+2. Create `.obsidian/plugins/sync-todoist/` in your vault.
+3. Put the three files in that folder.
+4. Restart Obsidian and enable **Sync Todoist**.
+
+### Build from Source
+
+```bash
+git clone https://github.com/o1xhack/obsidian-sync-todoist.git
+cd obsidian-sync-todoist
+npm install
+npm run build
+```
+
+Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/sync-todoist/`.
+
+## Quick Start
+
+1. Get your Todoist API token from [Todoist Settings -> Integrations -> Developer](https://todoist.com/app/settings/integrations/developer).
+2. Open **Settings -> Community plugins -> Sync Todoist**.
+3. Paste the token and click **Verify**.
+4. Add `#todoist` to a Markdown checkbox.
+5. Run **Sync Todoist: Sync now**.
 
 ```markdown
 - [ ] Buy groceries #todoist
-- [ ] Meeting with team #todoist 📅 2026-01-28 ⏫
 ```
 
-After sync, Sync Todoist records the Todoist task ID in an HTML comment so future edits update the same task:
+After sync, Sync Todoist stores the Todoist task ID in an HTML comment:
 
 ```markdown
 - [ ] Buy groceries #todoist <!-- todoist-id:8765432109 -->
 ```
 
-Changes flow both ways. Completion, title edits, due dates, priorities, labels, projects, and configured conflict behavior are all handled during sync.
+## Sync Format
 
-## Subtasks, Projects, and Labels
+Sync Todoist reads and writes plain Markdown task lines. The `todoist-id` comment is the stable link between an Obsidian line and a Todoist task.
 
-Indent tasks beneath a `#todoist` parent. Child tasks inherit sync from the parent, so you do not need to tag each child:
+| Marker | Meaning | Todoist mapping |
+|---|---|---|
+| `#todoist` | Sync marker | Marks a top-level task for sync |
+| `<!-- todoist-id:... -->` | Task identity | Keeps future syncs attached to the same Todoist task |
+| `📅 2026-01-28` | Due date | Todoist due date |
+| `due:2026-01-28` | Due date | Todoist due date |
+| `🔺` | Urgent priority | Priority 4 |
+| `⏫` | High priority | Priority 3 |
+| `🔼` | Medium priority | Priority 2 |
+| `🔽` | Normal priority | Priority 1 |
+| `📁 Work` | Project | Todoist project named `Work` |
+| `#label` | Label | Todoist label, except the sync tag |
+
+## Subtasks
+
+Indented Markdown tasks under a synced parent become Todoist subtasks. Child lines do not need `#todoist`; they inherit sync from the parent outline.
 
 ```markdown
-- [ ] Plan launch #todoist 📁 Work #marketing 📅 2026-03-05
+- [ ] Plan launch #todoist 📁 Work #marketing 📅 2026-06-01
   - [ ] Draft announcement
   - [ ] Review screenshots
   - [ ] Publish release notes
 ```
 
-`📁 ProjectName` routes a task to a Todoist project, and hashtags other than the sync tag are synced as Todoist labels. Subtask hierarchy is preserved with Todoist `parentId` relationships.
+How inheritance works:
+
+- The parent task carries the sync tag.
+- Child tasks are created with Todoist `parentId`.
+- Child tasks inherit the Todoist project from the parent when they are created.
+- Child task content, completion, due date, priority, and labels remain their own fields after sync.
+
+## Projects and Labels
+
+- Use `📁 ProjectName` to route a task to a Todoist project.
+- If no project is written, new tasks use the configured default project or Inbox.
+- Hashtags other than the sync tag become Todoist labels.
+- Todoist project moves and label changes sync back to Obsidian when conflict handling allows Todoist to win.
 
 ## Query Blocks
 
@@ -65,24 +133,66 @@ filter: today | overdue
 ```
 ````
 
-Query blocks use [Todoist filter syntax](https://todoist.com/help/articles/introduction-to-filters-702348ff), render checkboxes in Obsidian, include a refresh button, and show when they were last updated. The original `syncist` code block language is still accepted as a migration alias.
+Query blocks use [Todoist filter syntax](https://todoist.com/help/articles/introduction-to-filters-702348ff), render checkboxes, include a refresh button, and show the last updated time. The original `syncist` code block language is still accepted as a migration alias.
 
-Completed tasks can be merged into query results with bounded archive lookups:
+### Completed Tasks in Query Blocks
+
+`include_completed` adds a second completed-task lookup and merges those results with the active tasks returned by `filter`. It does not automatically mean "completed today."
+
+| Option | Description |
+|---|---|
+| `filter: today` | Active tasks matching a Todoist filter. |
+| `include_completed: true` | Merge matching completed tasks into active results. |
+| `completed_by: due_date` | Search completed tasks by Todoist due date. |
+| `completed_by: completion_date` | Search completed tasks by completion time. |
+| `completed_since: 30d` | Start of completed-task window: `30d`, `6w`, `3m`, `today`, `yesterday`, or `YYYY-MM-DD`. |
+| `completed_until: today` | End of completed-task window: `today`, `now`, or `YYYY-MM-DD`. |
+| `completed_range: today` | One bounded range: `today`, `yesterday`, `YYYY-MM-DD`, `30d`, `6w`, or `3m`. |
+
+If `completed_by` is omitted, Sync Todoist infers a default:
+
+- Date-oriented filters such as `today`, `overdue`, or `due before...` default to `due_date`.
+- Label or project filters such as `@writing` or `#Work` default to `completion_date`.
+
+Examples:
+
+````markdown
+```sync-todoist
+filter: today
+include_completed: true
+completed_by: due_date
+completed_range: today
+```
+````
+
+Shows active tasks due today and completed tasks whose due date is today.
 
 ````markdown
 ```sync-todoist
 filter: @writing
 include_completed: true
 completed_by: completion_date
-completed_since: 30d
+completed_range: today
 ```
 ````
 
+Shows active `@writing` tasks and `@writing` tasks completed today.
+
 ## Daily Notes
 
-Sync Todoist can write today's matching Todoist tasks into today's Obsidian Daily Note. Enable Obsidian's core **Daily notes** plugin first, then open **Settings -> Sync Todoist -> 每日 Daily Note**.
+Sync Todoist can write today's matching Todoist tasks into today's Obsidian Daily Note. Enable Obsidian's core **Daily notes** plugin first, then open **Settings -> Sync Todoist -> Daily Note**.
 
-The plugin writes only inside a marker block, using source-mode markers by default:
+Daily Note controls:
+
+- Enable or disable Daily Note sync.
+- Customize the source-mode start and end markers.
+- Choose task filters by project, label, and priority.
+- Choose primary sorting: time first or priority first.
+- Include tasks completed today.
+- Include completed recurring occurrences when completed tasks are enabled.
+- Run a manual **Sync today** refresh.
+
+Default marker block:
 
 ```markdown
 %% sync-todoist:daily:start %%
@@ -90,83 +200,37 @@ The plugin writes only inside a marker block, using source-mode markers by defau
 %% sync-todoist:daily:end %%
 ```
 
-You can customize the start/end markers and choose which tasks appear using project, label, and priority multi-select filters. Empty selections mean **all** for that dimension. Daily Note tasks can be sorted by **time first** or **priority first**; the other dimension is used as the secondary sort, then project/content order keeps untimed normal-priority tasks stable.
+Important behavior:
 
-The Daily Note block refreshes during normal sync, and you can also run **Sync Todoist: Sync today's daily note** manually. When **Include completed tasks** is enabled, Todoist tasks completed today remain in the block and stay sorted in place regardless of due date.
+- Sync Todoist fully rewrites everything between the markers during sync.
+- Do not manually edit inside the marker region unless you are ready for those edits to be overwritten.
+- Daily Note output is a **flat list**. It does not expand Todoist parent tasks into nested child outlines.
+- If a Todoist subtask independently matches the Daily Note filters, it can appear as its own top-level row.
+- Daily Note rows copy each task's own content, completion state, due date, priority, labels, and project display.
+- Regular Markdown inheritance for subtasks is not applied inside the Daily Note generated block.
 
-Sync Todoist fully rewrites everything between the Daily Note markers during sync. Do not manually edit inside the marker region; unsynced edits there can be overwritten.
+Completed and recurring behavior:
 
-## Quick Start
+- Active tasks are included when their current Todoist due date falls today.
+- Timed due dates and current recurring occurrences are treated as today when their local date is today.
+- With **Include completed tasks**, regular tasks completed today remain checked in the Daily Note block.
+- With **Include completed recurring tasks**, Sync Todoist also checks today's activity log and keeps recurring tasks completed today as checked rows.
+- Todoist moves recurring tasks to the next occurrence after completion, so the activity-log fallback is required to preserve today's completed occurrence.
 
-1. Install the plugin with BRAT.
-2. Get your Todoist API token from [Todoist Settings -> Integrations -> Developer](https://todoist.com/app/settings/integrations/developer).
-3. Open **Settings -> Community plugins -> Sync Todoist**, paste the token, and click **Verify**.
-4. Add `#todoist` to a Markdown task, then run **Sync Todoist: Sync now**.
-
-## Install
-
-<details>
-<summary><b>BRAT (recommended)</b></summary>
-
-Use BRAT while Sync Todoist is pending review for the Obsidian Community Plugins directory.
-
-1. Open **Settings -> Community plugins**.
-2. Install and enable [BRAT](https://github.com/TfTHacker/obsidian42-brat).
-3. Run **BRAT: Add a beta plugin for testing**.
-4. Enter `https://github.com/o1xhack/obsidian-sync-todoist`.
-5. Enable **Sync Todoist** and configure your Todoist API token.
-
-</details>
-
-<details>
-<summary><b>Pending: Community Plugins</b></summary>
-
-Sync Todoist is not yet listed in the Obsidian Community Plugins directory. After approval:
-
-1. Open **Settings -> Community plugins**.
-2. Click **Browse** and search for **Sync Todoist**.
-3. Install and enable the plugin.
-4. Configure your Todoist API token in plugin settings.
-
-</details>
-
-<details>
-<summary><b>Manual Release</b></summary>
-
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest).
-2. Create `.obsidian/plugins/sync-todoist/` in your vault.
-3. Copy the three release files into that folder.
-4. Restart Obsidian and enable **Sync Todoist** in Community plugins.
-
-</details>
-
-<details>
-<summary><b>Build from Source</b></summary>
-
-```bash
-git clone https://github.com/o1xhack/obsidian-sync-todoist.git
-cd obsidian-sync-todoist
-npm install
-npm run build
-```
-
-Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/sync-todoist/` in a test vault.
-
-</details>
-
-## Configuration
+## Settings
 
 | Setting | Default | Description |
 |---|---|---|
-| Todoist API token | empty | Required token used to call Todoist's API. Stored locally in Obsidian plugin data. |
 | Interface language | English | Settings UI language. Supports English and Simplified Chinese. |
+| Todoist API token | empty | Required token used to call Todoist's API. Stored locally in Obsidian plugin data. |
 | Sync tag | `#todoist` | Markdown tag that marks top-level tasks for sync. |
 | Default project | Inbox | Todoist project for new tasks unless the task has `📁 ProjectName`. |
 | Sync interval | `5` minutes | Auto-sync frequency. Set to `0` to disable automatic sync. |
 | Conflict resolution | `Todoist wins` | Behavior when both Obsidian and Todoist changed the same task. |
 | Daily Note filters | All | Optional project, label, and priority filters for today's Daily Note block. |
 | Daily Note primary sort | `Time first` | Sort Daily Note tasks by time then priority, or by priority then time. |
-| Include completed tasks | Off | Keep Todoist tasks completed today in the Daily Note block, regardless of due date. |
+| Include completed tasks | Off | Keep Todoist tasks completed today in the Daily Note block. |
+| Include completed recurring tasks | Off | Sub-option shown only when completed tasks are enabled. Uses activity log fallback. |
 | Manual sync notices | On | Show short `Sync Todoist:` completion notices for manual sync actions. |
 | Automatic sync notices | On | Show scheduled sync notices on desktop and mobile, including zero-change summaries. |
 
@@ -180,66 +244,6 @@ Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/s
 | **Sync today's daily note** | Refreshes today's managed Daily Note task block. |
 | **Open settings** | Opens the Sync Todoist settings tab. |
 
-## Supported Task Metadata
-
-| Marker | Meaning | Todoist mapping |
-|---|---|---|
-| `📅 2026-01-28` | Due date | Task due date |
-| `due:2026-01-28` | Due date | Task due date |
-| `🔺` | Urgent priority | Priority 4 |
-| `⏫` | High priority | Priority 3 |
-| `🔼` | Medium priority | Priority 2 |
-| `🔽` | Normal priority | Priority 1 |
-| `📁 Work` | Project | Todoist project named `Work` |
-| `#label` | Label | Todoist label, except the sync tag |
-
-## Query Block Reference
-
-| Option | Description |
-|---|---|
-| `filter: today` | Active tasks matching a Todoist filter. |
-| `include_completed: true` | Merge matching completed tasks into active results. |
-| `completed_by: due_date` | Search completed tasks by their Todoist due date. |
-| `completed_by: completion_date` | Search completed tasks by when they were completed. |
-| `completed_since: 30d` | Start of completed-task window: `30d`, `6w`, `3m`, `today`, `yesterday`, or `YYYY-MM-DD`. |
-| `completed_until: today` | End of completed-task window: `today`, `now`, or `YYYY-MM-DD`. |
-| `completed_range: today` | Shortcut for one bounded range: `today`, `yesterday`, `YYYY-MM-DD`, `30d`, `6w`, or `3m`. |
-
-Todoist completed-task archive endpoints require a bounded date window. If no window is configured, Sync Todoist uses the last 6 weeks for `completed_by: due_date` and the last 30 days for `completed_by: completion_date`.
-
-`include_completed` is not the same as "completed today." It only enables a second completed-task lookup and merges those results with the active tasks returned by `filter`.
-
-Use `completed_by` to choose the completed-task date dimension:
-
-- `completed_by: due_date` means the completed task's Todoist due date is inside the completed window.
-- `completed_by: completion_date` means the task was completed inside the completed window.
-
-If `completed_by` is omitted, Sync Todoist infers a default from the filter. Date-oriented filters such as `today`, `overdue`, or `due before...` default to `due_date`. Label or project filters such as `@writing` or `#Work` default to `completion_date`.
-
-Examples:
-
-````markdown
-```sync-todoist
-filter: today
-include_completed: true
-completed_by: due_date
-completed_range: today
-```
-````
-
-This shows active tasks due today and merges completed tasks whose due date is today.
-
-````markdown
-```sync-todoist
-filter: @writing
-include_completed: true
-completed_by: completion_date
-completed_range: today
-```
-````
-
-This shows active `@writing` tasks and merges `@writing` tasks completed today. If you write `filter: today`, `today` still means Todoist's due-today filter; it does not automatically mean completed today.
-
 ## Development
 
 ```bash
@@ -247,34 +251,26 @@ npm install
 npm run lint
 npm run build
 npx tsc --noEmit
+npm test
 ```
 
-No automated test framework is configured. Use [test/TEST_SPEC_v2.0.0.md](test/TEST_SPEC_v2.0.0.md) for manual QA against a test vault and Todoist account.
+Use [test/TEST_SPEC_v2.0.0.md](test/TEST_SPEC_v2.0.0.md) for manual QA against a test vault and Todoist account.
 
 Release tags must exactly match `manifest.json` `version`, and every public release must attach `main.js`, `manifest.json`, and `styles.css`. See [RELEASE.md](RELEASE.md).
 
 ## FAQ
 
-<details>
-<summary><b>Why is the repository named <code>obsidian-sync-todoist</code> but the plugin ID is <code>sync-todoist</code>?</b></summary>
+### Why is the repository named `obsidian-sync-todoist` but the plugin ID is `sync-todoist`?
 
 The GitHub repository keeps the descriptive Obsidian-focused name. The Obsidian plugin ID is `sync-todoist` because Obsidian plugin IDs must not include `obsidian`.
 
-</details>
-
-<details>
-<summary><b>Where is my Todoist API token stored?</b></summary>
+### Where is my Todoist API token stored?
 
 It is stored locally in Obsidian's plugin data file for your vault. The runtime `data.json` file is intentionally gitignored.
 
-</details>
-
-<details>
-<summary><b>Does this use a third-party Todoist SDK?</b></summary>
+### Does this use a third-party Todoist SDK?
 
 No. Sync Todoist talks directly to Todoist API v1 through Obsidian's `requestUrl()` API for desktop and mobile compatibility.
-
-</details>
 
 ## Contributing
 
@@ -284,18 +280,15 @@ Issues and PRs are welcome. Before opening a PR, run:
 npm run lint
 npm run build
 npx tsc --noEmit
+npm test
 ```
 
 For behavior changes, also walk through the relevant sections of [test/TEST_SPEC_v2.0.0.md](test/TEST_SPEC_v2.0.0.md).
 
 ## Acknowledgements
 
-Sync Todoist is based on [Syncist](https://github.com/bastiaanschonhage/syncist) by Bastiaan Schönhage, used under the MIT License. This repository keeps the upstream history, copyright notice, and license text intact while adding the independent Sync Todoist release line, `sync-todoist` plugin ID, subtasks, import, projects, labels, query blocks, and completed-task queries.
+Sync Todoist is based on [Syncist](https://github.com/bastiaanschonhage/syncist) by Bastiaan Schönhage, used under the MIT License. This repository keeps the upstream history, copyright notice, and license text intact while adding the independent Sync Todoist release line, `sync-todoist` plugin ID, subtasks, import, projects, labels, query blocks, Daily Notes, and completed-task support.
 
 ## License
 
 MIT - see [LICENSE](LICENSE).
-
----
-
-Author: [o1xhack](https://github.com/o1xhack)

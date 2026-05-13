@@ -369,9 +369,25 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.dailyNote.includeCompleted)
           .onChange(async (value) => {
             this.plugin.settings.dailyNote.includeCompleted = value;
+            if (!value) this.plugin.settings.dailyNote.includeCompletedRecurring = false;
             await this.plugin.saveSettings();
+            this.display();
           })
       );
+
+    if (this.plugin.settings.dailyNote.includeCompleted) {
+      new Setting(containerEl)
+        .setName(this.tr('daily.includeCompletedRecurring.name'))
+        .setDesc(this.tr('daily.includeCompletedRecurring.desc'))
+        .addToggle((toggle) =>
+          toggle
+            .setValue(this.plugin.settings.dailyNote.includeCompletedRecurring)
+            .onChange(async (value) => {
+              this.plugin.settings.dailyNote.includeCompletedRecurring = value;
+              await this.plugin.saveSettings();
+            })
+        );
+    }
 
     new Setting(containerEl)
       .setName(this.tr('daily.syncNow.name'))

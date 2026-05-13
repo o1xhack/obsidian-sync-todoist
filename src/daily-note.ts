@@ -24,6 +24,13 @@ export interface DailyNoteTaskFilter {
   includeCompleted: boolean;
 }
 
+export interface DailyNoteCompletionActivity {
+  objectId: string;
+  v2ObjectId?: string;
+  eventDate: string;
+  extraData: Record<string, unknown> | null;
+}
+
 export function localTodayISODate(now: Date = new Date()): string {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -152,6 +159,61 @@ function datePrefix(value: string): string | null {
   return match?.[1] ?? null;
 }
 
+export function buildCompletedRecurringTaskSnapshots(
+  activeTasks: TodoistTask[],
+  completedActivities: DailyNoteCompletionActivity[],
+  today: string
+): TodoistTask[] {
+  const activeById = new Map(activeTasks.map(task => [task.id, task]));
+  const snapshots: TodoistTask[] = [];
+  const seen = new Set<string>();
+
+  for (const activity of completedActivities) {
+    if (localDateFromTimestamp(activity.eventDate) !== today) continue;
+    const activeTask = activeById.get(activity.objectId) ?? (activity.v2ObjectId ? activeById.get(activity.v2ObjectId) : undefined);
+    if (!activeTask || !activeTask.due?.isRecurring || seen.has(activity.objectId)) continue;
+
+    const occurrenceDate = activityDueDate(activity.extraData) ?? today;
+    snapshots.push({
+      ...activeTask,
+      content: activityContent(activity.extraData) ?? activeTask.content,
+      due: {
+        ...activeTask.due,
+        date: occurrenceDate,
+        datetime: undefined,
+      },
+      isCompleted: true,
+      completedAt: activity.eventDate,
+    });
+    seen.add(activity.objectId);
+  }
+
+  return snapshots;
+}
+
+function activityContent(extraData: Record<string, unknown> | null): string | null {
+  const content = extraData?.content;
+  return typeof content === 'string' && content.trim() ? content : null;
+}
+
+function activityDueDate(extraData: Record<string, unknown> | null): string | null {
+  return dueValueToDate(extraData?.due_date) ?? dueValueToDate(extraData?.last_due_date);
+}
+
+function dueValueToDate(value: unknown): string | null {
+  if (typeof value === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    return localDateFromTimestamp(value) ?? datePrefix(value);
+  }
+  if (value && typeof value === 'object' && 'date' in value) {
+    const date = (value as { date?: unknown }).date;
+    if (typeof date !== 'string') return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    return localDateFromTimestamp(date) ?? datePrefix(date);
+  }
+  return null;
+}
+
 export function filterDailyNoteTasks(tasks: TodoistTask[], settings: DailyNoteSettings, today: string): TodoistTask[] {
   const filter: DailyNoteTaskFilter = {
     today,
@@ -243,7 +305,7 @@ export function buildDailyNoteParsedTask(
     todoistId: task.id,
     parentId: task.parentId,
     indentLevel: 0,
-    dueDate: task.due?.date ?? null,
+    dueDate: localDateFromTodoistDue(task.due),
     priority: task.priority,
     labels: task.labels ?? [],
     description: task.description ?? '',

@@ -50,7 +50,8 @@ var DEFAULT_SETTINGS = {
     labels: [],
     priorities: [],
     sortMode: "time",
-    includeCompleted: false
+    includeCompleted: false,
+    includeCompletedRecurring: false
   },
   notifications: {
     manualSync: true,
@@ -66,12 +67,22 @@ function normalizeTask(raw) {
     projectId: raw.project_id,
     parentId: raw.parent_id,
     priority: raw.priority,
-    due: raw.due,
+    due: normalizeDue(raw.due),
     labels: (_a = raw.labels) != null ? _a : [],
     isCompleted: (_b = raw.checked) != null ? _b : raw.completed_at != null,
     createdAt: (_c = raw.added_at) != null ? _c : "",
     completedAt: (_d = raw.completed_at) != null ? _d : null,
     url: `https://todoist.com/app/task/${raw.id}`
+  };
+}
+function normalizeDue(due) {
+  if (!due)
+    return null;
+  return {
+    date: due.date,
+    datetime: due.datetime,
+    string: due.string,
+    isRecurring: due.is_recurring
   };
 }
 var DEFAULT_SYNC_STATE = {
@@ -141,6 +152,8 @@ var STRINGS = {
     "daily.sort.priority": "Priority first",
     "daily.includeCompleted.name": "Include completed tasks",
     "daily.includeCompleted.desc": "Keep Todoist tasks completed today in the Daily Note block and sorted in place, regardless of due date.",
+    "daily.includeCompletedRecurring.name": "Include completed recurring tasks",
+    "daily.includeCompletedRecurring.desc": "Also keep recurring tasks completed today. Todoist moves recurring tasks to their next occurrence, so Sync Todoist uses the activity log to keep today's completed occurrence.",
     "daily.syncNow.name": "Sync Daily Note now",
     "daily.syncNow.desc": "Refresh today's Daily Note using the current filter settings.",
     "daily.syncNow.button": "Sync today",
@@ -221,6 +234,8 @@ var STRINGS = {
     "daily.sort.priority": "\u91CD\u8981\u7A0B\u5EA6\u4F18\u5148",
     "daily.includeCompleted.name": "\u540C\u6B65\u5DF2\u5B8C\u6210\u4EFB\u52A1",
     "daily.includeCompleted.desc": "\u5C06\u4ECA\u5929\u6807\u8BB0\u5B8C\u6210\u7684 Todoist \u4EFB\u52A1\u4FDD\u7559\u5728 Daily Note \u533A\u95F4\u4E2D\uFF0C\u5E76\u6309\u6392\u5E8F\u89C4\u5219\u653E\u5728\u539F\u4F4D\u7F6E\uFF0C\u4E0D\u8981\u6C42\u622A\u6B62\u65E5\u671F\u662F\u4ECA\u5929\u3002",
+    "daily.includeCompletedRecurring.name": "\u5305\u542B\u5DF2\u5B8C\u6210\u7684\u5FAA\u73AF\u4EFB\u52A1",
+    "daily.includeCompletedRecurring.desc": "\u540C\u65F6\u4FDD\u7559\u4ECA\u5929\u5B8C\u6210\u7684\u5FAA\u73AF\u4EFB\u52A1\u3002Todoist \u4F1A\u628A\u5FAA\u73AF\u4EFB\u52A1\u79FB\u52A8\u5230\u4E0B\u4E00\u6B21\u51FA\u73B0\uFF0C\u56E0\u6B64 Sync Todoist \u4F1A\u7528\u6D3B\u52A8\u65E5\u5FD7\u4FDD\u7559\u4ECA\u5929\u5B8C\u6210\u7684\u8FD9\u4E00\u8F6E\u3002",
     "daily.syncNow.name": "\u7ACB\u5373\u540C\u6B65 Daily Note",
     "daily.syncNow.desc": "\u4F7F\u7528\u5F53\u524D\u7B5B\u9009\u8BBE\u7F6E\u5237\u65B0\u4ECA\u5929\u7684 Daily Note\u3002",
     "daily.syncNow.button": "\u540C\u6B65\u4ECA\u5929",
@@ -532,9 +547,20 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     new import_obsidian2.Setting(containerEl).setName(this.tr("daily.includeCompleted.name")).setDesc(this.tr("daily.includeCompleted.desc")).addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.dailyNote.includeCompleted).onChange(async (value) => {
         this.plugin.settings.dailyNote.includeCompleted = value;
+        if (!value)
+          this.plugin.settings.dailyNote.includeCompletedRecurring = false;
         await this.plugin.saveSettings();
+        this.display();
       })
     );
+    if (this.plugin.settings.dailyNote.includeCompleted) {
+      new import_obsidian2.Setting(containerEl).setName(this.tr("daily.includeCompletedRecurring.name")).setDesc(this.tr("daily.includeCompletedRecurring.desc")).addToggle(
+        (toggle) => toggle.setValue(this.plugin.settings.dailyNote.includeCompletedRecurring).onChange(async (value) => {
+          this.plugin.settings.dailyNote.includeCompletedRecurring = value;
+          await this.plugin.saveSettings();
+        })
+      );
+    }
     new import_obsidian2.Setting(containerEl).setName(this.tr("daily.syncNow.name")).setDesc(this.tr("daily.syncNow.desc")).addButton(
       (button) => button.setButtonText(this.tr("daily.syncNow.button")).onClick(async () => {
         var _a;
@@ -1085,6 +1111,45 @@ var TodoistService = class {
     } while (cursor);
     return allTasks;
   }
+  async getCompletedTaskActivities(since, until) {
+    var _a, _b, _c, _d;
+    if (!this.apiToken)
+      throw new Error("Todoist API not initialized");
+    const allActivities = [];
+    let cursor = null;
+    do {
+      const params = new URLSearchParams({
+        date_from: since.toISOString(),
+        date_to: until.toISOString(),
+        limit: "100"
+      });
+      params.append("object_event_types", "item:completed");
+      if (cursor)
+        params.set("cursor", cursor);
+      const resp = await (0, import_obsidian3.requestUrl)({
+        url: `${API_BASE}/activities?${params.toString()}`,
+        headers: this.headers(),
+        throw: false
+      });
+      if (resp.status !== 200) {
+        throw new Error(`Completed activity request failed, status ${resp.status}`);
+      }
+      const data = resp.json;
+      const rawItems = (_b = (_a = data.results) != null ? _a : data.items) != null ? _b : [];
+      for (const raw of rawItems) {
+        if (raw.event_type !== "completed")
+          continue;
+        allActivities.push({
+          objectId: raw.object_id,
+          v2ObjectId: raw.v2_object_id,
+          eventDate: raw.event_date,
+          extraData: (_c = raw.extra_data) != null ? _c : null
+        });
+      }
+      cursor = (_d = data.next_cursor) != null ? _d : null;
+    } while (cursor);
+    return allActivities;
+  }
   static fromTodoistPriority(priority) {
     return priority;
   }
@@ -1485,6 +1550,58 @@ function datePrefix(value) {
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
   return (_a = match == null ? void 0 : match[1]) != null ? _a : null;
 }
+function buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today) {
+  var _a, _b, _c, _d;
+  const activeById = new Map(activeTasks.map((task) => [task.id, task]));
+  const snapshots = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const activity of completedActivities) {
+    if (localDateFromTimestamp(activity.eventDate) !== today)
+      continue;
+    const activeTask = (_a = activeById.get(activity.objectId)) != null ? _a : activity.v2ObjectId ? activeById.get(activity.v2ObjectId) : void 0;
+    if (!activeTask || !((_b = activeTask.due) == null ? void 0 : _b.isRecurring) || seen.has(activity.objectId))
+      continue;
+    const occurrenceDate = (_c = activityDueDate(activity.extraData)) != null ? _c : today;
+    snapshots.push({
+      ...activeTask,
+      content: (_d = activityContent(activity.extraData)) != null ? _d : activeTask.content,
+      due: {
+        ...activeTask.due,
+        date: occurrenceDate,
+        datetime: void 0
+      },
+      isCompleted: true,
+      completedAt: activity.eventDate
+    });
+    seen.add(activity.objectId);
+  }
+  return snapshots;
+}
+function activityContent(extraData) {
+  const content = extraData == null ? void 0 : extraData.content;
+  return typeof content === "string" && content.trim() ? content : null;
+}
+function activityDueDate(extraData) {
+  var _a;
+  return (_a = dueValueToDate(extraData == null ? void 0 : extraData.due_date)) != null ? _a : dueValueToDate(extraData == null ? void 0 : extraData.last_due_date);
+}
+function dueValueToDate(value) {
+  var _a, _b;
+  if (typeof value === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value))
+      return value;
+    return (_a = localDateFromTimestamp(value)) != null ? _a : datePrefix(value);
+  }
+  if (value && typeof value === "object" && "date" in value) {
+    const date = value.date;
+    if (typeof date !== "string")
+      return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date))
+      return date;
+    return (_b = localDateFromTimestamp(date)) != null ? _b : datePrefix(date);
+  }
+  return null;
+}
 function filterDailyNoteTasks(tasks, settings, today) {
   const filter = {
     today,
@@ -1538,7 +1655,7 @@ ${markerEnd}` : `${markerStart}
 ${markerEnd}`;
 }
 function buildDailyNoteParsedTask(task, filePath, lineNumber, resolveProjectName) {
-  var _a, _b, _c, _d;
+  var _a, _b;
   return {
     originalLine: "",
     lineNumber,
@@ -1548,10 +1665,10 @@ function buildDailyNoteParsedTask(task, filePath, lineNumber, resolveProjectName
     todoistId: task.id,
     parentId: task.parentId,
     indentLevel: 0,
-    dueDate: (_b = (_a = task.due) == null ? void 0 : _a.date) != null ? _b : null,
+    dueDate: localDateFromTodoistDue(task.due),
     priority: task.priority,
-    labels: (_c = task.labels) != null ? _c : [],
-    description: (_d = task.description) != null ? _d : "",
+    labels: (_a = task.labels) != null ? _a : [],
+    description: (_b = task.description) != null ? _b : "",
     projectId: task.projectId,
     projectName: resolveProjectName(task.projectId),
     lastModified: Date.now()
@@ -1790,10 +1907,21 @@ var SyncEngine = class {
       since,
       until
     });
+    let completedRecurringTasks = [];
+    if (this.settings.dailyNote.includeCompletedRecurring) {
+      try {
+        const completedActivities = await this.todoistService.getCompletedTaskActivities(since, until);
+        completedRecurringTasks = buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today);
+      } catch (error) {
+        console.warn("Todoist Sync: Failed to fetch completed recurring task activities:", error);
+      }
+    }
     const byId = /* @__PURE__ */ new Map();
     for (const task of activeTasks)
       byId.set(task.id, task);
     for (const task of completedTasks)
+      byId.set(task.id, task);
+    for (const task of completedRecurringTasks)
       byId.set(task.id, task);
     return [...byId.values()];
   }

@@ -27,6 +27,13 @@ export type ConflictResolution = 'obsidian-wins' | 'todoist-wins' | 'ask-user';
 export type UiLanguage = 'en' | 'zh-CN';
 export type DailyNoteSortMode = 'time' | 'priority';
 
+export interface TodoistDue {
+  date: string;
+  datetime?: string;
+  string?: string;
+  isRecurring?: boolean;
+}
+
 export interface DailyNoteSettings {
   /** Whether to write today's Todoist tasks into today's Daily Note */
   enabled: boolean;
@@ -44,6 +51,8 @@ export interface DailyNoteSettings {
   sortMode: DailyNoteSortMode;
   /** Whether completed tasks due today should remain in the Daily Note block */
   includeCompleted: boolean;
+  /** Whether completed recurring occurrences should be kept when includeCompleted is enabled */
+  includeCompletedRecurring: boolean;
 }
 
 export interface NotificationSettings {
@@ -75,6 +84,7 @@ export const DEFAULT_SETTINGS: TodoistSyncSettings = {
     priorities: [],
     sortMode: 'time',
     includeCompleted: false,
+    includeCompletedRecurring: false,
   },
   notifications: {
     manualSync: true,
@@ -107,7 +117,7 @@ export interface TodoistTask {
   projectId: string;
   parentId: string | null;
   priority: number;
-  due: { date: string; datetime?: string; string?: string; isRecurring?: boolean } | null;
+  due: TodoistDue | null;
   labels: string[];
   isCompleted: boolean;
   createdAt: string;
@@ -139,12 +149,22 @@ export function normalizeTask(raw: TodoistApiRawTask): TodoistTask {
     projectId: raw.project_id,
     parentId: raw.parent_id,
     priority: raw.priority,
-    due: raw.due,
+    due: normalizeDue(raw.due),
     labels: raw.labels ?? [],
     isCompleted: raw.checked ?? raw.completed_at != null,
     createdAt: raw.added_at ?? '',
     completedAt: raw.completed_at ?? null,
     url: `https://todoist.com/app/task/${raw.id}`,
+  };
+}
+
+function normalizeDue(due: TodoistApiRawTask['due']): TodoistDue | null {
+  if (!due) return null;
+  return {
+    date: due.date,
+    datetime: due.datetime,
+    string: due.string,
+    isRecurring: due.is_recurring,
   };
 }
 
