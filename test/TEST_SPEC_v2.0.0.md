@@ -439,19 +439,19 @@ Test each of these query blocks (create one block per filter):
 2. **Expected**: A notice starts with `Sync Todoist:` and reports created, updated, completed, conflicts, and Daily Note status counts.
 - [ ] **PASS** / **FAIL**
 
-### G4. Automatic sync notice controls
+### G4. Automatic sync notices
 
-1. Enable **Automatic sync notices**
+1. Keep **Automatic sync notices** enabled
 2. Set sync interval to a short value for testing
 3. Wait for scheduled sync
-4. **Expected**: A `Sync Todoist:` notice appears, including zero-count results when nothing changed.
+4. **Expected**: A `Sync Todoist:` notice appears on desktop, including zero-count results when nothing changed.
 5. Disable **Automatic sync notices**
 6. **Expected**: Scheduled successful syncs stop showing notices unless there is an error.
 - [ ] **PASS** / **FAIL**
 
-### G5. Mobile automatic sync notice controls
+### G5. Mobile automatic sync notices
 
-1. On mobile, enable **Mobile automatic sync notices**
+1. On mobile, keep **Automatic sync notices** enabled
 2. Wait for scheduled sync
 3. **Expected**: A `Sync Todoist:` notice appears and auto-dismisses.
 - [ ] **PASS** / **FAIL**

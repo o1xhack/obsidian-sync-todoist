@@ -201,24 +201,12 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Automatic sync notices')
-      .setDesc('Show scheduled sync notices on desktop. Errors are always shown.')
+      .setDesc('Show scheduled sync notices on desktop and mobile. Errors are always shown.')
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.notifications.automaticSync)
           .onChange(async (value) => {
             this.plugin.settings.notifications.automaticSync = value;
-            await this.plugin.saveSettings();
-          })
-      );
-
-    new Setting(containerEl)
-      .setName('Mobile automatic sync notices')
-      .setDesc('Show scheduled sync notices on mobile. Errors are always shown.')
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.notifications.mobileAutomaticSync)
-          .onChange(async (value) => {
-            this.plugin.settings.notifications.mobileAutomaticSync = value;
             await this.plugin.saveSettings();
           })
       );

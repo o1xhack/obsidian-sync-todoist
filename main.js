@@ -51,8 +51,7 @@ var DEFAULT_SETTINGS = {
   },
   notifications: {
     manualSync: true,
-    automaticSync: false,
-    mobileAutomaticSync: false
+    automaticSync: true
   }
 };
 function normalizeTask(raw) {
@@ -130,7 +129,7 @@ function formatDailyNoteSummary(result) {
 function shouldShowAutomaticSyncNotice(result, settings) {
   if (result.errors.length > 0 || result.conflicts > 0)
     return true;
-  return import_obsidian.Platform.isMobile ? settings.mobileAutomaticSync : settings.automaticSync;
+  return settings.automaticSync;
 }
 function noticeDurationForResult(result) {
   return result.errors.length > 0 || result.conflicts > 0 ? ERROR_DURATION : DEFAULT_DURATION;
@@ -257,15 +256,9 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("Automatic sync notices").setDesc("Show scheduled sync notices on desktop. Errors are always shown.").addToggle(
+    new import_obsidian2.Setting(containerEl).setName("Automatic sync notices").setDesc("Show scheduled sync notices on desktop and mobile. Errors are always shown.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.notifications.automaticSync).onChange(async (value) => {
         this.plugin.settings.notifications.automaticSync = value;
-        await this.plugin.saveSettings();
-      })
-    );
-    new import_obsidian2.Setting(containerEl).setName("Mobile automatic sync notices").setDesc("Show scheduled sync notices on mobile. Errors are always shown.").addToggle(
-      (toggle) => toggle.setValue(this.plugin.settings.notifications.mobileAutomaticSync).onChange(async (value) => {
-        this.plugin.settings.notifications.mobileAutomaticSync = value;
         await this.plugin.saveSettings();
       })
     );

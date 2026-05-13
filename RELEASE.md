@@ -17,6 +17,7 @@ Sync Todoist has an independent release line. Upstream Syncist tags and releases
 - `0.2.0`: follow-up test release for fixes found during real Obsidian/Todoist use.
 - `0.3.0`: Daily Note release. Adds BRAT-ready Daily Note task insertion with configurable markers and project, label, and priority filters.
 - `0.4.0`: notification release. Adds prefixed Sync Todoist notices, manual and automatic sync notification controls, and mobile automatic sync notices.
+- `0.4.1`: notification default fix. Enables automatic sync notices by default on desktop and mobile with one shared setting.
 - `1.0.0`: first community-submission candidate after the test release line is stable.
 
 ## 0.1.0 Scope

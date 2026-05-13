@@ -1,4 +1,4 @@
-import { Notice, Platform } from 'obsidian';
+import { Notice } from 'obsidian';
 import { DailyNoteSyncResult, NotificationSettings, SyncResult } from './types';
 
 const PREFIX = 'Sync Todoist:';
@@ -60,7 +60,7 @@ export function formatDailyNoteSummary(result: DailyNoteSyncResult): string {
 
 export function shouldShowAutomaticSyncNotice(result: SyncResult, settings: NotificationSettings): boolean {
   if (result.errors.length > 0 || result.conflicts > 0) return true;
-  return Platform.isMobile ? settings.mobileAutomaticSync : settings.automaticSync;
+  return settings.automaticSync;
 }
 
 export function noticeDurationForResult(result: SyncResult): number {

@@ -41,10 +41,8 @@ export interface DailyNoteSettings {
 export interface NotificationSettings {
   /** Show completion notices for manually triggered sync actions */
   manualSync: boolean;
-  /** Show completion notices for scheduled desktop syncs */
+  /** Show completion notices for scheduled syncs on desktop and mobile */
   automaticSync: boolean;
-  /** Show completion notices for scheduled mobile syncs */
-  mobileAutomaticSync: boolean;
 }
 
 export const DEFAULT_DAILY_NOTE_MARKER_START = '%% sync-todoist:daily:start %%';
@@ -69,8 +67,7 @@ export const DEFAULT_SETTINGS: TodoistSyncSettings = {
   },
   notifications: {
     manualSync: true,
-    automaticSync: false,
-    mobileAutomaticSync: false,
+    automaticSync: true,
   },
 };
 
