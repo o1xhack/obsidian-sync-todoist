@@ -10,7 +10,7 @@
 
 > Language: **English** · [简体中文](docs/i18n/README.zh-CN.md)
 
-Sync Todoist is currently recommended through **BRAT** while community-plugin submission is being prepared.
+Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
 ## What's New in 0.6.1
 
@@ -32,28 +32,44 @@ Sync Todoist is currently recommended through **BRAT** while community-plugin su
 
 ## Installation
 
-### BRAT (recommended)
+### Community Plugins (recommended)
 
-Use BRAT while Sync Todoist is pending review for the Obsidian Community Plugins directory.
+Install Sync Todoist from Obsidian's built-in Community Plugins browser.
 
 1. Open **Settings -> Community plugins**.
-2. Install and enable [BRAT](https://github.com/TfTHacker/obsidian42-brat).
-3. Run **BRAT: Add a beta plugin for testing**.
-4. Enter `https://github.com/o1xhack/obsidian-sync-todoist`.
-5. Enable **Sync Todoist** and configure your Todoist API token.
+2. If Restricted mode is on, click **Turn on community plugins**.
+3. Click **Browse**.
+4. Search for **Sync Todoist**.
+5. Click **Install**, then **Enable**.
+6. Open **Sync Todoist** settings and configure your Todoist API token.
 
-### Pending: Community Plugins
+### Migrating from BRAT
 
-Sync Todoist is not yet listed in the Obsidian Community Plugins directory. After approval, install it from **Settings -> Community plugins -> Browse**.
+If you previously installed Sync Todoist through BRAT, migrate to the community version without deleting the plugin folder.
 
-### Manual Release
+1. Open **Settings -> Community plugins -> Installed plugins**.
+2. Disable **Sync Todoist**.
+3. Open **Settings -> BRAT**.
+4. Remove `o1xhack/obsidian-sync-todoist` from BRAT's beta plugin list. This stops BRAT from updating it; it does not need to uninstall the plugin from your vault.
+5. Go back to **Settings -> Community plugins -> Browse**.
+6. Search for **Sync Todoist**. Because the plugin ID is still `sync-todoist`, Obsidian may already show it as **Installed**.
+7. If it is already installed, return to **Installed plugins** and enable **Sync Todoist**. If it is not installed, click **Install**, then **Enable**.
+8. Confirm your Todoist API token is still present in settings, then run **Sync Todoist: Sync now** once.
+
+Do not uninstall Sync Todoist from **Installed plugins** unless you intentionally want a clean reinstall.
+
+<details>
+<summary>Manual Release</summary>
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest).
 2. Create `.obsidian/plugins/sync-todoist/` in your vault.
 3. Put the three files in that folder.
 4. Restart Obsidian and enable **Sync Todoist**.
 
-### Build from Source
+</details>
+
+<details>
+<summary>Build from Source</summary>
 
 ```bash
 git clone https://github.com/o1xhack/obsidian-sync-todoist.git
@@ -63,6 +79,8 @@ npm run build
 ```
 
 Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/sync-todoist/`.
+
+</details>
 
 ## Quick Start
 

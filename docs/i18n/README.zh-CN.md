@@ -10,7 +10,7 @@
 
 > 语言：[English](../../README.md) · **简体中文**
 
-Sync Todoist 目前推荐通过 **BRAT** 安装；Community Plugins 提交流程正在准备中。
+Sync Todoist 已可通过 Obsidian Community Plugins 安装。如果你之前通过 BRAT 安装了 beta 版本，可以按下面的迁移步骤停止 BRAT 更新，并继续使用社区插件版本。
 
 ## 0.6.1 新功能
 
@@ -32,28 +32,44 @@ Sync Todoist 目前推荐通过 **BRAT** 安装；Community Plugins 提交流程
 
 ## 安装
 
-### BRAT（推荐）
+### Community Plugins（推荐）
 
-Sync Todoist 还在等待 Obsidian Community Plugins 审核，当前推荐先用 BRAT 安装。
+从 Obsidian 内置的 Community Plugins 浏览器安装 Sync Todoist。
 
 1. 打开 **Settings -> Community plugins**。
-2. 安装并启用 [BRAT](https://github.com/TfTHacker/obsidian42-brat)。
-3. 运行 **BRAT: Add a beta plugin for testing**。
-4. 输入 `https://github.com/o1xhack/obsidian-sync-todoist`。
-5. 启用 **Sync Todoist**，并配置 Todoist API token。
+2. 如果 Restricted mode 仍然开启，点击 **Turn on community plugins**。
+3. 点击 **Browse**。
+4. 搜索 **Sync Todoist**。
+5. 点击 **Install**，然后点击 **Enable**。
+6. 打开 **Sync Todoist** 设置，配置 Todoist API token。
 
-### Pending: Community Plugins
+### 从 BRAT 迁移
 
-Sync Todoist 目前还没有上架 Obsidian Community Plugins。审核通过后，可从 **Settings -> Community plugins -> Browse** 安装。
+如果你之前通过 BRAT 安装了 Sync Todoist，请按下面步骤迁移到社区插件版本，不要删除插件文件夹。
 
-### Manual Release
+1. 打开 **Settings -> Community plugins -> Installed plugins**。
+2. 关闭 **Sync Todoist**。
+3. 打开 **Settings -> BRAT**。
+4. 从 BRAT 的 beta plugin 列表中移除 `o1xhack/obsidian-sync-todoist`。这一步只是停止 BRAT 继续更新它，不需要从 vault 中卸载插件本体。
+5. 回到 **Settings -> Community plugins -> Browse**。
+6. 搜索 **Sync Todoist**。由于插件 ID 仍然是 `sync-todoist`，Obsidian 可能会直接显示 **Installed**。
+7. 如果已经显示 installed，回到 **Installed plugins** 并重新启用 **Sync Todoist**。如果没有安装，则点击 **Install**，然后点击 **Enable**。
+8. 确认 Todoist API token 仍然在设置中，然后运行一次 **Sync Todoist: Sync now**。
+
+除非你想完全重新安装，否则不要在 **Installed plugins** 里卸载 Sync Todoist。
+
+<details>
+<summary>Manual Release</summary>
 
 1. 从 [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest) 下载 `main.js`、`manifest.json` 和 `styles.css`。
 2. 在 vault 中创建 `.obsidian/plugins/sync-todoist/`。
 3. 把三个文件放进去。
 4. 重启 Obsidian，在 Community plugins 中启用 **Sync Todoist**。
 
-### Build from Source
+</details>
+
+<details>
+<summary>Build from Source</summary>
 
 ```bash
 git clone https://github.com/o1xhack/obsidian-sync-todoist.git
@@ -63,6 +79,8 @@ npm run build
 ```
 
 然后把 `main.js`、`manifest.json` 和 `styles.css` 复制到 `.obsidian/plugins/sync-todoist/`。
+
+</details>
 
 ## 快速上手
 
