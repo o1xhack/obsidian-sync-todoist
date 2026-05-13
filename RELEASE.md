@@ -13,9 +13,26 @@ Sync Todoist has an independent release line. Upstream Syncist tags and releases
 
 ## Release Line
 
-- `0.1.0`: first Sync Todoist test release after local manual QA.
+- `0.1.0`: first independent Sync Todoist baseline release after importing upstream Syncist history. This version includes the Sync Todoist rebrand, the `sync-todoist` Obsidian plugin id, the independent release/tag line, and the feature set added on top of upstream Syncist.
 - `0.2.0`: follow-up test release for fixes found during real Obsidian/Todoist use.
 - `1.0.0`: first community-submission candidate after the test release line is stable.
+
+## 0.1.0 Scope
+
+`0.1.0` should be described as the first Sync Todoist release, not as a continuation of upstream Syncist releases.
+
+Compared with the upstream Syncist baseline, `0.1.0` includes:
+
+- Rebranded plugin identity: repository `obsidian-sync-todoist`, display name `Sync Todoist`, Obsidian plugin id `sync-todoist`.
+- Independent release line: upstream Syncist tags and releases are intentionally not reused.
+- Obsidian-compatible release packaging: release tags match `manifest.json` `version` exactly, with `main.js`, `manifest.json`, and `styles.css` attached as release assets.
+- Primary query block language `sync-todoist`, while keeping `syncist` as a migration alias.
+- Completed-task query support through `include_completed`, `completed_by`, `completed_since`, `completed_until`, and `completed_range`.
+- Subtask sync for indented Markdown tasks under a synced parent.
+- Todoist task import from Obsidian, including subtasks.
+- Todoist project metadata through `📁 ProjectName`.
+- Bidirectional Todoist label sync through Markdown hashtags.
+- Direct Todoist API v1 access through Obsidian `requestUrl()` for desktop and mobile compatibility.
 
 ## Release Checklist
 
