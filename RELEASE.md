@@ -19,6 +19,7 @@ Sync Todoist has an independent release line. Upstream Syncist tags and releases
 - `0.4.0`: notification release. Adds prefixed Sync Todoist notices, manual and automatic sync notification controls, and mobile automatic sync notices.
 - `0.4.1`: notification default fix. Enables automatic sync notices by default on desktop and mobile with one shared setting.
 - `0.5.0`: Daily Note polish release. Adds English/Simplified Chinese settings UI, configurable Daily Note primary sorting, completed-task inclusion for today's Daily Note, and a bilingual marker overwrite warning.
+- `0.5.1`: Daily Note completed-task fix. Treats "Include completed tasks" as tasks completed today, regardless of due date.
 - `1.0.0`: first community-submission candidate after the test release line is stable.
 
 ## 0.1.0 Scope

@@ -329,7 +329,7 @@ export class SyncEngine {
     until.setDate(since.getDate() + 1);
 
     const completedTasks = await this.todoistService.getCompletedTasks({
-      by: 'due_date',
+      by: 'completion_date',
       since,
       until,
     });

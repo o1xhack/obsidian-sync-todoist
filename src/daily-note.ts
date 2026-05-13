@@ -106,8 +106,12 @@ export function extractTodoistIdsFromMarkerRegion(
 }
 
 export function taskMatchesDailyNoteFilter(task: TodoistTask, filter: DailyNoteTaskFilter): boolean {
-  if (task.isCompleted && !filter.includeCompleted) return false;
-  if ((task.due?.date ?? null) !== filter.today) return false;
+  if (task.isCompleted) {
+    if (!filter.includeCompleted) return false;
+    if (localDateFromTimestamp(task.completedAt) !== filter.today) return false;
+  } else if ((task.due?.date ?? null) !== filter.today) {
+    return false;
+  }
 
   if (filter.projectIds.length > 0 && !filter.projectIds.includes(task.projectId)) {
     return false;
@@ -124,6 +128,13 @@ export function taskMatchesDailyNoteFilter(task: TodoistTask, filter: DailyNoteT
   }
 
   return true;
+}
+
+function localDateFromTimestamp(timestamp: string | null): string | null {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return null;
+  return localTodayISODate(date);
 }
 
 export function filterDailyNoteTasks(tasks: TodoistTask[], settings: DailyNoteSettings, today: string): TodoistTask[] {

@@ -477,14 +477,14 @@ Test each of these query blocks (create one block per filter):
 5. **Expected**: urgent appears before medium/normal; tasks with the same priority are ordered by time.
 - [ ] **PASS** / **FAIL**
 
-### G8. Daily Note completed-task inclusion
+### G8. Daily Note completed-today inclusion
 
-1. Create or choose a Todoist task due today with a clear time.
+1. Create or choose a Todoist task that is not due today, or has no due date.
 2. Complete it in Todoist.
 3. Disable **Include completed tasks** and sync today's Daily Note.
 4. **Expected**: The completed task is not in the marker block.
 5. Enable **Include completed tasks** and sync again.
-6. **Expected**: The completed task appears as checked and remains ordered by the configured sort.
+6. **Expected**: The task completed today appears as checked and remains ordered by the configured sort, even though its due date is not today.
 - [ ] **PASS** / **FAIL**
 
 ### G9. Daily Note overwrite warning
@@ -512,5 +512,5 @@ Test each of these query blocks (create one block per filter):
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.5.0
+**Plugin version**: 0.5.1
 **Obsidian version**: ___________________

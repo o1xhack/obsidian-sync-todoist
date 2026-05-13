@@ -140,7 +140,7 @@ var STRINGS = {
     "daily.sort.time": "Time first",
     "daily.sort.priority": "Priority first",
     "daily.includeCompleted.name": "Include completed tasks",
-    "daily.includeCompleted.desc": "Keep completed Todoist tasks due today in the Daily Note block and sorted in place.",
+    "daily.includeCompleted.desc": "Keep Todoist tasks completed today in the Daily Note block and sorted in place, regardless of due date.",
     "daily.syncNow.name": "Sync Daily Note now",
     "daily.syncNow.desc": "Refresh today's Daily Note using the current filter settings.",
     "daily.syncNow.button": "Sync today",
@@ -220,7 +220,7 @@ var STRINGS = {
     "daily.sort.time": "\u65F6\u95F4\u4F18\u5148",
     "daily.sort.priority": "\u91CD\u8981\u7A0B\u5EA6\u4F18\u5148",
     "daily.includeCompleted.name": "\u540C\u6B65\u5DF2\u5B8C\u6210\u4EFB\u52A1",
-    "daily.includeCompleted.desc": "\u5C06\u4ECA\u5929\u5230\u671F\u4E14\u5DF2\u5B8C\u6210\u7684 Todoist \u4EFB\u52A1\u4FDD\u7559\u5728 Daily Note \u533A\u95F4\u4E2D\uFF0C\u5E76\u6309\u6392\u5E8F\u89C4\u5219\u653E\u5728\u539F\u4F4D\u7F6E\u3002",
+    "daily.includeCompleted.desc": "\u5C06\u4ECA\u5929\u6807\u8BB0\u5B8C\u6210\u7684 Todoist \u4EFB\u52A1\u4FDD\u7559\u5728 Daily Note \u533A\u95F4\u4E2D\uFF0C\u5E76\u6309\u6392\u5E8F\u89C4\u5219\u653E\u5728\u539F\u4F4D\u7F6E\uFF0C\u4E0D\u8981\u6C42\u622A\u6B62\u65E5\u671F\u662F\u4ECA\u5929\u3002",
     "daily.syncNow.name": "\u7ACB\u5373\u540C\u6B65 Daily Note",
     "daily.syncNow.desc": "\u4F7F\u7528\u5F53\u524D\u7B5B\u9009\u8BBE\u7F6E\u5237\u65B0\u4ECA\u5929\u7684 Daily Note\u3002",
     "daily.syncNow.button": "\u540C\u6B65\u4ECA\u5929",
@@ -1437,10 +1437,14 @@ function extractTodoistIdsFromMarkerRegion(content, markerStart, markerEnd) {
 }
 function taskMatchesDailyNoteFilter(task, filter) {
   var _a, _b, _c;
-  if (task.isCompleted && !filter.includeCompleted)
+  if (task.isCompleted) {
+    if (!filter.includeCompleted)
+      return false;
+    if (localDateFromTimestamp(task.completedAt) !== filter.today)
+      return false;
+  } else if (((_b = (_a = task.due) == null ? void 0 : _a.date) != null ? _b : null) !== filter.today) {
     return false;
-  if (((_b = (_a = task.due) == null ? void 0 : _a.date) != null ? _b : null) !== filter.today)
-    return false;
+  }
   if (filter.projectIds.length > 0 && !filter.projectIds.includes(task.projectId)) {
     return false;
   }
@@ -1454,6 +1458,14 @@ function taskMatchesDailyNoteFilter(task, filter) {
     return false;
   }
   return true;
+}
+function localDateFromTimestamp(timestamp) {
+  if (!timestamp)
+    return null;
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime()))
+    return null;
+  return localTodayISODate(date);
 }
 function filterDailyNoteTasks(tasks, settings, today) {
   const filter = {
@@ -1756,7 +1768,7 @@ var SyncEngine = class {
     const until = new Date(since);
     until.setDate(since.getDate() + 1);
     const completedTasks = await this.todoistService.getCompletedTasks({
-      by: "due_date",
+      by: "completion_date",
       since,
       until
     });

@@ -71,19 +71,48 @@ function runDailyNoteTests(): void {
   const matching = task({ id: 'match', projectId: 'work', priority: TodoistPriority.HIGH, labels: ['Writing'] });
   const wrongDate = task({ id: 'wrong-date', projectId: 'work', priority: TodoistPriority.HIGH, labels: ['writing'], due: { date: '2026-05-12' } });
   const wrongProject = task({ id: 'wrong-project', projectId: 'home', priority: TodoistPriority.HIGH, labels: ['writing'] });
-  const completed = task({ id: 'done', projectId: 'work', priority: TodoistPriority.HIGH, labels: ['writing'], isCompleted: true });
+  const completedTodayNoDue = task({
+    id: 'done-today-no-due',
+    projectId: 'work',
+    priority: TodoistPriority.HIGH,
+    labels: ['writing'],
+    due: null,
+    isCompleted: true,
+    completedAt: '2026-05-13T15:30:00Z',
+  });
+  const completedTodayWrongDue = task({
+    id: 'done-today-wrong-due',
+    projectId: 'work',
+    priority: TodoistPriority.HIGH,
+    labels: ['writing'],
+    due: { date: '2026-05-01' },
+    isCompleted: true,
+    completedAt: '2026-05-13T09:00:00Z',
+  });
+  const completedYesterdayDueToday = task({
+    id: 'done-yesterday-due-today',
+    projectId: 'work',
+    priority: TodoistPriority.HIGH,
+    labels: ['writing'],
+    isCompleted: true,
+    completedAt: '2026-05-12T23:00:00Z',
+  });
   assert.deepEqual(
-    filterDailyNoteTasks([wrongDate, wrongProject, completed, matching], settings, '2026-05-13').map(t => t.id),
+    filterDailyNoteTasks(
+      [wrongDate, wrongProject, completedTodayNoDue, completedTodayWrongDue, completedYesterdayDueToday, matching],
+      settings,
+      '2026-05-13'
+    ).map(t => t.id),
     ['match']
   );
 
   assert.deepEqual(
     filterDailyNoteTasks(
-      [wrongDate, wrongProject, completed, matching],
+      [wrongDate, wrongProject, completedTodayNoDue, completedTodayWrongDue, completedYesterdayDueToday, matching],
       { ...settings, includeCompleted: true },
       '2026-05-13'
     ).map(t => t.id),
-    ['done', 'match']
+    ['done-today-no-due', 'done-today-wrong-due', 'match']
   );
 
   const projectNames: Record<string, string> = {
