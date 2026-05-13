@@ -207,6 +207,39 @@ Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/s
 
 Todoist completed-task archive endpoints require a bounded date window. If no window is configured, Sync Todoist uses the last 6 weeks for `completed_by: due_date` and the last 30 days for `completed_by: completion_date`.
 
+`include_completed` is not the same as "completed today." It only enables a second completed-task lookup and merges those results with the active tasks returned by `filter`.
+
+Use `completed_by` to choose the completed-task date dimension:
+
+- `completed_by: due_date` means the completed task's Todoist due date is inside the completed window.
+- `completed_by: completion_date` means the task was completed inside the completed window.
+
+If `completed_by` is omitted, Sync Todoist infers a default from the filter. Date-oriented filters such as `today`, `overdue`, or `due before...` default to `due_date`. Label or project filters such as `@writing` or `#Work` default to `completion_date`.
+
+Examples:
+
+````markdown
+```sync-todoist
+filter: today
+include_completed: true
+completed_by: due_date
+completed_range: today
+```
+````
+
+This shows active tasks due today and merges completed tasks whose due date is today.
+
+````markdown
+```sync-todoist
+filter: @writing
+include_completed: true
+completed_by: completion_date
+completed_range: today
+```
+````
+
+This shows active `@writing` tasks and merges `@writing` tasks completed today. If you write `filter: today`, `today` still means Todoist's due-today filter; it does not automatically mean completed today.
+
 ## Development
 
 ```bash

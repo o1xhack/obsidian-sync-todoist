@@ -207,6 +207,39 @@ npm run build
 
 Todoist 已完成任务归档接口要求有边界的日期窗口。如果没有配置窗口，Sync Todoist 会对 `completed_by: due_date` 使用最近 6 周，对 `completed_by: completion_date` 使用最近 30 天。
 
+`include_completed` 不等于“今天完成”。它只是额外启用一次已完成任务查询，并把结果合并到 `filter` 返回的未完成任务里。
+
+用 `completed_by` 选择已完成任务的日期维度：
+
+- `completed_by: due_date` 表示已完成任务的 Todoist 截止日期落在 completed 窗口内。
+- `completed_by: completion_date` 表示任务是在 completed 窗口内被标记完成。
+
+如果省略 `completed_by`，Sync Todoist 会根据 filter 自动推断默认值。`today`、`overdue`、`due before...` 这类日期意图 filter 默认使用 `due_date`。`@writing` 或 `#Work` 这类标签/项目 filter 默认使用 `completion_date`。
+
+示例：
+
+````markdown
+```sync-todoist
+filter: today
+include_completed: true
+completed_by: due_date
+completed_range: today
+```
+````
+
+这表示显示今天截止的未完成任务，并合并截止日期也是今天的已完成任务。
+
+````markdown
+```sync-todoist
+filter: @writing
+include_completed: true
+completed_by: completion_date
+completed_range: today
+```
+````
+
+这表示显示未完成的 `@writing` 任务，并合并今天完成的 `@writing` 任务。如果写的是 `filter: today`，这里的 `today` 仍然是 Todoist 的今天截止 filter，不会自动变成今天完成。
+
 ## 开发
 
 ```bash
