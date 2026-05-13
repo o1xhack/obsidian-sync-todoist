@@ -512,5 +512,5 @@ Test each of these query blocks (create one block per filter):
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.5.1
+**Plugin version**: 0.5.2
 **Obsidian version**: ___________________

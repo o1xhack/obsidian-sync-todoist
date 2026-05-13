@@ -1436,20 +1436,20 @@ function extractTodoistIdsFromMarkerRegion(content, markerStart, markerEnd) {
   return ids;
 }
 function taskMatchesDailyNoteFilter(task, filter) {
-  var _a, _b, _c;
+  var _a;
   if (task.isCompleted) {
     if (!filter.includeCompleted)
       return false;
     if (localDateFromTimestamp(task.completedAt) !== filter.today)
       return false;
-  } else if (((_b = (_a = task.due) == null ? void 0 : _a.date) != null ? _b : null) !== filter.today) {
+  } else if (localDateFromTodoistDue(task.due) !== filter.today) {
     return false;
   }
   if (filter.projectIds.length > 0 && !filter.projectIds.includes(task.projectId)) {
     return false;
   }
   if (filter.labels.length > 0) {
-    const taskLabels = new Set(((_c = task.labels) != null ? _c : []).map((label) => label.toLowerCase()));
+    const taskLabels = new Set(((_a = task.labels) != null ? _a : []).map((label) => label.toLowerCase()));
     const hasSelectedLabel = filter.labels.some((label) => taskLabels.has(label.toLowerCase()));
     if (!hasSelectedLabel)
       return false;
@@ -1466,6 +1466,24 @@ function localDateFromTimestamp(timestamp) {
   if (Number.isNaN(date.getTime()))
     return null;
   return localTodayISODate(date);
+}
+function localDateFromTodoistDue(due) {
+  var _a, _b;
+  if (!due)
+    return null;
+  if (due.datetime) {
+    return (_a = localDateFromTimestamp(due.datetime)) != null ? _a : datePrefix(due.datetime);
+  }
+  if (!due.date)
+    return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(due.date))
+    return due.date;
+  return (_b = localDateFromTimestamp(due.date)) != null ? _b : datePrefix(due.date);
+}
+function datePrefix(value) {
+  var _a;
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  return (_a = match == null ? void 0 : match[1]) != null ? _a : null;
 }
 function filterDailyNoteTasks(tasks, settings, today) {
   const filter = {

@@ -1,6 +1,6 @@
 # Sync Todoist
 
-[![版本](https://img.shields.io/badge/version-0.5.1-7c3aed)](../../RELEASE.md)
+[![版本](https://img.shields.io/badge/version-0.5.2-7c3aed)](../../RELEASE.md)
 [![许可证](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](../../LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![插件 ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](../../manifest.json)

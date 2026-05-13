@@ -109,7 +109,7 @@ export function taskMatchesDailyNoteFilter(task: TodoistTask, filter: DailyNoteT
   if (task.isCompleted) {
     if (!filter.includeCompleted) return false;
     if (localDateFromTimestamp(task.completedAt) !== filter.today) return false;
-  } else if ((task.due?.date ?? null) !== filter.today) {
+  } else if (localDateFromTodoistDue(task.due) !== filter.today) {
     return false;
   }
 
@@ -135,6 +135,21 @@ function localDateFromTimestamp(timestamp: string | null): string | null {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return null;
   return localTodayISODate(date);
+}
+
+function localDateFromTodoistDue(due: TodoistTask['due']): string | null {
+  if (!due) return null;
+  if (due.datetime) {
+    return localDateFromTimestamp(due.datetime) ?? datePrefix(due.datetime);
+  }
+  if (!due.date) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(due.date)) return due.date;
+  return localDateFromTimestamp(due.date) ?? datePrefix(due.date);
+}
+
+function datePrefix(value: string): string | null {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? null;
 }
 
 export function filterDailyNoteTasks(tasks: TodoistTask[], settings: DailyNoteSettings, today: string): TodoistTask[] {
