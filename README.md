@@ -1,143 +1,66 @@
-# Sync Todoist - Obsidian Plugin
+# Sync Todoist
 
-### Summary
-With this plugin it is possible to create `Todoist` tasks from `Obsidian` and keep them in sync bidirectionally.
-Its usage is very simple after the plugin has been connected to your Todoist account.
-When you add the `#todoist` tag to a task (or checkbox item) it will automatically be created on Todoist and from that moment onward, the Todoist and Obsidian task will be synced.
+[![Version](https://img.shields.io/badge/version-0.1.0-7c3aed)](RELEASE.md)
+[![License](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](LICENSE)
+[![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
+[![Plugin ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](manifest.json)
 
-### Features
-- **Bidirectional Sync**: Changes in Obsidian or Todoist are synced both ways
-- **Subtasks**: Indented tasks beneath a `#todoist` parent are synced as subtasks automatically — no tag needed on each child
-- **Import from Todoist**: Search and import any Todoist task (with its subtasks) into your note via a fuzzy-search modal
-- **Projects & Labels**: Per-task project assignment with `📁 ProjectName` metadata, bidirectional label sync via `#hashtags`
-- **Query Blocks**: Embed live Todoist task lists in your notes using `sync-todoist` code blocks (e.g., `filter: today`)
-- **Tasks Plugin Compatible**: Works with the popular Obsidian Tasks plugin emojis (📅, ⏫, 🔼, 🔽)
-- **Configurable**: Customize sync tag, default project, sync interval, and conflict resolution
-- **Commands**: Quick commands to create tasks, import tasks, and trigger sync
-- **Conflict Resolution**: Choose how to handle conflicts (Obsidian wins, Todoist wins, or ask)
-- **Zero Dependencies**: Direct Todoist API v1 integration via Obsidian's built-in `requestUrl` — no external SDKs
+**Sync Todoist keeps Markdown tasks in Obsidian and Todoist tasks in sync both ways, without giving up local notes, nested task outlines, labels, projects, or live filtered task views.**
 
-### Installation
+> Language: **English** · [简体中文](docs/i18n/README.zh-CN.md)
 
-#### From Community Plugins (After Approval)
-1. Open Obsidian Settings → Community plugins
-2. Click "Browse" and search for "Sync Todoist"
-3. Install and enable the plugin
-4. Configure your Todoist API token in the plugin settings
+---
 
-#### Manual Installation
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases)
-2. Create a folder `sync-todoist` in your vault's `.obsidian/plugins/` directory
-3. Copy `main.js`, `manifest.json`, and `styles.css` into that folder
-4. Enable the plugin in Obsidian settings
+## Why?
 
-#### From Source (Development)
-1. Clone this repository
-2. Run `npm install` and `npm run build`
-3. Copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/sync-todoist/` in a test vault
-4. Enable Community plugins in Settings → Community plugins
-5. Enable the "Sync Todoist" plugin
+- **Write tasks where you think** - add `#todoist` to an Obsidian checkbox and it becomes a Todoist task.
+- **Keep hierarchy intact** - indented children under a synced parent become Todoist subtasks automatically.
+- **Bring Todoist into notes** - import existing Todoist tasks and render live Todoist filters with `sync-todoist` query blocks.
+- **Works on desktop and mobile** - network calls use Obsidian's `requestUrl()` API instead of a Node-only SDK.
 
-### Configuration
+## Sync from Markdown
 
-1. Get your Todoist API token from [Todoist Settings → Integrations → Developer](https://todoist.com/app/settings/integrations/developer)
-2. Open plugin settings in Obsidian
-3. Enter your API token and click "Verify"
-4. Configure other settings as needed:
-   - **Sync Tag**: Tag to mark tasks for sync (default: `#todoist`)
-   - **Default Project**: Where new tasks go (default: Inbox)
-   - **Sync Interval**: Auto-sync frequency in minutes
-   - **Conflict Resolution**: How to handle conflicting changes
+Add the sync tag to any Markdown task:
 
-### Usage
-
-#### Creating Tasks
-Add the `#todoist` tag to any task:
 ```markdown
 - [ ] Buy groceries #todoist
 - [ ] Meeting with team #todoist 📅 2026-01-28 ⏫
 ```
 
-After sync, the task will have a Todoist ID:
+After sync, Sync Todoist records the Todoist task ID in an HTML comment so future edits update the same task:
+
 ```markdown
 - [ ] Buy groceries #todoist <!-- todoist-id:8765432109 -->
 ```
 
-#### Subtasks
-Indent tasks beneath a `#todoist`-tagged parent. Subtasks inherit the sync tag automatically — you do **not** need to add `#todoist` to each one:
+Changes flow both ways. Completion, title edits, due dates, priorities, labels, projects, and configured conflict behavior are all handled during sync.
+
+## Subtasks, Projects, and Labels
+
+Indent tasks beneath a `#todoist` parent. Child tasks inherit sync from the parent, so you do not need to tag each child:
+
 ```markdown
-- [ ] Buy groceries #todoist <!-- todoist-id:111 -->
-  - [ ] Milk <!-- todoist-id:222 -->
-  - [ ] Bread <!-- todoist-id:333 -->
-  - [ ] Eggs
+- [ ] Plan launch #todoist 📁 Work #marketing 📅 2026-03-05
+  - [ ] Draft announcement
+  - [ ] Review screenshots
+  - [ ] Publish release notes
 ```
 
-- Subtasks are synced as Todoist subtasks (using `parentId`)
-- New indented tasks without a Todoist ID are created as subtasks on the next sync
-- Subtask hierarchy is preserved in both directions
+`📁 ProjectName` routes a task to a Todoist project, and hashtags other than the sync tag are synced as Todoist labels. Subtask hierarchy is preserved with Todoist `parentId` relationships.
 
-#### Importing Tasks from Todoist
-Use the command **"Import task from Todoist"** to search for any open Todoist task and insert it at your cursor:
+## Query Blocks
 
-1. Open the command palette (`Ctrl/Cmd + P`)
-2. Run "Sync Todoist: Import task from Todoist"
-3. Search by task content, project, label, or due date
-4. Select a task — it and its subtasks are inserted as synced markdown
-
-#### Projects and Labels
-Assign a project to a task using the `📁` emoji:
-```markdown
-- [ ] Design review #todoist #design #urgent 📁 WorkProject 📅 2026-03-05 <!-- todoist-id:123 -->
-```
-
-- `📁 ProjectName` sets the Todoist project for the task (overrides the default project)
-- `#hashtags` (other than the sync tag) are synced as Todoist labels, bidirectionally
-- Project names are resolved from the Todoist project list and cached
-
-#### Query Blocks (Show Today's Tasks)
-Embed a live, interactive task list in any note using a `sync-todoist` code block:
+Embed a live Todoist task list in any note:
 
 ````markdown
 ```sync-todoist
-filter: today
+filter: today | overdue
 ```
 ````
 
-The block renders as a styled task list with checkboxes, priorities, projects, and due dates. You can complete or reopen tasks directly from the rendered block.
+Query blocks use [Todoist filter syntax](https://todoist.com/help/articles/introduction-to-filters-702348ff), render checkboxes in Obsidian, include a refresh button, and show when they were last updated. The original `syncist` code block language is still accepted as a migration alias.
 
-**Supported filters** (uses [Todoist filter syntax](https://todoist.com/help/articles/introduction-to-filters-702348ff)):
-
-| Filter | Description |
-|--------|-------------|
-| `filter: today` | Tasks due today |
-| `filter: overdue` | Overdue tasks |
-| `filter: today \| overdue` | Combined filters |
-| `filter: #ProjectName` | Tasks in a project |
-| `filter: @label` | Tasks with a label |
-| `filter: p1` | High priority tasks |
-
-To include completed tasks, keep `filter:` as Todoist filter syntax and add Sync Todoist-specific options:
-
-````markdown
-```sync-todoist
-filter: today
-include_completed: true
-completed_by: due_date
-```
-````
-
-Completed task search uses Todoist's completed-task archive endpoints, which require a bounded date window. If no window is configured, Sync Todoist uses the last 6 weeks for `completed_by: due_date` and the last 30 days for `completed_by: completion_date`. Label and project filters default to `completion_date`; date-oriented filters default to `due_date`.
-
-| Option | Description |
-|--------|-------------|
-| `include_completed: true` | Merge active results with matching completed tasks |
-| `completed_by: due_date` | Find completed tasks by their Todoist due date |
-| `completed_by: completion_date` | Find completed tasks by when they were completed |
-| `completed_since: 30d` | Start of the completed-task window (`30d`, `6w`, `3m`, `today`, `yesterday`, or `YYYY-MM-DD`) |
-| `completed_until: today` | End of the completed-task window (`today`, `now`, or `YYYY-MM-DD`) |
-| `completed_range: today` | Shortcut for one bounded range (`today`, `yesterday`, `YYYY-MM-DD`, `30d`, `6w`, `3m`) |
-
-Example for recently completed label work:
+Completed tasks can be merged into query results with bounded archive lookups:
 
 ````markdown
 ```sync-todoist
@@ -148,46 +71,155 @@ completed_since: 30d
 ```
 ````
 
-Each query block includes a refresh button and shows when it was last updated.
+## Quick Start
 
-#### Commands
-- **Create Todoist task from current line**: Convert current line to a synced task
-- **Import task from Todoist**: Search and import a Todoist task at cursor
-- **Sync with Todoist now**: Manually trigger sync
-- **Open Sync Todoist settings**: Quick access to settings
+1. Install the plugin manually or build it from source.
+2. Get your Todoist API token from [Todoist Settings -> Integrations -> Developer](https://todoist.com/app/settings/integrations/developer).
+3. Open **Settings -> Community plugins -> Sync Todoist**, paste the token, and click **Verify**.
+4. Add `#todoist` to a Markdown task, then run **Sync Todoist: Sync now**.
 
-### Supported Task Formats
+## Install
 
-| Emoji | Meaning | Todoist Mapping |
-|-------|---------|-----------------|
-| 📅 | Due date | Task due date |
-| ⏫ | High priority | Priority 4 |
-| 🔼 | Medium priority | Priority 3 |
-| 🔽 | Low priority | Priority 2 |
-| 📁 | Project | Task project |
+<details>
+<summary><b>Community Plugins</b></summary>
 
-### Network Usage
+Sync Todoist is not yet listed in the Obsidian Community Plugins directory. After approval:
 
-This plugin connects directly to the **Todoist API v1** (via Obsidian's built-in `requestUrl`) to sync tasks. There are no external SDK dependencies. Your Todoist API token is stored locally in Obsidian's plugin data and is only used to communicate with Todoist's servers (`api.todoist.com`).
+1. Open **Settings -> Community plugins**.
+2. Click **Browse** and search for **Sync Todoist**.
+3. Install and enable the plugin.
+4. Configure your Todoist API token in plugin settings.
 
-### Development
+</details>
 
-To build the plugin from source:
+<details>
+<summary><b>Manual release install</b></summary>
+
+The first Sync Todoist release will use the independent `0.1.0` release line described in [RELEASE.md](RELEASE.md). Once a GitHub release exists:
+
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest).
+2. Create `.obsidian/plugins/sync-todoist/` in your vault.
+3. Copy the three release files into that folder.
+4. Restart Obsidian and enable **Sync Todoist** in Community plugins.
+
+</details>
+
+<details>
+<summary><b>Build from source</b></summary>
+
 ```bash
+git clone https://github.com/o1xhack/obsidian-sync-todoist.git
+cd obsidian-sync-todoist
 npm install
 npm run build
 ```
 
-To lint:
+Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/sync-todoist/` in a test vault.
+
+</details>
+
+## Configuration
+
+| Setting | Default | Description |
+|---|---|---|
+| Todoist API token | empty | Required token used to call Todoist's API. Stored locally in Obsidian plugin data. |
+| Sync tag | `#todoist` | Markdown tag that marks top-level tasks for sync. |
+| Default project | Inbox | Todoist project for new tasks unless the task has `📁 ProjectName`. |
+| Sync interval | `5` minutes | Auto-sync frequency. Set to `0` to disable automatic sync. |
+| Conflict resolution | `Todoist wins` | Behavior when both Obsidian and Todoist changed the same task. |
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| **Create task from current line** | Converts the current Markdown task into a synced Todoist task. |
+| **Import task from todoist** | Searches open Todoist tasks and inserts the selected task, including subtasks, at the cursor. |
+| **Sync now** | Runs a manual sync. |
+| **Open settings** | Opens the Sync Todoist settings tab. |
+
+## Supported Task Metadata
+
+| Marker | Meaning | Todoist mapping |
+|---|---|---|
+| `📅 2026-01-28` | Due date | Task due date |
+| `due:2026-01-28` | Due date | Task due date |
+| `🔺` | Urgent priority | Priority 4 |
+| `⏫` | High priority | Priority 3 |
+| `🔼` | Medium priority | Priority 2 |
+| `🔽` | Normal priority | Priority 1 |
+| `📁 Work` | Project | Todoist project named `Work` |
+| `#label` | Label | Todoist label, except the sync tag |
+
+## Query Block Reference
+
+| Option | Description |
+|---|---|
+| `filter: today` | Active tasks matching a Todoist filter. |
+| `include_completed: true` | Merge matching completed tasks into active results. |
+| `completed_by: due_date` | Search completed tasks by their Todoist due date. |
+| `completed_by: completion_date` | Search completed tasks by when they were completed. |
+| `completed_since: 30d` | Start of completed-task window: `30d`, `6w`, `3m`, `today`, `yesterday`, or `YYYY-MM-DD`. |
+| `completed_until: today` | End of completed-task window: `today`, `now`, or `YYYY-MM-DD`. |
+| `completed_range: today` | Shortcut for one bounded range: `today`, `yesterday`, `YYYY-MM-DD`, `30d`, `6w`, or `3m`. |
+
+Todoist completed-task archive endpoints require a bounded date window. If no window is configured, Sync Todoist uses the last 6 weeks for `completed_by: due_date` and the last 30 days for `completed_by: completion_date`.
+
+## Development
+
 ```bash
+npm install
 npm run lint
+npm run build
+npx tsc --noEmit
 ```
 
-### About This Plugin
+No automated test framework is configured. Use [test/TEST_SPEC_v2.0.0.md](test/TEST_SPEC_v2.0.0.md) for manual QA against a test vault and Todoist account.
 
-- Direct Todoist API v1 integration — no external SDKs, only Obsidian's built-in `requestUrl`
-- Query blocks support both the primary `sync-todoist` code block language and the original `syncist` alias for migration.
-- This project is based on [Syncist](https://github.com/bastiaanschonhage/syncist) by Bastiaan Schönhage, used under the MIT License. The original copyright and license notice are retained in `LICENSE`, and the upstream git history is preserved.
+Release tags must exactly match `manifest.json` `version`, and every public release must attach `main.js`, `manifest.json`, and `styles.css`. See [RELEASE.md](RELEASE.md).
 
-### Finally
-If you like this plugin, please give it a star on `GitHub` and in `Obsidian`!
+## FAQ
+
+<details>
+<summary><b>Why is the repository named <code>obsidian-sync-todoist</code> but the plugin ID is <code>sync-todoist</code>?</b></summary>
+
+The GitHub repository keeps the descriptive Obsidian-focused name. The Obsidian plugin ID is `sync-todoist` because Obsidian plugin IDs must not include `obsidian`.
+
+</details>
+
+<details>
+<summary><b>Where is my Todoist API token stored?</b></summary>
+
+It is stored locally in Obsidian's plugin data file for your vault. The runtime `data.json` file is intentionally gitignored.
+
+</details>
+
+<details>
+<summary><b>Does this use a third-party Todoist SDK?</b></summary>
+
+No. Sync Todoist talks directly to Todoist API v1 through Obsidian's `requestUrl()` API for desktop and mobile compatibility.
+
+</details>
+
+## Contributing
+
+Issues and PRs are welcome. Before opening a PR, run:
+
+```bash
+npm run lint
+npm run build
+npx tsc --noEmit
+```
+
+For behavior changes, also walk through the relevant sections of [test/TEST_SPEC_v2.0.0.md](test/TEST_SPEC_v2.0.0.md).
+
+## Acknowledgements
+
+Sync Todoist is based on [Syncist](https://github.com/bastiaanschonhage/syncist) by Bastiaan Schönhage, used under the MIT License. This repository keeps the upstream history, copyright notice, and license text intact while adding the independent Sync Todoist release line, `sync-todoist` plugin ID, subtasks, import, projects, labels, query blocks, and completed-task queries.
+
+## License
+
+MIT - see [LICENSE](LICENSE).
+
+---
+
+Author: [o1xhack](https://github.com/o1xhack)
