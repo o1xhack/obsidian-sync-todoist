@@ -16,3 +16,6 @@ data.json
 
 # Test vault (local development only)
 TestVault/
+
+# Generated test bundles
+test/.tmp/

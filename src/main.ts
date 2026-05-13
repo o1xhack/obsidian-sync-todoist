@@ -10,6 +10,7 @@ import {
   SyncState,
   DEFAULT_SYNC_STATE,
   SyncResult,
+  DailyNoteSyncResult,
 } from './types';
 
 /**
@@ -204,20 +205,52 @@ export default class TodoistSyncPlugin extends Plugin {
         }
       },
     });
+
+    // Command: Sync today's Daily Note
+    this.addCommand({
+      id: 'sync-daily-note-today',
+      name: 'Sync today\'s daily note',
+      callback: async () => {
+        if (!this.settings.apiToken) {
+          new Notice('Please configure your API token in the settings.');
+          return;
+        }
+
+        const result = await this.syncDailyNoteNow();
+        if (result.status === 'updated') {
+          new Notice(`Daily Note updated: ${result.taskCount} task(s).`);
+        } else {
+          new Notice(result.message ?? `Daily Note not updated: ${result.status}`);
+        }
+      },
+    });
   }
 
   /**
    * Load plugin settings
    */
   async loadSettings(): Promise<void> {
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    const data = await this.loadData() as Partial<TodoistSyncSettings> | null;
+    this.settings = {
+      ...DEFAULT_SETTINGS,
+      ...(data ?? {}),
+      dailyNote: {
+        ...DEFAULT_SETTINGS.dailyNote,
+        ...(data?.dailyNote ?? {}),
+      },
+    };
   }
 
   /**
    * Save plugin settings
    */
   async saveSettings(): Promise<void> {
-    await this.saveData(this.settings);
+    const data = await this.loadData() ?? {};
+    await this.saveData({
+      ...data,
+      ...this.settings,
+      syncState: this.syncEngine?.getSyncState() ?? this.syncState,
+    });
     
     // Update services with new settings
     if (this.settings.apiToken) {
@@ -268,6 +301,13 @@ export default class TodoistSyncPlugin extends Plugin {
       this.updateStatusBar('Sync failed');
       throw error;
     }
+  }
+
+  async syncDailyNoteNow(): Promise<DailyNoteSyncResult> {
+    const result = await this.syncEngine.syncDailyNoteNow();
+    await this.saveSyncState();
+    this.updateStatusBar();
+    return result;
   }
 
   /**

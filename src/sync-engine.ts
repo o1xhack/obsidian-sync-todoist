@@ -1,5 +1,13 @@
-import { App, TFile } from 'obsidian';
+import { App, moment, normalizePath, TFile } from 'obsidian';
 import { TodoistService } from './todoist-service';
+import {
+  buildDailyNoteParsedTask,
+  extractTodoistIdsFromMarkerRegion,
+  filterDailyNoteTasks,
+  localTodayISODate,
+  renderDailyNoteTaskBlock,
+  updateDailyNoteContent,
+} from './daily-note';
 import {
   parseTasksFromContent,
   buildTaskLine,
@@ -14,7 +22,18 @@ import {
   SyncConflict,
   TodoistSyncSettings,
   TodoistTask,
+  DailyNoteSyncResult,
 } from './types';
+
+interface DailyNotesCorePlugin {
+  enabled?: boolean;
+  instance?: {
+    options?: {
+      folder?: string;
+      format?: string;
+    };
+  };
+}
 
 /**
  * Core sync engine for bidirectional Todoist <-> Obsidian sync
@@ -208,6 +227,21 @@ export class SyncEngine {
       }
 
       this.syncState.lastFullSync = Date.now();
+
+      if (this.settings.dailyNote.enabled) {
+        try {
+          const freshTasks = await this.todoistService.getTasks();
+          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks);
+          if (result.dailyNote.status === 'error' || result.dailyNote.status === 'invalid_markers') {
+            result.errors.push(result.dailyNote.message ?? 'Daily Note sync failed');
+          }
+        } catch (error) {
+          const message = `Daily Note sync failed: ${error}`;
+          result.dailyNote = { status: 'error', taskCount: 0, message };
+          result.errors.push(message);
+        }
+      }
+
       console.debug('Todoist Sync: Completed!', result);
 
     } catch (error) {
@@ -271,6 +305,137 @@ export class SyncEngine {
 
     console.debug(`Todoist Sync: Scan complete — ${files.length} files, ${tasks.length} tasks found`);
     return tasks;
+  }
+
+  async syncDailyNoteNow(): Promise<DailyNoteSyncResult> {
+    if (!this.todoistService.isInitialized()) {
+      return { status: 'error', taskCount: 0, message: 'Todoist API not configured' };
+    }
+    await this.todoistService.ensureProjectCache();
+    const tasks = await this.todoistService.getTasks();
+    return this.syncTasksIntoDailyNote(tasks);
+  }
+
+  private getDailyNotePath(date: string): { status: 'ok'; path: string } | { status: 'daily_plugin_disabled'; message: string } {
+    const appWithInternal = this.app as App & {
+      internalPlugins?: {
+        plugins?: Record<string, DailyNotesCorePlugin>;
+      };
+    };
+    const dailyNotesPlugin = appWithInternal.internalPlugins?.plugins?.['daily-notes'];
+    if (!dailyNotesPlugin?.enabled) {
+      return {
+        status: 'daily_plugin_disabled',
+        message: 'Enable Obsidian core Daily notes plugin first.',
+      };
+    }
+
+    const options = dailyNotesPlugin.instance?.options ?? {};
+    const format = options.format?.trim() || 'YYYY-MM-DD';
+    const folder = (options.folder ?? '').trim().replace(/^\/+|\/+$/g, '');
+    const filename = moment(date, 'YYYY-MM-DD').format(format);
+    return {
+      status: 'ok',
+      path: normalizePath(folder ? `${folder}/${filename}.md` : `${filename}.md`),
+    };
+  }
+
+  private async syncTasksIntoDailyNote(tasks: TodoistTask[]): Promise<DailyNoteSyncResult> {
+    const settings = this.settings.dailyNote;
+    if (!settings.enabled) {
+      return { status: 'disabled', taskCount: 0 };
+    }
+
+    const today = localTodayISODate();
+    const pathResult = this.getDailyNotePath(today);
+    if (pathResult.status !== 'ok') {
+      return { status: pathResult.status, taskCount: 0, message: pathResult.message };
+    }
+
+    const file = this.app.vault.getAbstractFileByPath(pathResult.path);
+    if (!(file instanceof TFile)) {
+      return {
+        status: 'skipped_no_file',
+        filePath: pathResult.path,
+        taskCount: 0,
+        message: `Daily Note not found: ${pathResult.path}`,
+      };
+    }
+
+    const filteredTasks = filterDailyNoteTasks(tasks, settings, today);
+    const oldContent = await this.app.vault.read(file);
+    const staleIds = extractTodoistIdsFromMarkerRegion(oldContent, settings.markerStart, settings.markerEnd);
+    const block = renderDailyNoteTaskBlock(
+      filteredTasks,
+      settings.markerStart,
+      settings.markerEnd,
+      this.settings.syncTag,
+      (projectId) => this.resolveProjectName(projectId),
+      pathResult.path
+    );
+    const update = updateDailyNoteContent(oldContent, settings.markerStart, settings.markerEnd, block);
+
+    if (update.status === 'invalid_markers') {
+      return {
+        status: 'invalid_markers',
+        filePath: pathResult.path,
+        taskCount: filteredTasks.length,
+        message: 'Daily Note markers are missing a pair, inverted, empty, or identical.',
+      };
+    }
+
+    if (update.content !== oldContent) {
+      await this.app.vault.modify(file, update.content);
+    }
+
+    for (const id of staleIds) {
+      delete this.syncState.tasks[id];
+    }
+
+    if (filteredTasks.length === 0) {
+      return {
+        status: 'skipped_no_tasks',
+        filePath: pathResult.path,
+        taskCount: 0,
+        message: 'No matching Todoist tasks due today.',
+      };
+    }
+
+    const markerLine = this.findMarkerLine(update.content, settings.markerStart);
+    const firstTaskLine = markerLine + 1;
+    for (let i = 0; i < filteredTasks.length; i++) {
+      const todoistTask = filteredTasks[i];
+      const obsidianTask = buildDailyNoteParsedTask(
+        todoistTask,
+        pathResult.path,
+        firstTaskLine + i,
+        (projectId) => this.resolveProjectName(projectId)
+      );
+      this.syncState.tasks[todoistTask.id] = {
+        todoistId: todoistTask.id,
+        parentId: todoistTask.parentId,
+        filePath: pathResult.path,
+        lineNumber: firstTaskLine + i,
+        contentHash: generateContentHash(obsidianTask),
+        lastSynced: Date.now(),
+        obsidianCompleted: todoistTask.isCompleted,
+        todoistCompleted: todoistTask.isCompleted,
+        projectId: todoistTask.projectId,
+      };
+    }
+
+    return {
+      status: 'updated',
+      filePath: pathResult.path,
+      taskCount: filteredTasks.length,
+      message: `Updated Daily Note with ${filteredTasks.length} Todoist task(s).`,
+    };
+  }
+
+  private findMarkerLine(content: string, markerStart: string): number {
+    const idx = content.indexOf(markerStart);
+    if (idx <= 0) return 0;
+    return content.slice(0, idx).split('\n').length - 1;
   }
 
   /**

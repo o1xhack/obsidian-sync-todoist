@@ -12,12 +12,32 @@ export interface TodoistSyncSettings {
   syncIntervalMinutes: number;
   /** Conflict resolution strategy */
   conflictResolution: ConflictResolution;
+  /** Daily Note integration settings */
+  dailyNote: DailyNoteSettings;
 }
 
 /**
  * Conflict resolution options
  */
 export type ConflictResolution = 'obsidian-wins' | 'todoist-wins' | 'ask-user';
+
+export interface DailyNoteSettings {
+  /** Whether to write today's Todoist tasks into today's Daily Note */
+  enabled: boolean;
+  /** Marker that starts the managed Daily Note region */
+  markerStart: string;
+  /** Marker that ends the managed Daily Note region */
+  markerEnd: string;
+  /** Todoist project IDs to include. Empty means all projects. */
+  projectIds: string[];
+  /** Todoist label names to include. Empty means all labels. */
+  labels: string[];
+  /** Todoist priority values to include. Empty means all priorities. */
+  priorities: TodoistPriority[];
+}
+
+export const DEFAULT_DAILY_NOTE_MARKER_START = '%% sync-todoist:daily:start %%';
+export const DEFAULT_DAILY_NOTE_MARKER_END = '%% sync-todoist:daily:end %%';
 
 /**
  * Default plugin settings
@@ -28,6 +48,14 @@ export const DEFAULT_SETTINGS: TodoistSyncSettings = {
   defaultProjectId: '',
   syncIntervalMinutes: 5,
   conflictResolution: 'todoist-wins',
+  dailyNote: {
+    enabled: false,
+    markerStart: DEFAULT_DAILY_NOTE_MARKER_START,
+    markerEnd: DEFAULT_DAILY_NOTE_MARKER_END,
+    projectIds: [],
+    labels: [],
+    priorities: [],
+  },
 };
 
 /**
@@ -197,6 +225,12 @@ export interface TodoistProject {
   isInbox: boolean;
 }
 
+export interface TodoistLabel {
+  id: string;
+  name: string;
+  isShared: boolean;
+}
+
 /**
  * Task options for creating/updating Todoist tasks
  */
@@ -218,6 +252,14 @@ export interface SyncResult {
   completed: number;
   conflicts: number;
   errors: string[];
+  dailyNote?: DailyNoteSyncResult;
+}
+
+export interface DailyNoteSyncResult {
+  status: 'disabled' | 'updated' | 'skipped_no_file' | 'skipped_no_tasks' | 'daily_plugin_disabled' | 'invalid_markers' | 'error';
+  filePath?: string;
+  taskCount: number;
+  message?: string;
 }
 
 export interface SyncConflict {

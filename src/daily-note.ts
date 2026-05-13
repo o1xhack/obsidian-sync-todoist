@@ -1,0 +1,179 @@
+import {
+  DEFAULT_DAILY_NOTE_MARKER_END,
+  DEFAULT_DAILY_NOTE_MARKER_START,
+  DailyNoteSettings,
+  ParsedObsidianTask,
+  TodoistPriority,
+  TodoistTask,
+} from './types';
+import { buildTaskLine } from './task-parser';
+
+export const DAILY_NOTE_DEFAULT_MARKER_START = DEFAULT_DAILY_NOTE_MARKER_START;
+export const DAILY_NOTE_DEFAULT_MARKER_END = DEFAULT_DAILY_NOTE_MARKER_END;
+
+export interface DailyNoteContentUpdate {
+  content: string;
+  status: 'appended' | 'replaced' | 'unchanged' | 'invalid_markers';
+}
+
+export interface DailyNoteTaskFilter {
+  today: string;
+  projectIds: string[];
+  labels: string[];
+  priorities: TodoistPriority[];
+}
+
+export function localTodayISODate(now: Date = new Date()): string {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function isMarkerPairConfigValid(markerStart: string, markerEnd: string): boolean {
+  return markerStart.length > 0 && markerEnd.length > 0 && markerStart !== markerEnd;
+}
+
+export function isMarkerRegionValid(content: string, markerStart: string, markerEnd: string): boolean {
+  if (!isMarkerPairConfigValid(markerStart, markerEnd)) return false;
+  const startIdx = content.indexOf(markerStart);
+  if (startIdx === -1) return false;
+  const endIdx = content.indexOf(markerEnd, startIdx + markerStart.length);
+  return endIdx !== -1;
+}
+
+function hasAnyMarker(content: string, markerStart: string, markerEnd: string): boolean {
+  return content.includes(markerStart) || content.includes(markerEnd);
+}
+
+export function replaceMarkerBlock(
+  content: string,
+  markerStart: string,
+  markerEnd: string,
+  newBlock: string
+): string {
+  const startIdx = content.indexOf(markerStart);
+  const endIdx = content.indexOf(markerEnd, startIdx + markerStart.length);
+  const before = content.slice(0, startIdx);
+  const after = content.slice(endIdx + markerEnd.length);
+  return before + newBlock + after;
+}
+
+export function appendMarkerBlock(content: string, newBlock: string): string {
+  const trimmed = content.replace(/\s+$/, '');
+  return trimmed.length > 0 ? `${trimmed}\n\n${newBlock}\n` : `${newBlock}\n`;
+}
+
+export function updateDailyNoteContent(
+  content: string,
+  markerStart: string,
+  markerEnd: string,
+  newBlock: string
+): DailyNoteContentUpdate {
+  if (!isMarkerPairConfigValid(markerStart, markerEnd)) {
+    return { content, status: 'invalid_markers' };
+  }
+
+  if (isMarkerRegionValid(content, markerStart, markerEnd)) {
+    const next = replaceMarkerBlock(content, markerStart, markerEnd, newBlock);
+    return { content: next, status: next === content ? 'unchanged' : 'replaced' };
+  }
+
+  if (hasAnyMarker(content, markerStart, markerEnd)) {
+    return { content, status: 'invalid_markers' };
+  }
+
+  return { content: appendMarkerBlock(content, newBlock), status: 'appended' };
+}
+
+export function extractTodoistIdsFromMarkerRegion(
+  content: string,
+  markerStart: string,
+  markerEnd: string
+): string[] {
+  if (!isMarkerRegionValid(content, markerStart, markerEnd)) return [];
+  const startIdx = content.indexOf(markerStart);
+  const endIdx = content.indexOf(markerEnd, startIdx + markerStart.length);
+  const region = content.slice(startIdx + markerStart.length, endIdx);
+  const ids: string[] = [];
+  const pattern = /<!--\s*todoist-id:\s*([\w]+)\s*-->/g;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(region)) !== null) {
+    ids.push(match[1]);
+  }
+  return ids;
+}
+
+export function taskMatchesDailyNoteFilter(task: TodoistTask, filter: DailyNoteTaskFilter): boolean {
+  if (task.isCompleted) return false;
+  if ((task.due?.date ?? null) !== filter.today) return false;
+
+  if (filter.projectIds.length > 0 && !filter.projectIds.includes(task.projectId)) {
+    return false;
+  }
+
+  if (filter.labels.length > 0) {
+    const taskLabels = new Set((task.labels ?? []).map(label => label.toLowerCase()));
+    const hasSelectedLabel = filter.labels.some(label => taskLabels.has(label.toLowerCase()));
+    if (!hasSelectedLabel) return false;
+  }
+
+  if (filter.priorities.length > 0 && !filter.priorities.includes(task.priority)) {
+    return false;
+  }
+
+  return true;
+}
+
+export function filterDailyNoteTasks(tasks: TodoistTask[], settings: DailyNoteSettings, today: string): TodoistTask[] {
+  const filter: DailyNoteTaskFilter = {
+    today,
+    projectIds: settings.projectIds,
+    labels: settings.labels,
+    priorities: settings.priorities,
+  };
+  return tasks.filter(task => taskMatchesDailyNoteFilter(task, filter));
+}
+
+export function renderDailyNoteTaskBlock(
+  tasks: TodoistTask[],
+  markerStart: string,
+  markerEnd: string,
+  syncTag: string,
+  resolveProjectName: (projectId: string) => string | null,
+  filePath: string
+): string {
+  const lines = tasks.map((task, index) => {
+    const parsed = buildDailyNoteParsedTask(task, filePath, index, resolveProjectName);
+    return buildTaskLine(parsed, syncTag);
+  });
+
+  return lines.length > 0
+    ? `${markerStart}\n${lines.join('\n')}\n${markerEnd}`
+    : `${markerStart}\n${markerEnd}`;
+}
+
+export function buildDailyNoteParsedTask(
+  task: TodoistTask,
+  filePath: string,
+  lineNumber: number,
+  resolveProjectName: (projectId: string) => string | null
+): ParsedObsidianTask {
+  return {
+    originalLine: '',
+    lineNumber,
+    filePath,
+    content: task.content,
+    isCompleted: task.isCompleted,
+    todoistId: task.id,
+    parentId: task.parentId,
+    indentLevel: 0,
+    dueDate: task.due?.date ?? null,
+    priority: task.priority,
+    labels: task.labels ?? [],
+    description: task.description ?? '',
+    projectId: task.projectId,
+    projectName: resolveProjectName(task.projectId),
+    lastModified: Date.now(),
+  };
+}

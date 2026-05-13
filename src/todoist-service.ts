@@ -3,6 +3,7 @@ import {
   TaskOptions,
   TodoistPriority,
   TodoistProject,
+  TodoistLabel,
   TodoistTask,
   TodoistApiRawTask,
   TodoistApiRawProject,
@@ -19,6 +20,11 @@ export interface CompletedTaskQueryOptions {
   by: TodoistCompletedTaskDateMode;
   since: Date;
   until: Date;
+}
+
+interface TodoistApiRawLabel {
+  id: string;
+  name: string;
 }
 
 /**
@@ -92,6 +98,67 @@ export class TodoistService {
       console.error('Failed to get projects:', error);
       throw error;
     }
+  }
+
+  async getLabels(): Promise<TodoistLabel[]> {
+    if (!this.apiToken) throw new Error('Todoist API not initialized');
+
+    const labels: TodoistLabel[] = [];
+    const seenNames = new Set<string>();
+
+    let personalCursor: string | null = null;
+    do {
+      const params = new URLSearchParams({ limit: '200' });
+      if (personalCursor) params.set('cursor', personalCursor);
+      const personalResp = await requestUrl({
+        url: `${API_BASE}/labels?${params.toString()}`,
+        headers: this.headers(),
+        throw: false,
+      });
+
+      if (personalResp.status !== 200) {
+        throw new Error(`Failed to get labels, status ${personalResp.status}`);
+      }
+
+      const personalData = personalResp.json as TodoistPaginatedResponse<TodoistApiRawLabel>;
+      const personalLabels = personalData.results ?? [];
+      for (const label of personalLabels) {
+        if (seenNames.has(label.name)) continue;
+        seenNames.add(label.name);
+        labels.push({ id: label.id, name: label.name, isShared: false });
+      }
+      personalCursor = personalData.next_cursor ?? null;
+    } while (personalCursor);
+
+    let sharedCursor: string | null = null;
+    do {
+      const params = new URLSearchParams({ limit: '200' });
+      if (sharedCursor) params.set('cursor', sharedCursor);
+      const sharedResp = await requestUrl({
+        url: `${API_BASE}/labels/shared?${params.toString()}`,
+        headers: this.headers(),
+        throw: false,
+      });
+
+      if (sharedResp.status === 404) {
+        break;
+      }
+
+      if (sharedResp.status !== 200) {
+        throw new Error(`Failed to get shared labels, status ${sharedResp.status}`);
+      }
+
+      const sharedData = sharedResp.json as TodoistPaginatedResponse<string>;
+      const names = sharedData.results ?? [];
+      for (const name of names) {
+        if (seenNames.has(name)) continue;
+        seenNames.add(name);
+        labels.push({ id: name, name, isShared: true });
+      }
+      sharedCursor = sharedData.next_cursor ?? null;
+    } while (sharedCursor);
+
+    return labels.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   getProjectCache(): ProjectCache {

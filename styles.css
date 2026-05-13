@@ -5,6 +5,54 @@
   width: 300px;
 }
 
+/* ─── Settings ─── */
+
+.sync-todoist-tab-bar {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 18px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.sync-todoist-tab {
+  border: 0;
+  border-radius: var(--radius-s) var(--radius-s) 0 0;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.sync-todoist-tab:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.sync-todoist-tab.is-active {
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+.sync-todoist-multi-select {
+  margin: 12px 0 18px;
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+}
+
+.sync-todoist-multi-select h4 {
+  margin: 0 0 8px;
+}
+
+.sync-todoist-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  font-size: var(--font-ui-small);
+}
+
 /* ─── Import Modal ─── */
 
 .syncist-import-suggestion {

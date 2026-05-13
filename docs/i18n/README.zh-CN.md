@@ -1,6 +1,6 @@
 # Sync Todoist
 
-[![版本](https://img.shields.io/badge/version-0.1.0-7c3aed)](../../RELEASE.md)
+[![版本](https://img.shields.io/badge/version-0.3.0-7c3aed)](../../RELEASE.md)
 [![许可证](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](../../LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![插件 ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](../../manifest.json)
@@ -16,6 +16,7 @@
 - **在思考的位置写任务** - 给 Obsidian checkbox 加上 `#todoist`，它就会成为 Todoist 任务。
 - **保留任务层级** - 同步父任务下面的缩进子项会自动成为 Todoist 子任务。
 - **把 Todoist 带进笔记** - 可以导入已有 Todoist 任务，也可以用 `sync-todoist` 查询块渲染实时筛选列表。
+- **在 Daily Note 里做每日计划** - 把今天匹配的 Todoist 任务写入 Daily Note 中受控的标记区间。
 - **桌面和移动端都可用** - 网络请求使用 Obsidian 的 `requestUrl()`，不是 Node-only SDK。
 
 ## 0.1.0 基线版本
@@ -76,6 +77,20 @@ completed_by: completion_date
 completed_since: 30d
 ```
 ````
+
+## Daily Notes
+
+Sync Todoist 可以把今天匹配的 Todoist 任务写入当天的 Obsidian Daily Note。请先启用 Obsidian 核心插件 **Daily notes**，然后打开 **Settings -> Sync Todoist -> 每日 Daily Note**。
+
+插件只会写入 marker 区间，默认使用 source mode 可见的注释标记：
+
+```markdown
+%% sync-todoist:daily:start %%
+- [ ] Review launch tasks #todoist 📁 Work 🔺 📅 2026-05-13 <!-- todoist-id:123456 -->
+%% sync-todoist:daily:end %%
+```
+
+你可以自定义 start/end marker，并通过项目、标签、优先级三个多选维度决定哪些任务进入 Daily Note。某个维度为空表示该维度选择 **全部**。Daily Note 区块会在普通同步时刷新，也可以手动运行 **Sync Todoist: Sync today's daily note**。
 
 ## 快速上手
 
@@ -144,6 +159,7 @@ npm run build
 | Default project | Inbox | 新任务默认进入的 Todoist 项目，除非任务写了 `📁 ProjectName`。 |
 | Sync interval | `5` 分钟 | 自动同步频率。设为 `0` 可关闭自动同步。 |
 | Conflict resolution | `Todoist wins` | Obsidian 和 Todoist 同时改动同一任务时的处理策略。 |
+| Daily Note filters | 全部 | 控制今天 Daily Note 区块的项目、标签和优先级筛选。 |
 
 ## 命令
 
@@ -152,6 +168,7 @@ npm run build
 | **Create task from current line** | 把当前 Markdown 任务转换成已同步的 Todoist 任务。 |
 | **Import task from todoist** | 搜索打开的 Todoist 任务，并把选中的任务和子任务插入光标位置。 |
 | **Sync now** | 手动运行同步。 |
+| **Sync today's daily note** | 刷新今天 Daily Note 中受控的任务区块。 |
 | **Open settings** | 打开 Sync Todoist 设置页。 |
 
 ## 支持的任务元数据

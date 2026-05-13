@@ -1,6 +1,6 @@
 # Sync Todoist
 
-[![Version](https://img.shields.io/badge/version-0.1.0-7c3aed)](RELEASE.md)
+[![Version](https://img.shields.io/badge/version-0.3.0-7c3aed)](RELEASE.md)
 [![License](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![Plugin ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](manifest.json)
@@ -16,6 +16,7 @@
 - **Write tasks where you think** - add `#todoist` to an Obsidian checkbox and it becomes a Todoist task.
 - **Keep hierarchy intact** - indented children under a synced parent become Todoist subtasks automatically.
 - **Bring Todoist into notes** - import existing Todoist tasks and render live Todoist filters with `sync-todoist` query blocks.
+- **Plan from your Daily Note** - write today's matching Todoist tasks into a managed Daily Note region for daily review.
 - **Works on desktop and mobile** - network calls use Obsidian's `requestUrl()` API instead of a Node-only SDK.
 
 ## 0.1.0 Baseline
@@ -76,6 +77,20 @@ completed_by: completion_date
 completed_since: 30d
 ```
 ````
+
+## Daily Notes
+
+Sync Todoist can write today's matching Todoist tasks into today's Obsidian Daily Note. Enable Obsidian's core **Daily notes** plugin first, then open **Settings -> Sync Todoist -> 每日 Daily Note**.
+
+The plugin writes only inside a marker block, using source-mode markers by default:
+
+```markdown
+%% sync-todoist:daily:start %%
+- [ ] Review launch tasks #todoist 📁 Work 🔺 📅 2026-05-13 <!-- todoist-id:123456 -->
+%% sync-todoist:daily:end %%
+```
+
+You can customize the start/end markers and choose which tasks appear using project, label, and priority multi-select filters. Empty selections mean **all** for that dimension. The Daily Note block refreshes during normal sync, and you can also run **Sync Todoist: Sync today's daily note** manually.
 
 ## Quick Start
 
@@ -144,6 +159,7 @@ Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/s
 | Default project | Inbox | Todoist project for new tasks unless the task has `📁 ProjectName`. |
 | Sync interval | `5` minutes | Auto-sync frequency. Set to `0` to disable automatic sync. |
 | Conflict resolution | `Todoist wins` | Behavior when both Obsidian and Todoist changed the same task. |
+| Daily Note filters | All | Optional project, label, and priority filters for today's Daily Note block. |
 
 ## Commands
 
@@ -152,6 +168,7 @@ Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/s
 | **Create task from current line** | Converts the current Markdown task into a synced Todoist task. |
 | **Import task from todoist** | Searches open Todoist tasks and inserts the selected task, including subtasks, at the cursor. |
 | **Sync now** | Runs a manual sync. |
+| **Sync today's daily note** | Refreshes today's managed Daily Note task block. |
 | **Open settings** | Opens the Sync Todoist settings tab. |
 
 ## Supported Task Metadata
