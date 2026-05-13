@@ -1,6 +1,6 @@
 # Sync Todoist
 
-[![Version](https://img.shields.io/badge/version-0.4.1-7c3aed)](RELEASE.md)
+[![Version](https://img.shields.io/badge/version-0.5.0-7c3aed)](RELEASE.md)
 [![License](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![Plugin ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](manifest.json)
@@ -90,7 +90,11 @@ The plugin writes only inside a marker block, using source-mode markers by defau
 %% sync-todoist:daily:end %%
 ```
 
-You can customize the start/end markers and choose which tasks appear using project, label, and priority multi-select filters. Empty selections mean **all** for that dimension. The Daily Note block refreshes during normal sync, and you can also run **Sync Todoist: Sync today's daily note** manually.
+You can customize the start/end markers and choose which tasks appear using project, label, and priority multi-select filters. Empty selections mean **all** for that dimension. Daily Note tasks can be sorted by **time first** or **priority first**; the other dimension is used as the secondary sort, then project/content order keeps untimed normal-priority tasks stable.
+
+The Daily Note block refreshes during normal sync, and you can also run **Sync Todoist: Sync today's daily note** manually. When **Include completed tasks** is enabled, completed Todoist tasks due today remain in the block and stay sorted in place instead of disappearing.
+
+Sync Todoist fully rewrites everything between the Daily Note markers during sync. Do not manually edit inside the marker region; unsynced edits there can be overwritten.
 
 ## Quick Start
 
@@ -155,11 +159,14 @@ Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/s
 | Setting | Default | Description |
 |---|---|---|
 | Todoist API token | empty | Required token used to call Todoist's API. Stored locally in Obsidian plugin data. |
+| Interface language | English | Settings UI language. Supports English and Simplified Chinese. |
 | Sync tag | `#todoist` | Markdown tag that marks top-level tasks for sync. |
 | Default project | Inbox | Todoist project for new tasks unless the task has `📁 ProjectName`. |
 | Sync interval | `5` minutes | Auto-sync frequency. Set to `0` to disable automatic sync. |
 | Conflict resolution | `Todoist wins` | Behavior when both Obsidian and Todoist changed the same task. |
 | Daily Note filters | All | Optional project, label, and priority filters for today's Daily Note block. |
+| Daily Note primary sort | `Time first` | Sort Daily Note tasks by time then priority, or by priority then time. |
+| Include completed tasks | Off | Keep completed Todoist tasks due today in the Daily Note block. |
 | Manual sync notices | On | Show short `Sync Todoist:` completion notices for manual sync actions. |
 | Automatic sync notices | On | Show scheduled sync notices on desktop and mobile, including zero-change summaries. |
 

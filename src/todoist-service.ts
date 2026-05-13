@@ -16,7 +16,7 @@ const API_BASE = 'https://api.todoist.com/api/v1';
 export type TodoistCompletedTaskDateMode = 'due_date' | 'completion_date';
 
 export interface CompletedTaskQueryOptions {
-  filterQuery: string;
+  filterQuery?: string;
   by: TodoistCompletedTaskDateMode;
   since: Date;
   until: Date;
@@ -400,11 +400,11 @@ export class TodoistService {
 
     do {
       const params = new URLSearchParams({
-        filter_query: options.filterQuery,
         since: options.since.toISOString(),
         until: options.until.toISOString(),
         limit: '200',
       });
+      if (options.filterQuery) params.set('filter_query', options.filterQuery);
       if (cursor) params.set('cursor', cursor);
 
       const resp = await requestUrl({

@@ -4,6 +4,7 @@ import {
   filterDailyNoteTasks,
   isMarkerRegionValid,
   renderDailyNoteTaskBlock,
+  sortDailyNoteTasks,
   updateDailyNoteContent,
 } from '../src/daily-note';
 import { DEFAULT_SETTINGS, TodoistPriority, TodoistTask } from '../src/types';
@@ -75,6 +76,56 @@ function runDailyNoteTests(): void {
     filterDailyNoteTasks([wrongDate, wrongProject, completed, matching], settings, '2026-05-13').map(t => t.id),
     ['match']
   );
+
+  assert.deepEqual(
+    filterDailyNoteTasks(
+      [wrongDate, wrongProject, completed, matching],
+      { ...settings, includeCompleted: true },
+      '2026-05-13'
+    ).map(t => t.id),
+    ['done', 'match']
+  );
+
+  const projectNames: Record<string, string> = {
+    alpha: 'Alpha',
+    beta: 'Beta',
+    work: 'Work',
+  };
+  const resolveProjectName = (projectId: string): string | null => projectNames[projectId] ?? null;
+
+  const timeSorted = sortDailyNoteTasks(
+    [
+      task({ id: '10-low', content: '10 low', projectId: 'work', priority: TodoistPriority.LOW, due: { date: '2026-05-13', datetime: '2026-05-13T10:00:00' } }),
+      task({ id: '09-normal', content: '09 normal', projectId: 'work', priority: TodoistPriority.NONE, due: { date: '2026-05-13', datetime: '2026-05-13T09:00:00' } }),
+      task({ id: '10-urgent', content: '10 urgent', projectId: 'work', priority: TodoistPriority.HIGH, due: { date: '2026-05-13', datetime: '2026-05-13T10:00:00' } }),
+      task({ id: 'no-time', content: 'No time', projectId: 'work', priority: TodoistPriority.HIGH }),
+    ],
+    { ...DEFAULT_SETTINGS.dailyNote, sortMode: 'time' },
+    resolveProjectName
+  ).map(t => t.id);
+  assert.deepEqual(timeSorted, ['09-normal', '10-urgent', '10-low', 'no-time']);
+
+  const prioritySorted = sortDailyNoteTasks(
+    [
+      task({ id: 'low-08', content: 'Low 08', projectId: 'work', priority: TodoistPriority.LOW, due: { date: '2026-05-13', datetime: '2026-05-13T08:00:00' } }),
+      task({ id: 'urgent-11', content: 'Urgent 11', projectId: 'work', priority: TodoistPriority.HIGH, due: { date: '2026-05-13', datetime: '2026-05-13T11:00:00' } }),
+      task({ id: 'urgent-09', content: 'Urgent 09', projectId: 'work', priority: TodoistPriority.HIGH, due: { date: '2026-05-13', datetime: '2026-05-13T09:00:00' } }),
+    ],
+    { ...DEFAULT_SETTINGS.dailyNote, sortMode: 'priority' },
+    resolveProjectName
+  ).map(t => t.id);
+  assert.deepEqual(prioritySorted, ['urgent-09', 'urgent-11', 'low-08']);
+
+  const fallbackSorted = sortDailyNoteTasks(
+    [
+      task({ id: 'beta-b', content: 'Beta B', projectId: 'beta' }),
+      task({ id: 'alpha-b', content: 'Beta content', projectId: 'alpha' }),
+      task({ id: 'alpha-a', content: 'Alpha content', projectId: 'alpha' }),
+    ],
+    { ...DEFAULT_SETTINGS.dailyNote, sortMode: 'time' },
+    resolveProjectName
+  ).map(t => t.id);
+  assert.deepEqual(fallbackSorted, ['alpha-a', 'alpha-b', 'beta-b']);
 
   const block = renderDailyNoteTaskBlock(
     [matching],

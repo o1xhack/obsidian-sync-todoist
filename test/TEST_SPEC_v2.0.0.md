@@ -456,6 +456,45 @@ Test each of these query blocks (create one block per filter):
 3. **Expected**: A `Sync Todoist:` notice appears and auto-dismisses.
 - [ ] **PASS** / **FAIL**
 
+### G6. Bilingual settings UI
+
+1. Open **Settings -> Sync Todoist -> General**
+2. Change **Interface language** to **Simplified Chinese**
+3. **Expected**: General and Daily Note settings labels/descriptions switch to Simplified Chinese.
+4. Change the language back to **English**
+5. **Expected**: Settings labels/descriptions switch back to English.
+- [ ] **PASS** / **FAIL**
+
+### G7. Daily Note nested sorting
+
+1. Create or choose three Todoist tasks due today:
+   - one due 09:00 with normal priority
+   - one due 10:00 with urgent priority
+   - one due 10:00 with medium priority
+2. Set Daily Note **Primary sort** to **Time first** and sync today's Daily Note
+3. **Expected**: 09:00 appears first; at 10:00, urgent appears before medium.
+4. Set **Primary sort** to **Priority first** and sync again
+5. **Expected**: urgent appears before medium/normal; tasks with the same priority are ordered by time.
+- [ ] **PASS** / **FAIL**
+
+### G8. Daily Note completed-task inclusion
+
+1. Create or choose a Todoist task due today with a clear time.
+2. Complete it in Todoist.
+3. Disable **Include completed tasks** and sync today's Daily Note.
+4. **Expected**: The completed task is not in the marker block.
+5. Enable **Include completed tasks** and sync again.
+6. **Expected**: The completed task appears as checked and remains ordered by the configured sort.
+- [ ] **PASS** / **FAIL**
+
+### G9. Daily Note overwrite warning
+
+1. Open **Settings -> Sync Todoist -> Daily Note**
+2. **Expected**: A warning explains that Sync Todoist fully rewrites content between the markers and that unsynced manual edits inside the marker region may be overwritten.
+3. Switch **Interface language** to **Simplified Chinese**
+4. **Expected**: The same warning appears in Simplified Chinese.
+- [ ] **PASS** / **FAIL**
+
 ---
 
 ## Test Summary
@@ -468,10 +507,10 @@ Test each of these query blocks (create one block per filter):
 | D. Projects & Labels | 6 | | |
 | E. Query Blocks | 10 | | |
 | F. Edge Cases | 6 | | |
-| G. Daily Notes & Notices | 5 | | |
-| **Total** | **46** | | |
+| G. Daily Notes & Notices | 9 | | |
+| **Total** | **50** | | |
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.4.0
+**Plugin version**: 0.5.0
 **Obsidian version**: ___________________

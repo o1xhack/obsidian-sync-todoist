@@ -2,6 +2,8 @@
  * Plugin settings interface
  */
 export interface TodoistSyncSettings {
+  /** UI language for plugin settings */
+  uiLanguage: UiLanguage;
   /** Todoist API token */
   apiToken: string;
   /** Tag used to identify tasks for sync (default: #todoist) */
@@ -22,6 +24,8 @@ export interface TodoistSyncSettings {
  * Conflict resolution options
  */
 export type ConflictResolution = 'obsidian-wins' | 'todoist-wins' | 'ask-user';
+export type UiLanguage = 'en' | 'zh-CN';
+export type DailyNoteSortMode = 'time' | 'priority';
 
 export interface DailyNoteSettings {
   /** Whether to write today's Todoist tasks into today's Daily Note */
@@ -36,6 +40,10 @@ export interface DailyNoteSettings {
   labels: string[];
   /** Todoist priority values to include. Empty means all priorities. */
   priorities: TodoistPriority[];
+  /** Primary sorting dimension for Daily Note tasks */
+  sortMode: DailyNoteSortMode;
+  /** Whether completed tasks due today should remain in the Daily Note block */
+  includeCompleted: boolean;
 }
 
 export interface NotificationSettings {
@@ -52,6 +60,7 @@ export const DEFAULT_DAILY_NOTE_MARKER_END = '%% sync-todoist:daily:end %%';
  * Default plugin settings
  */
 export const DEFAULT_SETTINGS: TodoistSyncSettings = {
+  uiLanguage: 'en',
   apiToken: '',
   syncTag: '#todoist',
   defaultProjectId: '',
@@ -64,6 +73,8 @@ export const DEFAULT_SETTINGS: TodoistSyncSettings = {
     projectIds: [],
     labels: [],
     priorities: [],
+    sortMode: 'time',
+    includeCompleted: false,
   },
   notifications: {
     manualSync: true,
@@ -96,7 +107,7 @@ export interface TodoistTask {
   projectId: string;
   parentId: string | null;
   priority: number;
-  due: { date: string; string?: string; isRecurring?: boolean } | null;
+  due: { date: string; datetime?: string; string?: string; isRecurring?: boolean } | null;
   labels: string[];
   isCompleted: boolean;
   createdAt: string;
@@ -112,7 +123,7 @@ export interface TodoistApiRawTask {
   project_id: string;
   parent_id: string | null;
   priority: number;
-  due: { date: string; string?: string; is_recurring?: boolean } | null;
+  due: { date: string; datetime?: string; string?: string; is_recurring?: boolean } | null;
   labels: string[];
   checked?: boolean;
   added_at?: string;

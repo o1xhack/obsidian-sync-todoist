@@ -21,6 +21,7 @@ export interface DailyNoteTaskFilter {
   projectIds: string[];
   labels: string[];
   priorities: TodoistPriority[];
+  includeCompleted: boolean;
 }
 
 export function localTodayISODate(now: Date = new Date()): string {
@@ -105,7 +106,7 @@ export function extractTodoistIdsFromMarkerRegion(
 }
 
 export function taskMatchesDailyNoteFilter(task: TodoistTask, filter: DailyNoteTaskFilter): boolean {
-  if (task.isCompleted) return false;
+  if (task.isCompleted && !filter.includeCompleted) return false;
   if ((task.due?.date ?? null) !== filter.today) return false;
 
   if (filter.projectIds.length > 0 && !filter.projectIds.includes(task.projectId)) {
@@ -131,8 +132,56 @@ export function filterDailyNoteTasks(tasks: TodoistTask[], settings: DailyNoteSe
     projectIds: settings.projectIds,
     labels: settings.labels,
     priorities: settings.priorities,
+    includeCompleted: settings.includeCompleted,
   };
   return tasks.filter(task => taskMatchesDailyNoteFilter(task, filter));
+}
+
+export function sortDailyNoteTasks(
+  tasks: TodoistTask[],
+  settings: DailyNoteSettings,
+  resolveProjectName: (projectId: string) => string | null
+): TodoistTask[] {
+  return [...tasks].sort((a, b) => compareDailyNoteTasks(a, b, settings, resolveProjectName));
+}
+
+function compareDailyNoteTasks(
+  a: TodoistTask,
+  b: TodoistTask,
+  settings: DailyNoteSettings,
+  resolveProjectName: (projectId: string) => string | null
+): number {
+  const primary = settings.sortMode === 'priority'
+    ? comparePriority(a, b) || compareTime(a, b)
+    : compareTime(a, b) || comparePriority(a, b);
+  if (primary !== 0) return primary;
+
+  const aProject = resolveProjectName(a.projectId) ?? a.projectId;
+  const bProject = resolveProjectName(b.projectId) ?? b.projectId;
+  return (
+    aProject.localeCompare(bProject) ||
+    a.content.localeCompare(b.content) ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+function comparePriority(a: TodoistTask, b: TodoistTask): number {
+  return b.priority - a.priority;
+}
+
+function compareTime(a: TodoistTask, b: TodoistTask): number {
+  const aTime = getDueTimeMinutes(a);
+  const bTime = getDueTimeMinutes(b);
+  if (aTime === bTime) return 0;
+  return aTime < bTime ? -1 : 1;
+}
+
+function getDueTimeMinutes(task: TodoistTask): number {
+  const datetime = task.due?.datetime;
+  if (!datetime) return Number.POSITIVE_INFINITY;
+  const date = new Date(datetime);
+  if (Number.isNaN(date.getTime())) return Number.POSITIVE_INFINITY;
+  return date.getHours() * 60 + date.getMinutes();
 }
 
 export function renderDailyNoteTaskBlock(

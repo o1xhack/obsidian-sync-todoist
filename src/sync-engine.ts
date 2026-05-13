@@ -6,6 +6,7 @@ import {
   filterDailyNoteTasks,
   localTodayISODate,
   renderDailyNoteTaskBlock,
+  sortDailyNoteTasks,
   updateDailyNoteContent,
 } from './daily-note';
 import {
@@ -230,7 +231,7 @@ export class SyncEngine {
 
       if (this.settings.dailyNote.enabled) {
         try {
-          const freshTasks = await this.todoistService.getTasks();
+          const freshTasks = await this.getDailyNoteSourceTasks();
           result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks);
           if (result.dailyNote.status === 'error' || result.dailyNote.status === 'invalid_markers') {
             result.errors.push(result.dailyNote.message ?? 'Daily Note sync failed');
@@ -312,8 +313,31 @@ export class SyncEngine {
       return { status: 'error', taskCount: 0, message: 'Todoist API not configured' };
     }
     await this.todoistService.ensureProjectCache();
-    const tasks = await this.todoistService.getTasks();
+    const tasks = await this.getDailyNoteSourceTasks();
     return this.syncTasksIntoDailyNote(tasks);
+  }
+
+  private async getDailyNoteSourceTasks(): Promise<TodoistTask[]> {
+    const activeTasks = await this.todoistService.getTasks();
+    if (!this.settings.dailyNote.includeCompleted) {
+      return activeTasks;
+    }
+
+    const today = localTodayISODate();
+    const since = new Date(`${today}T00:00:00`);
+    const until = new Date(since);
+    until.setDate(since.getDate() + 1);
+
+    const completedTasks = await this.todoistService.getCompletedTasks({
+      by: 'due_date',
+      since,
+      until,
+    });
+
+    const byId = new Map<string, TodoistTask>();
+    for (const task of activeTasks) byId.set(task.id, task);
+    for (const task of completedTasks) byId.set(task.id, task);
+    return [...byId.values()];
   }
 
   private getDailyNotePath(date: string): { status: 'ok'; path: string } | { status: 'daily_plugin_disabled'; message: string } {
@@ -362,7 +386,11 @@ export class SyncEngine {
       };
     }
 
-    const filteredTasks = filterDailyNoteTasks(tasks, settings, today);
+    const filteredTasks = sortDailyNoteTasks(
+      filterDailyNoteTasks(tasks, settings, today),
+      settings,
+      (projectId) => this.resolveProjectName(projectId)
+    );
     const oldContent = await this.app.vault.read(file);
     const staleIds = extractTodoistIdsFromMarkerRegion(oldContent, settings.markerStart, settings.markerEnd);
     const block = renderDailyNoteTaskBlock(

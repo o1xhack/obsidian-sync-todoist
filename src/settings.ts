@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import TodoistSyncPlugin from './main';
-import { ConflictResolution, TodoistLabel, TodoistPriority, TodoistProject } from './types';
+import { ConflictResolution, DailyNoteSortMode, TodoistLabel, TodoistPriority, TodoistProject, UiLanguage } from './types';
+import { I18nKey, t } from './i18n';
 import {
   formatSyncResult,
   noticeDurationForResult,
@@ -11,11 +12,11 @@ type SettingsTabId = 'general' | 'daily';
 const SETTINGS_TABS: SettingsTabId[] = ['general', 'daily'];
 const ACTIVE_TAB_STORAGE_KEY = 'sync-todoist:active-settings-tab';
 
-const PRIORITY_OPTIONS: Array<{ value: TodoistPriority; label: string }> = [
-  { value: TodoistPriority.HIGH, label: 'Urgent (p1)' },
-  { value: TodoistPriority.MEDIUM, label: 'High (p2)' },
-  { value: TodoistPriority.LOW, label: 'Medium (p3)' },
-  { value: TodoistPriority.NONE, label: 'Normal (p4)' },
+const PRIORITY_OPTIONS: Array<{ value: TodoistPriority; labelKey: I18nKey }> = [
+  { value: TodoistPriority.HIGH, labelKey: 'priority.urgent' },
+  { value: TodoistPriority.MEDIUM, labelKey: 'priority.high' },
+  { value: TodoistPriority.LOW, labelKey: 'priority.medium' },
+  { value: TodoistPriority.NONE, labelKey: 'priority.normal' },
 ];
 
 /**
@@ -34,6 +35,10 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     this.plugin = plugin;
   }
 
+  private tr(key: I18nKey, values?: Record<string, string | number>): string {
+    return t(this.plugin.settings.uiLanguage, key, values);
+  }
+
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
@@ -49,13 +54,28 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
   }
 
   private renderGeneralSettings(containerEl: HTMLElement): void {
+    new Setting(containerEl)
+      .setName(this.tr('general.language.name'))
+      .setDesc(this.tr('general.language.desc'))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption('en', this.tr('general.language.en'))
+          .addOption('zh-CN', this.tr('general.language.zh'))
+          .setValue(this.plugin.settings.uiLanguage)
+          .onChange(async (value) => {
+            this.plugin.settings.uiLanguage = value as UiLanguage;
+            await this.plugin.saveSettings();
+            this.display();
+          });
+      });
+
     // API Token Setting
     new Setting(containerEl)
-      .setName('Todoist API token')
-      .setDesc('Your todoist API token. Find it in todoist settings → integrations → developer.')
+      .setName(this.tr('general.apiToken.name'))
+      .setDesc(this.tr('general.apiToken.desc'))
       .addText((text) => {
         text
-          .setPlaceholder('Enter your API token')
+          .setPlaceholder(this.tr('general.apiToken.placeholder'))
           .setValue(this.plugin.settings.apiToken)
           .onChange(async (value) => {
             this.plugin.settings.apiToken = value;
@@ -72,37 +92,37 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
       })
       .addButton((button) => {
         button
-          .setButtonText('Verify')
+          .setButtonText(this.tr('general.apiToken.verify'))
           .onClick(async () => {
             button.setDisabled(true);
-            button.setButtonText('Verifying...');
+            button.setButtonText(this.tr('general.apiToken.verifying'));
             
             try {
               this.plugin.todoistService.initialize(this.plugin.settings.apiToken);
               const isValid = await this.plugin.todoistService.verifyToken();
               
               if (isValid) {
-                showSyncTodoistNotice('API token is valid.');
+                showSyncTodoistNotice(this.tr('general.apiToken.valid'));
                 // Load projects after successful verification
                 await this.loadTodoistMetadata();
                 this.display(); // Refresh to show projects
               } else {
-                showSyncTodoistNotice('API token is invalid. Please check and try again.', 10000);
+                showSyncTodoistNotice(this.tr('general.apiToken.invalid'), 10000);
               }
             } catch (error) {
-              showSyncTodoistNotice('Failed to verify token. Please check your internet connection.', 10000);
+              showSyncTodoistNotice(this.tr('general.apiToken.failed'), 10000);
               console.warn('Token verification error:', error);
             } finally {
               button.setDisabled(false);
-              button.setButtonText('Verify');
+              button.setButtonText(this.tr('general.apiToken.verify'));
             }
           });
       });
 
     // Sync Tag Setting
     new Setting(containerEl)
-      .setName('Sync tag')
-      .setDesc('Tag used to identify tasks for syncing. Include the # symbol.')
+      .setName(this.tr('general.syncTag.name'))
+      .setDesc(this.tr('general.syncTag.desc'))
       .addText((text) =>
         text
           .setPlaceholder('#todoist')
@@ -124,13 +144,13 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
 
     // Default Project Setting
     const projectSetting = new Setting(containerEl)
-      .setName('Default project')
-      .setDesc('Default todoist project for new tasks. Leave empty to use inbox.');
+      .setName(this.tr('general.defaultProject.name'))
+      .setDesc(this.tr('general.defaultProject.desc'));
 
     if (this.projects.length > 0) {
       projectSetting.addDropdown((dropdown) => {
         // Add empty option for Inbox
-        dropdown.addOption('', 'Inbox (default)');
+        dropdown.addOption('', this.tr('general.defaultProject.inbox'));
         
         for (const project of this.projects) {
           dropdown.addOption(project.id, project.name);
@@ -145,7 +165,7 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     } else {
       projectSetting.addText((text) => {
         text
-          .setPlaceholder('Verify API token to load projects')
+          .setPlaceholder(this.tr('general.defaultProject.placeholder'))
           .setValue(this.plugin.settings.defaultProjectId)
           .setDisabled(true);
       });
@@ -153,8 +173,8 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
 
     // Sync Interval Setting
     new Setting(containerEl)
-      .setName('Sync interval')
-      .setDesc('How often to sync with todoist (in minutes). Set to 0 to disable auto sync.')
+      .setName(this.tr('general.syncInterval.name'))
+      .setDesc(this.tr('general.syncInterval.desc'))
       .addText((text) =>
         text
           .setPlaceholder('5')
@@ -171,13 +191,13 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
 
     // Conflict Resolution Setting
     new Setting(containerEl)
-      .setName('Conflict resolution')
-      .setDesc('How to handle conflicts when both sides have changes.')
+      .setName(this.tr('general.conflict.name'))
+      .setDesc(this.tr('general.conflict.desc'))
       .addDropdown((dropdown) => {
         dropdown
-          .addOption('todoist-wins', 'Todoist wins')
-          .addOption('obsidian-wins', 'Local wins')
-          .addOption('ask-user', 'Ask me each time')
+          .addOption('todoist-wins', this.tr('general.conflict.todoist'))
+          .addOption('obsidian-wins', this.tr('general.conflict.local'))
+          .addOption('ask-user', this.tr('general.conflict.ask'))
           .setValue(this.plugin.settings.conflictResolution)
           .onChange(async (value) => {
             this.plugin.settings.conflictResolution = value as ConflictResolution;
@@ -185,11 +205,11 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
           });
       });
 
-    new Setting(containerEl).setName('Notifications').setHeading();
+    new Setting(containerEl).setName(this.tr('general.notifications')).setHeading();
 
     new Setting(containerEl)
-      .setName('Manual sync notices')
-      .setDesc('Show a short completion notice after manual sync actions.')
+      .setName(this.tr('general.notifications.manual.name'))
+      .setDesc(this.tr('general.notifications.manual.desc'))
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.notifications.manualSync)
@@ -200,8 +220,8 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Automatic sync notices')
-      .setDesc('Show scheduled sync notices on desktop and mobile. Errors are always shown.')
+      .setName(this.tr('general.notifications.auto.name'))
+      .setDesc(this.tr('general.notifications.auto.desc'))
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.notifications.automaticSync)
@@ -212,23 +232,23 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
       );
 
     // Manual Sync Section
-    new Setting(containerEl).setName('Manual actions').setHeading();
+    new Setting(containerEl).setName(this.tr('general.manualActions')).setHeading();
 
     new Setting(containerEl)
-      .setName('Sync now')
-      .setDesc('Manually trigger a sync.')
+      .setName(this.tr('general.syncNow.name'))
+      .setDesc(this.tr('general.syncNow.desc'))
       .addButton((button) => {
         button
-          .setButtonText('Sync now')
+          .setButtonText(this.tr('general.syncNow.button'))
           .setCta()
           .onClick(async () => {
             if (!this.plugin.settings.apiToken) {
-              showSyncTodoistNotice('Please configure your API token first.');
+              showSyncTodoistNotice(this.tr('general.syncNow.noToken'));
               return;
             }
 
             button.setDisabled(true);
-            button.setButtonText('Syncing...');
+            button.setButtonText(this.tr('general.syncNow.syncing'));
 
             try {
               const result = await this.plugin.syncNow();
@@ -243,17 +263,17 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
               // Refresh the display to show updated status
               this.display();
             } catch (error) {
-              showSyncTodoistNotice('Sync failed. Check console for details.', 10000);
+              showSyncTodoistNotice(this.tr('general.syncNow.failed'), 10000);
               console.warn('Sync error:', error);
             } finally {
               button.setDisabled(false);
-              button.setButtonText('Sync now');
+              button.setButtonText(this.tr('general.syncNow.button'));
             }
           });
       });
 
     // Status Section
-    new Setting(containerEl).setName('Status').setHeading();
+    new Setting(containerEl).setName(this.tr('general.status')).setHeading();
 
     const statusEl = containerEl.createDiv({ cls: 'todoist-sync-status' });
     this.updateStatusDisplay(statusEl);
@@ -264,7 +284,7 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     for (const tabId of SETTINGS_TABS) {
       const button = bar.createEl('button', {
         cls: 'sync-todoist-tab' + (tabId === this.activeTab ? ' is-active' : ''),
-        text: tabId === 'general' ? 'General' : '每日 Daily Note',
+        text: tabId === 'general' ? this.tr('tab.general') : this.tr('tab.daily'),
       });
       button.onclick = () => {
         this.activeTab = tabId;
@@ -284,8 +304,8 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
 
   private renderDailyNoteSettings(containerEl: HTMLElement): void {
     new Setting(containerEl)
-      .setName('每日 daily note')
-      .setDesc('Write today\'s matching tasks into the managed marker region of today\'s daily note.')
+      .setName(this.tr('daily.enable.name'))
+      .setDesc(this.tr('daily.enable.desc'))
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.dailyNote.enabled)
@@ -301,8 +321,8 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     }
 
     new Setting(containerEl)
-      .setName('Marker start')
-      .setDesc('Start marker for the managed daily note source-mode region.')
+      .setName(this.tr('daily.markerStart.name'))
+      .setDesc(this.tr('daily.markerStart.desc'))
       .addText((text) =>
         text
           .setValue(this.plugin.settings.dailyNote.markerStart)
@@ -313,8 +333,8 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Marker end')
-      .setDesc('End marker for the managed daily note source-mode region.')
+      .setName(this.tr('daily.markerEnd.name'))
+      .setDesc(this.tr('daily.markerEnd.desc'))
       .addText((text) =>
         text
           .setValue(this.plugin.settings.dailyNote.markerEnd)
@@ -325,26 +345,55 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Sync daily note now')
-      .setDesc('Refresh today\'s daily note using the current filter settings.')
-      .addButton((button) =>
-        button
-          .setButtonText('Sync today')
-          .onClick(async () => {
-            const result = await this.plugin.syncDailyNoteNow();
-            showSyncTodoistNotice(result.message ?? `Daily note result: ${result.status}`);
+      .setDesc(this.tr('daily.warning'));
+
+    new Setting(containerEl)
+      .setName(this.tr('daily.sort.name'))
+      .setDesc(this.tr('daily.sort.desc'))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption('time', this.tr('daily.sort.time'))
+          .addOption('priority', this.tr('daily.sort.priority'))
+          .setValue(this.plugin.settings.dailyNote.sortMode)
+          .onChange(async (value) => {
+            this.plugin.settings.dailyNote.sortMode = value as DailyNoteSortMode;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName(this.tr('daily.includeCompleted.name'))
+      .setDesc(this.tr('daily.includeCompleted.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.dailyNote.includeCompleted)
+          .onChange(async (value) => {
+            this.plugin.settings.dailyNote.includeCompleted = value;
+            await this.plugin.saveSettings();
           })
       );
 
-    new Setting(containerEl).setName('Task filters').setHeading();
-    new Setting(containerEl).setDesc('Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.');
+    new Setting(containerEl)
+      .setName(this.tr('daily.syncNow.name'))
+      .setDesc(this.tr('daily.syncNow.desc'))
+      .addButton((button) =>
+        button
+          .setButtonText(this.tr('daily.syncNow.button'))
+          .onClick(async () => {
+            const result = await this.plugin.syncDailyNoteNow();
+            showSyncTodoistNotice(result.message ?? this.tr('daily.syncNow.result', { status: result.status }));
+          })
+      );
+
+    new Setting(containerEl).setName(this.tr('daily.filters')).setHeading();
+    new Setting(containerEl).setDesc(this.tr('daily.filters.desc'));
 
     if (this.plugin.settings.apiToken && (!this.projectsLoaded || !this.labelsLoaded)) {
       void this.loadTodoistMetadata().then(() => this.display());
     }
 
     if (!this.plugin.settings.apiToken || (!this.projectsLoaded && !this.labelsLoaded)) {
-      new Setting(containerEl).setDesc('Verify your todoist API token in general settings first to load projects and labels.');
+      new Setting(containerEl).setDesc(this.tr('daily.filters.verifyFirst'));
     }
 
     this.renderProjectSelector(containerEl);
@@ -353,9 +402,9 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
   }
 
   private renderProjectSelector(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName('Projects').setHeading();
+    new Setting(containerEl).setName(this.tr('daily.projects')).setHeading();
     const wrapper = containerEl.createDiv({ cls: 'sync-todoist-multi-select' });
-    this.renderAllCheckbox(wrapper, 'All projects', this.plugin.settings.dailyNote.projectIds.length === 0, async () => {
+    this.renderAllCheckbox(wrapper, this.tr('daily.projects.all'), this.plugin.settings.dailyNote.projectIds.length === 0, async () => {
       this.plugin.settings.dailyNote.projectIds = [];
       await this.plugin.saveSettings();
       this.display();
@@ -364,7 +413,7 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     for (const project of this.projects) {
       this.renderCheckbox(
         wrapper,
-        project.name + (project.isInbox ? ' (Inbox)' : ''),
+        project.name + (project.isInbox ? ` (${this.tr('daily.projects.inbox')})` : ''),
         this.plugin.settings.dailyNote.projectIds.includes(project.id),
         async (checked) => {
           this.plugin.settings.dailyNote.projectIds = updateSelection(
@@ -380,9 +429,9 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
   }
 
   private renderLabelSelector(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName('Labels').setHeading();
+    new Setting(containerEl).setName(this.tr('daily.labels')).setHeading();
     const wrapper = containerEl.createDiv({ cls: 'sync-todoist-multi-select' });
-    this.renderAllCheckbox(wrapper, 'All labels', this.plugin.settings.dailyNote.labels.length === 0, async () => {
+    this.renderAllCheckbox(wrapper, this.tr('daily.labels.all'), this.plugin.settings.dailyNote.labels.length === 0, async () => {
       this.plugin.settings.dailyNote.labels = [];
       await this.plugin.saveSettings();
       this.display();
@@ -391,7 +440,7 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     for (const label of this.labels) {
       this.renderCheckbox(
         wrapper,
-        label.name + (label.isShared ? ' (shared)' : ''),
+        label.name + (label.isShared ? ` (${this.tr('daily.labels.shared')})` : ''),
         this.plugin.settings.dailyNote.labels.includes(label.name),
         async (checked) => {
           this.plugin.settings.dailyNote.labels = updateSelection(
@@ -407,9 +456,9 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
   }
 
   private renderPrioritySelector(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName('Priority').setHeading();
+    new Setting(containerEl).setName(this.tr('daily.priority')).setHeading();
     const wrapper = containerEl.createDiv({ cls: 'sync-todoist-multi-select' });
-    this.renderAllCheckbox(wrapper, 'All priorities', this.plugin.settings.dailyNote.priorities.length === 0, async () => {
+    this.renderAllCheckbox(wrapper, this.tr('daily.priority.all'), this.plugin.settings.dailyNote.priorities.length === 0, async () => {
       this.plugin.settings.dailyNote.priorities = [];
       await this.plugin.saveSettings();
       this.display();
@@ -418,7 +467,7 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     for (const priority of PRIORITY_OPTIONS) {
       this.renderCheckbox(
         wrapper,
-        priority.label,
+        this.tr(priority.labelKey),
         this.plugin.settings.dailyNote.priorities.includes(priority.value),
         async (checked) => {
           this.plugin.settings.dailyNote.priorities = updateSelection(
@@ -497,19 +546,23 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     const taskCount = Object.keys(syncState.tasks).length;
 
     const statusText = containerEl.createEl('p');
-    statusText.textContent = `Synced tasks: ${taskCount}`;
+    statusText.textContent = this.tr('general.status.synced', { count: taskCount });
 
     if (syncState.lastFullSync > 0) {
       const lastSync = new Date(syncState.lastFullSync);
       const lastSyncText = containerEl.createEl('p');
-      lastSyncText.textContent = `Last sync: ${lastSync.toLocaleString()}`;
+      lastSyncText.textContent = this.tr('general.status.last', { time: lastSync.toLocaleString() });
     } else {
       const lastSyncText = containerEl.createEl('p');
-      lastSyncText.textContent = 'Last sync: never';
+      lastSyncText.textContent = this.tr('general.status.never');
     }
 
     const apiStatus = containerEl.createEl('p');
-    apiStatus.textContent = `API status: ${this.plugin.todoistService.isInitialized() ? 'Connected' : 'Not connected'}`;
+    apiStatus.textContent = this.tr('general.status.api', {
+      status: this.plugin.todoistService.isInitialized()
+        ? this.tr('general.status.connected')
+        : this.tr('general.status.disconnected'),
+    });
   }
 }
 

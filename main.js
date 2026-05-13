@@ -36,6 +36,7 @@ var import_obsidian2 = require("obsidian");
 var DEFAULT_DAILY_NOTE_MARKER_START = "%% sync-todoist:daily:start %%";
 var DEFAULT_DAILY_NOTE_MARKER_END = "%% sync-todoist:daily:end %%";
 var DEFAULT_SETTINGS = {
+  uiLanguage: "en",
   apiToken: "",
   syncTag: "#todoist",
   defaultProjectId: "",
@@ -47,7 +48,9 @@ var DEFAULT_SETTINGS = {
     markerEnd: DEFAULT_DAILY_NOTE_MARKER_END,
     projectIds: [],
     labels: [],
-    priorities: []
+    priorities: [],
+    sortMode: "time",
+    includeCompleted: false
   },
   notifications: {
     manualSync: true,
@@ -75,6 +78,178 @@ var DEFAULT_SYNC_STATE = {
   tasks: {},
   lastFullSync: 0
 };
+
+// src/i18n.ts
+var STRINGS = {
+  en: {
+    "tab.general": "General",
+    "tab.daily": "Daily Note",
+    "general.language.name": "Interface language",
+    "general.language.desc": "Language used by Sync Todoist settings.",
+    "general.language.en": "English",
+    "general.language.zh": "Simplified Chinese",
+    "general.apiToken.name": "Todoist API token",
+    "general.apiToken.desc": "Your Todoist API token. Find it in Todoist settings -> integrations -> developer.",
+    "general.apiToken.placeholder": "Enter your API token",
+    "general.apiToken.verify": "Verify",
+    "general.apiToken.verifying": "Verifying...",
+    "general.apiToken.valid": "API token is valid.",
+    "general.apiToken.invalid": "API token is invalid. Please check and try again.",
+    "general.apiToken.failed": "Failed to verify token. Please check your internet connection.",
+    "general.syncTag.name": "Sync tag",
+    "general.syncTag.desc": "Tag used to identify tasks for syncing. Include the # symbol.",
+    "general.defaultProject.name": "Default project",
+    "general.defaultProject.desc": "Default Todoist project for new tasks. Leave empty to use Inbox.",
+    "general.defaultProject.inbox": "Inbox (default)",
+    "general.defaultProject.placeholder": "Verify API token to load projects",
+    "general.syncInterval.name": "Sync interval",
+    "general.syncInterval.desc": "How often to sync with Todoist, in minutes. Set to 0 to disable automatic sync.",
+    "general.conflict.name": "Conflict resolution",
+    "general.conflict.desc": "How to handle conflicts when both sides have changes.",
+    "general.conflict.todoist": "Todoist wins",
+    "general.conflict.local": "Local wins",
+    "general.conflict.ask": "Ask me each time",
+    "general.notifications": "Notifications",
+    "general.notifications.manual.name": "Manual sync notices",
+    "general.notifications.manual.desc": "Show a short completion notice after manual sync actions.",
+    "general.notifications.auto.name": "Automatic sync notices",
+    "general.notifications.auto.desc": "Show scheduled sync notices on desktop and mobile. Errors are always shown.",
+    "general.manualActions": "Manual actions",
+    "general.syncNow.name": "Sync now",
+    "general.syncNow.desc": "Manually trigger a sync.",
+    "general.syncNow.button": "Sync now",
+    "general.syncNow.syncing": "Syncing...",
+    "general.syncNow.noToken": "Please configure your API token first.",
+    "general.syncNow.failed": "Sync failed. Check console for details.",
+    "general.status": "Status",
+    "general.status.synced": "Synced tasks: {{count}}",
+    "general.status.last": "Last sync: {{time}}",
+    "general.status.never": "Last sync: never",
+    "general.status.api": "API status: {{status}}",
+    "general.status.connected": "Connected",
+    "general.status.disconnected": "Not connected",
+    "daily.enable.name": "Daily Note",
+    "daily.enable.desc": "Write today's matching tasks into the managed marker region of today's Daily Note.",
+    "daily.markerStart.name": "Marker start",
+    "daily.markerStart.desc": "Start marker for the managed Daily Note source-mode region.",
+    "daily.markerEnd.name": "Marker end",
+    "daily.markerEnd.desc": "End marker for the managed Daily Note source-mode region.",
+    "daily.warning": "Warning: Sync Todoist fully rewrites everything between these markers during sync. Do not edit inside the marker region; unsynced edits there can be overwritten.",
+    "daily.sort.name": "Primary sort",
+    "daily.sort.desc": "Choose the first Daily Note sort dimension. The secondary sort is the other dimension.",
+    "daily.sort.time": "Time first",
+    "daily.sort.priority": "Priority first",
+    "daily.includeCompleted.name": "Include completed tasks",
+    "daily.includeCompleted.desc": "Keep completed Todoist tasks due today in the Daily Note block and sorted in place.",
+    "daily.syncNow.name": "Sync Daily Note now",
+    "daily.syncNow.desc": "Refresh today's Daily Note using the current filter settings.",
+    "daily.syncNow.button": "Sync today",
+    "daily.syncNow.result": "Daily Note result: {{status}}",
+    "daily.filters": "Task filters",
+    "daily.filters.desc": "Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.",
+    "daily.filters.verifyFirst": "Verify your Todoist API token in General settings first to load projects and labels.",
+    "daily.projects": "Projects",
+    "daily.projects.all": "All projects",
+    "daily.projects.inbox": "Inbox",
+    "daily.labels": "Labels",
+    "daily.labels.all": "All labels",
+    "daily.labels.shared": "shared",
+    "daily.priority": "Priority",
+    "daily.priority.all": "All priorities",
+    "priority.urgent": "Urgent (p1)",
+    "priority.high": "High (p2)",
+    "priority.medium": "Medium (p3)",
+    "priority.normal": "Normal (p4)"
+  },
+  "zh-CN": {
+    "tab.general": "\u901A\u7528",
+    "tab.daily": "\u6BCF\u65E5 Daily Note",
+    "general.language.name": "\u754C\u9762\u8BED\u8A00",
+    "general.language.desc": "Sync Todoist \u8BBE\u7F6E\u754C\u9762\u4F7F\u7528\u7684\u8BED\u8A00\u3002",
+    "general.language.en": "\u82F1\u8BED",
+    "general.language.zh": "\u7B80\u4F53\u4E2D\u6587",
+    "general.apiToken.name": "Todoist API Token",
+    "general.apiToken.desc": "\u4F60\u7684 Todoist API Token\uFF0C\u53EF\u5728 Todoist \u8BBE\u7F6E -> Integrations -> Developer \u4E2D\u627E\u5230\u3002",
+    "general.apiToken.placeholder": "\u8F93\u5165 API Token",
+    "general.apiToken.verify": "\u9A8C\u8BC1",
+    "general.apiToken.verifying": "\u9A8C\u8BC1\u4E2D...",
+    "general.apiToken.valid": "API Token \u6709\u6548\u3002",
+    "general.apiToken.invalid": "API Token \u65E0\u6548\uFF0C\u8BF7\u68C0\u67E5\u540E\u91CD\u8BD5\u3002",
+    "general.apiToken.failed": "Token \u9A8C\u8BC1\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5\u3002",
+    "general.syncTag.name": "\u540C\u6B65\u6807\u7B7E",
+    "general.syncTag.desc": "\u7528\u4E8E\u8BC6\u522B\u9700\u8981\u540C\u6B65\u4EFB\u52A1\u7684\u6807\u7B7E\uFF0C\u8BF7\u5305\u542B # \u7B26\u53F7\u3002",
+    "general.defaultProject.name": "\u9ED8\u8BA4\u9879\u76EE",
+    "general.defaultProject.desc": "\u65B0\u4EFB\u52A1\u9ED8\u8BA4\u5199\u5165\u7684 Todoist \u9879\u76EE\u3002\u7559\u7A7A\u5219\u4F7F\u7528 Inbox\u3002",
+    "general.defaultProject.inbox": "Inbox\uFF08\u9ED8\u8BA4\uFF09",
+    "general.defaultProject.placeholder": "\u9A8C\u8BC1 API Token \u540E\u52A0\u8F7D\u9879\u76EE",
+    "general.syncInterval.name": "\u540C\u6B65\u95F4\u9694",
+    "general.syncInterval.desc": "\u4E0E Todoist \u540C\u6B65\u7684\u9891\u7387\uFF0C\u5355\u4F4D\u4E3A\u5206\u949F\u3002\u8BBE\u4E3A 0 \u53EF\u5173\u95ED\u81EA\u52A8\u540C\u6B65\u3002",
+    "general.conflict.name": "\u51B2\u7A81\u5904\u7406",
+    "general.conflict.desc": "\u5F53\u4E24\u8FB9\u90FD\u6709\u4FEE\u6539\u65F6\u5982\u4F55\u5904\u7406\u51B2\u7A81\u3002",
+    "general.conflict.todoist": "Todoist \u4F18\u5148",
+    "general.conflict.local": "\u672C\u5730\u4F18\u5148",
+    "general.conflict.ask": "\u6BCF\u6B21\u8BE2\u95EE",
+    "general.notifications": "\u901A\u77E5",
+    "general.notifications.manual.name": "\u624B\u52A8\u540C\u6B65\u901A\u77E5",
+    "general.notifications.manual.desc": "\u624B\u52A8\u89E6\u53D1\u540C\u6B65\u540E\u663E\u793A\u7B80\u77ED\u5B8C\u6210\u901A\u77E5\u3002",
+    "general.notifications.auto.name": "\u81EA\u52A8\u540C\u6B65\u901A\u77E5",
+    "general.notifications.auto.desc": "\u5728\u684C\u9762\u7AEF\u548C\u79FB\u52A8\u7AEF\u663E\u793A\u5B9A\u65F6\u540C\u6B65\u901A\u77E5\u3002\u9519\u8BEF\u59CB\u7EC8\u4F1A\u663E\u793A\u3002",
+    "general.manualActions": "\u624B\u52A8\u64CD\u4F5C",
+    "general.syncNow.name": "\u7ACB\u5373\u540C\u6B65",
+    "general.syncNow.desc": "\u624B\u52A8\u89E6\u53D1\u4E00\u6B21\u540C\u6B65\u3002",
+    "general.syncNow.button": "\u7ACB\u5373\u540C\u6B65",
+    "general.syncNow.syncing": "\u540C\u6B65\u4E2D...",
+    "general.syncNow.noToken": "\u8BF7\u5148\u914D\u7F6E API Token\u3002",
+    "general.syncNow.failed": "\u540C\u6B65\u5931\u8D25\uFF0C\u8BF7\u67E5\u770B\u63A7\u5236\u53F0\u3002",
+    "general.status": "\u72B6\u6001",
+    "general.status.synced": "\u5DF2\u540C\u6B65\u4EFB\u52A1\uFF1A{{count}}",
+    "general.status.last": "\u4E0A\u6B21\u540C\u6B65\uFF1A{{time}}",
+    "general.status.never": "\u4E0A\u6B21\u540C\u6B65\uFF1A\u4ECE\u672A\u540C\u6B65",
+    "general.status.api": "API \u72B6\u6001\uFF1A{{status}}",
+    "general.status.connected": "\u5DF2\u8FDE\u63A5",
+    "general.status.disconnected": "\u672A\u8FDE\u63A5",
+    "daily.enable.name": "\u6BCF\u65E5 Daily Note",
+    "daily.enable.desc": "\u5C06\u4ECA\u5929\u7B26\u5408\u6761\u4EF6\u7684\u4EFB\u52A1\u5199\u5165\u5F53\u5929 Daily Note \u7684\u53D7\u63A7 Marker \u533A\u95F4\u3002",
+    "daily.markerStart.name": "\u5F00\u59CB Marker",
+    "daily.markerStart.desc": "\u53D7\u63A7 Daily Note \u6E90\u4EE3\u7801\u6A21\u5F0F\u533A\u95F4\u7684\u5F00\u59CB\u6807\u8BB0\u3002",
+    "daily.markerEnd.name": "\u7ED3\u675F Marker",
+    "daily.markerEnd.desc": "\u53D7\u63A7 Daily Note \u6E90\u4EE3\u7801\u6A21\u5F0F\u533A\u95F4\u7684\u7ED3\u675F\u6807\u8BB0\u3002",
+    "daily.warning": "\u6CE8\u610F\uFF1ASync Todoist \u5728\u540C\u6B65\u65F6\u4F1A\u5B8C\u6574\u91CD\u5199\u8FD9\u4E24\u4E2A Marker \u4E4B\u95F4\u7684\u6240\u6709\u5185\u5BB9\u3002\u4E0D\u8981\u5728 Marker \u533A\u95F4\u5185\u624B\u52A8\u7F16\u8F91\uFF1B\u5C1A\u672A\u540C\u6B65\u7684\u6539\u52A8\u53EF\u80FD\u4F1A\u88AB\u8986\u76D6\u3002",
+    "daily.sort.name": "\u9996\u8981\u6392\u5E8F",
+    "daily.sort.desc": "\u9009\u62E9 Daily Note \u7684\u7B2C\u4E00\u7EA7\u6392\u5E8F\u7EF4\u5EA6\uFF0C\u7B2C\u4E8C\u7EA7\u6392\u5E8F\u4F1A\u4F7F\u7528\u53E6\u4E00\u4E2A\u7EF4\u5EA6\u3002",
+    "daily.sort.time": "\u65F6\u95F4\u4F18\u5148",
+    "daily.sort.priority": "\u91CD\u8981\u7A0B\u5EA6\u4F18\u5148",
+    "daily.includeCompleted.name": "\u540C\u6B65\u5DF2\u5B8C\u6210\u4EFB\u52A1",
+    "daily.includeCompleted.desc": "\u5C06\u4ECA\u5929\u5230\u671F\u4E14\u5DF2\u5B8C\u6210\u7684 Todoist \u4EFB\u52A1\u4FDD\u7559\u5728 Daily Note \u533A\u95F4\u4E2D\uFF0C\u5E76\u6309\u6392\u5E8F\u89C4\u5219\u653E\u5728\u539F\u4F4D\u7F6E\u3002",
+    "daily.syncNow.name": "\u7ACB\u5373\u540C\u6B65 Daily Note",
+    "daily.syncNow.desc": "\u4F7F\u7528\u5F53\u524D\u7B5B\u9009\u8BBE\u7F6E\u5237\u65B0\u4ECA\u5929\u7684 Daily Note\u3002",
+    "daily.syncNow.button": "\u540C\u6B65\u4ECA\u5929",
+    "daily.syncNow.result": "Daily Note \u7ED3\u679C\uFF1A{{status}}",
+    "daily.filters": "\u4EFB\u52A1\u7B5B\u9009",
+    "daily.filters.desc": "\u6BCF\u4E2A\u7EF4\u5EA6\u9ED8\u8BA4\u90FD\u662F\u5168\u90E8\u3002\u591A\u4E2A\u7EF4\u5EA6\u540C\u65F6\u9009\u62E9\u65F6\uFF0C\u4EFB\u52A1\u5FC5\u987B\u540C\u65F6\u6EE1\u8DB3\u6BCF\u4E2A\u5DF2\u9009\u62E9\u7684\u7EF4\u5EA6\u3002",
+    "daily.filters.verifyFirst": "\u8BF7\u5148\u5728\u901A\u7528\u8BBE\u7F6E\u4E2D\u9A8C\u8BC1 Todoist API Token\uFF0C\u4EE5\u52A0\u8F7D\u9879\u76EE\u548C\u6807\u7B7E\u3002",
+    "daily.projects": "\u9879\u76EE",
+    "daily.projects.all": "\u6240\u6709\u9879\u76EE",
+    "daily.projects.inbox": "Inbox",
+    "daily.labels": "\u6807\u7B7E",
+    "daily.labels.all": "\u6240\u6709\u6807\u7B7E",
+    "daily.labels.shared": "\u5171\u4EAB",
+    "daily.priority": "\u4F18\u5148\u7EA7",
+    "daily.priority.all": "\u6240\u6709\u4F18\u5148\u7EA7",
+    "priority.urgent": "\u7D27\u6025 (p1)",
+    "priority.high": "\u9AD8 (p2)",
+    "priority.medium": "\u4E2D (p3)",
+    "priority.normal": "\u666E\u901A (p4)"
+  }
+};
+function t(language, key, values = {}) {
+  var _a, _b;
+  let text = (_b = (_a = STRINGS[language]) == null ? void 0 : _a[key]) != null ? _b : STRINGS.en[key];
+  for (const [name, value] of Object.entries(values)) {
+    text = text.replace(new RegExp(`{{${name}}}`, "g"), String(value));
+  }
+  return text;
+}
 
 // src/notices.ts
 var import_obsidian = require("obsidian");
@@ -142,10 +317,10 @@ function noticeDurationForDailyNote(result) {
 var SETTINGS_TABS = ["general", "daily"];
 var ACTIVE_TAB_STORAGE_KEY = "sync-todoist:active-settings-tab";
 var PRIORITY_OPTIONS = [
-  { value: 4 /* HIGH */, label: "Urgent (p1)" },
-  { value: 3 /* MEDIUM */, label: "High (p2)" },
-  { value: 2 /* LOW */, label: "Medium (p3)" },
-  { value: 1 /* NONE */, label: "Normal (p4)" }
+  { value: 4 /* HIGH */, labelKey: "priority.urgent" },
+  { value: 3 /* MEDIUM */, labelKey: "priority.high" },
+  { value: 2 /* LOW */, labelKey: "priority.medium" },
+  { value: 1 /* NONE */, labelKey: "priority.normal" }
 ];
 var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
   constructor(app, plugin) {
@@ -156,6 +331,9 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     this.labelsLoaded = false;
     this.activeTab = "general";
     this.plugin = plugin;
+  }
+  tr(key, values) {
+    return t(this.plugin.settings.uiLanguage, key, values);
   }
   display() {
     const { containerEl } = this;
@@ -169,8 +347,15 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     this.renderGeneralSettings(containerEl);
   }
   renderGeneralSettings(containerEl) {
-    new import_obsidian2.Setting(containerEl).setName("Todoist API token").setDesc("Your todoist API token. Find it in todoist settings \u2192 integrations \u2192 developer.").addText((text) => {
-      text.setPlaceholder("Enter your API token").setValue(this.plugin.settings.apiToken).onChange(async (value) => {
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.language.name")).setDesc(this.tr("general.language.desc")).addDropdown((dropdown) => {
+      dropdown.addOption("en", this.tr("general.language.en")).addOption("zh-CN", this.tr("general.language.zh")).setValue(this.plugin.settings.uiLanguage).onChange(async (value) => {
+        this.plugin.settings.uiLanguage = value;
+        await this.plugin.saveSettings();
+        this.display();
+      });
+    });
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.apiToken.name")).setDesc(this.tr("general.apiToken.desc")).addText((text) => {
+      text.setPlaceholder(this.tr("general.apiToken.placeholder")).setValue(this.plugin.settings.apiToken).onChange(async (value) => {
         this.plugin.settings.apiToken = value;
         await this.plugin.saveSettings();
         this.projectsLoaded = false;
@@ -181,29 +366,29 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
       text.inputEl.type = "password";
       text.inputEl.addClass("syncist-api-token-input");
     }).addButton((button) => {
-      button.setButtonText("Verify").onClick(async () => {
+      button.setButtonText(this.tr("general.apiToken.verify")).onClick(async () => {
         button.setDisabled(true);
-        button.setButtonText("Verifying...");
+        button.setButtonText(this.tr("general.apiToken.verifying"));
         try {
           this.plugin.todoistService.initialize(this.plugin.settings.apiToken);
           const isValid = await this.plugin.todoistService.verifyToken();
           if (isValid) {
-            showSyncTodoistNotice("API token is valid.");
+            showSyncTodoistNotice(this.tr("general.apiToken.valid"));
             await this.loadTodoistMetadata();
             this.display();
           } else {
-            showSyncTodoistNotice("API token is invalid. Please check and try again.", 1e4);
+            showSyncTodoistNotice(this.tr("general.apiToken.invalid"), 1e4);
           }
         } catch (error) {
-          showSyncTodoistNotice("Failed to verify token. Please check your internet connection.", 1e4);
+          showSyncTodoistNotice(this.tr("general.apiToken.failed"), 1e4);
           console.warn("Token verification error:", error);
         } finally {
           button.setDisabled(false);
-          button.setButtonText("Verify");
+          button.setButtonText(this.tr("general.apiToken.verify"));
         }
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("Sync tag").setDesc("Tag used to identify tasks for syncing. Include the # symbol.").addText(
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.syncTag.name")).setDesc(this.tr("general.syncTag.desc")).addText(
       (text) => text.setPlaceholder("#todoist").setValue(this.plugin.settings.syncTag).onChange(async (value) => {
         if (value && !value.startsWith("#")) {
           value = "#" + value;
@@ -215,10 +400,10 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     if (this.plugin.settings.apiToken && !this.projectsLoaded) {
       void this.loadTodoistMetadata().then(() => this.display());
     }
-    const projectSetting = new import_obsidian2.Setting(containerEl).setName("Default project").setDesc("Default todoist project for new tasks. Leave empty to use inbox.");
+    const projectSetting = new import_obsidian2.Setting(containerEl).setName(this.tr("general.defaultProject.name")).setDesc(this.tr("general.defaultProject.desc"));
     if (this.projects.length > 0) {
       projectSetting.addDropdown((dropdown) => {
-        dropdown.addOption("", "Inbox (default)");
+        dropdown.addOption("", this.tr("general.defaultProject.inbox"));
         for (const project of this.projects) {
           dropdown.addOption(project.id, project.name);
         }
@@ -230,10 +415,10 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
       });
     } else {
       projectSetting.addText((text) => {
-        text.setPlaceholder("Verify API token to load projects").setValue(this.plugin.settings.defaultProjectId).setDisabled(true);
+        text.setPlaceholder(this.tr("general.defaultProject.placeholder")).setValue(this.plugin.settings.defaultProjectId).setDisabled(true);
       });
     }
-    new import_obsidian2.Setting(containerEl).setName("Sync interval").setDesc("How often to sync with todoist (in minutes). Set to 0 to disable auto sync.").addText(
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.syncInterval.name")).setDesc(this.tr("general.syncInterval.desc")).addText(
       (text) => text.setPlaceholder("5").setValue(String(this.plugin.settings.syncIntervalMinutes)).onChange(async (value) => {
         const num = parseInt(value, 10);
         if (!isNaN(num) && num >= 0) {
@@ -243,34 +428,34 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
         }
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("Conflict resolution").setDesc("How to handle conflicts when both sides have changes.").addDropdown((dropdown) => {
-      dropdown.addOption("todoist-wins", "Todoist wins").addOption("obsidian-wins", "Local wins").addOption("ask-user", "Ask me each time").setValue(this.plugin.settings.conflictResolution).onChange(async (value) => {
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.conflict.name")).setDesc(this.tr("general.conflict.desc")).addDropdown((dropdown) => {
+      dropdown.addOption("todoist-wins", this.tr("general.conflict.todoist")).addOption("obsidian-wins", this.tr("general.conflict.local")).addOption("ask-user", this.tr("general.conflict.ask")).setValue(this.plugin.settings.conflictResolution).onChange(async (value) => {
         this.plugin.settings.conflictResolution = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("Notifications").setHeading();
-    new import_obsidian2.Setting(containerEl).setName("Manual sync notices").setDesc("Show a short completion notice after manual sync actions.").addToggle(
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.notifications")).setHeading();
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.notifications.manual.name")).setDesc(this.tr("general.notifications.manual.desc")).addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.notifications.manualSync).onChange(async (value) => {
         this.plugin.settings.notifications.manualSync = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("Automatic sync notices").setDesc("Show scheduled sync notices on desktop and mobile. Errors are always shown.").addToggle(
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.notifications.auto.name")).setDesc(this.tr("general.notifications.auto.desc")).addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.notifications.automaticSync).onChange(async (value) => {
         this.plugin.settings.notifications.automaticSync = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("Manual actions").setHeading();
-    new import_obsidian2.Setting(containerEl).setName("Sync now").setDesc("Manually trigger a sync.").addButton((button) => {
-      button.setButtonText("Sync now").setCta().onClick(async () => {
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.manualActions")).setHeading();
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.syncNow.name")).setDesc(this.tr("general.syncNow.desc")).addButton((button) => {
+      button.setButtonText(this.tr("general.syncNow.button")).setCta().onClick(async () => {
         if (!this.plugin.settings.apiToken) {
-          showSyncTodoistNotice("Please configure your API token first.");
+          showSyncTodoistNotice(this.tr("general.syncNow.noToken"));
           return;
         }
         button.setDisabled(true);
-        button.setButtonText("Syncing...");
+        button.setButtonText(this.tr("general.syncNow.syncing"));
         try {
           const result = await this.plugin.syncNow();
           if (this.plugin.settings.notifications.manualSync) {
@@ -281,15 +466,15 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
           }
           this.display();
         } catch (error) {
-          showSyncTodoistNotice("Sync failed. Check console for details.", 1e4);
+          showSyncTodoistNotice(this.tr("general.syncNow.failed"), 1e4);
           console.warn("Sync error:", error);
         } finally {
           button.setDisabled(false);
-          button.setButtonText("Sync now");
+          button.setButtonText(this.tr("general.syncNow.button"));
         }
       });
     });
-    new import_obsidian2.Setting(containerEl).setName("Status").setHeading();
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.status")).setHeading();
     const statusEl = containerEl.createDiv({ cls: "todoist-sync-status" });
     this.updateStatusDisplay(statusEl);
   }
@@ -298,7 +483,7 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     for (const tabId of SETTINGS_TABS) {
       const button = bar.createEl("button", {
         cls: "sync-todoist-tab" + (tabId === this.activeTab ? " is-active" : ""),
-        text: tabId === "general" ? "General" : "\u6BCF\u65E5 Daily Note"
+        text: tabId === "general" ? this.tr("tab.general") : this.tr("tab.daily")
       });
       button.onclick = () => {
         this.activeTab = tabId;
@@ -315,7 +500,7 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     return "general";
   }
   renderDailyNoteSettings(containerEl) {
-    new import_obsidian2.Setting(containerEl).setName("\u6BCF\u65E5 daily note").setDesc("Write today's matching tasks into the managed marker region of today's daily note.").addToggle(
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.enable.name")).setDesc(this.tr("daily.enable.desc")).addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.dailyNote.enabled).onChange(async (value) => {
         this.plugin.settings.dailyNote.enabled = value;
         await this.plugin.saveSettings();
@@ -325,41 +510,54 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     if (!this.plugin.settings.dailyNote.enabled) {
       return;
     }
-    new import_obsidian2.Setting(containerEl).setName("Marker start").setDesc("Start marker for the managed daily note source-mode region.").addText(
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.markerStart.name")).setDesc(this.tr("daily.markerStart.desc")).addText(
       (text) => text.setValue(this.plugin.settings.dailyNote.markerStart).onChange(async (value) => {
         this.plugin.settings.dailyNote.markerStart = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("Marker end").setDesc("End marker for the managed daily note source-mode region.").addText(
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.markerEnd.name")).setDesc(this.tr("daily.markerEnd.desc")).addText(
       (text) => text.setValue(this.plugin.settings.dailyNote.markerEnd).onChange(async (value) => {
         this.plugin.settings.dailyNote.markerEnd = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("Sync daily note now").setDesc("Refresh today's daily note using the current filter settings.").addButton(
-      (button) => button.setButtonText("Sync today").onClick(async () => {
-        var _a;
-        const result = await this.plugin.syncDailyNoteNow();
-        showSyncTodoistNotice((_a = result.message) != null ? _a : `Daily note result: ${result.status}`);
+    new import_obsidian2.Setting(containerEl).setDesc(this.tr("daily.warning"));
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.sort.name")).setDesc(this.tr("daily.sort.desc")).addDropdown((dropdown) => {
+      dropdown.addOption("time", this.tr("daily.sort.time")).addOption("priority", this.tr("daily.sort.priority")).setValue(this.plugin.settings.dailyNote.sortMode).onChange(async (value) => {
+        this.plugin.settings.dailyNote.sortMode = value;
+        await this.plugin.saveSettings();
+      });
+    });
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.includeCompleted.name")).setDesc(this.tr("daily.includeCompleted.desc")).addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.dailyNote.includeCompleted).onChange(async (value) => {
+        this.plugin.settings.dailyNote.includeCompleted = value;
+        await this.plugin.saveSettings();
       })
     );
-    new import_obsidian2.Setting(containerEl).setName("Task filters").setHeading();
-    new import_obsidian2.Setting(containerEl).setDesc("Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.");
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.syncNow.name")).setDesc(this.tr("daily.syncNow.desc")).addButton(
+      (button) => button.setButtonText(this.tr("daily.syncNow.button")).onClick(async () => {
+        var _a;
+        const result = await this.plugin.syncDailyNoteNow();
+        showSyncTodoistNotice((_a = result.message) != null ? _a : this.tr("daily.syncNow.result", { status: result.status }));
+      })
+    );
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.filters")).setHeading();
+    new import_obsidian2.Setting(containerEl).setDesc(this.tr("daily.filters.desc"));
     if (this.plugin.settings.apiToken && (!this.projectsLoaded || !this.labelsLoaded)) {
       void this.loadTodoistMetadata().then(() => this.display());
     }
     if (!this.plugin.settings.apiToken || !this.projectsLoaded && !this.labelsLoaded) {
-      new import_obsidian2.Setting(containerEl).setDesc("Verify your todoist API token in general settings first to load projects and labels.");
+      new import_obsidian2.Setting(containerEl).setDesc(this.tr("daily.filters.verifyFirst"));
     }
     this.renderProjectSelector(containerEl);
     this.renderLabelSelector(containerEl);
     this.renderPrioritySelector(containerEl);
   }
   renderProjectSelector(containerEl) {
-    new import_obsidian2.Setting(containerEl).setName("Projects").setHeading();
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.projects")).setHeading();
     const wrapper = containerEl.createDiv({ cls: "sync-todoist-multi-select" });
-    this.renderAllCheckbox(wrapper, "All projects", this.plugin.settings.dailyNote.projectIds.length === 0, async () => {
+    this.renderAllCheckbox(wrapper, this.tr("daily.projects.all"), this.plugin.settings.dailyNote.projectIds.length === 0, async () => {
       this.plugin.settings.dailyNote.projectIds = [];
       await this.plugin.saveSettings();
       this.display();
@@ -367,7 +565,7 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     for (const project of this.projects) {
       this.renderCheckbox(
         wrapper,
-        project.name + (project.isInbox ? " (Inbox)" : ""),
+        project.name + (project.isInbox ? ` (${this.tr("daily.projects.inbox")})` : ""),
         this.plugin.settings.dailyNote.projectIds.includes(project.id),
         async (checked) => {
           this.plugin.settings.dailyNote.projectIds = updateSelection(
@@ -382,9 +580,9 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     }
   }
   renderLabelSelector(containerEl) {
-    new import_obsidian2.Setting(containerEl).setName("Labels").setHeading();
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.labels")).setHeading();
     const wrapper = containerEl.createDiv({ cls: "sync-todoist-multi-select" });
-    this.renderAllCheckbox(wrapper, "All labels", this.plugin.settings.dailyNote.labels.length === 0, async () => {
+    this.renderAllCheckbox(wrapper, this.tr("daily.labels.all"), this.plugin.settings.dailyNote.labels.length === 0, async () => {
       this.plugin.settings.dailyNote.labels = [];
       await this.plugin.saveSettings();
       this.display();
@@ -392,7 +590,7 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     for (const label of this.labels) {
       this.renderCheckbox(
         wrapper,
-        label.name + (label.isShared ? " (shared)" : ""),
+        label.name + (label.isShared ? ` (${this.tr("daily.labels.shared")})` : ""),
         this.plugin.settings.dailyNote.labels.includes(label.name),
         async (checked) => {
           this.plugin.settings.dailyNote.labels = updateSelection(
@@ -407,9 +605,9 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     }
   }
   renderPrioritySelector(containerEl) {
-    new import_obsidian2.Setting(containerEl).setName("Priority").setHeading();
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.priority")).setHeading();
     const wrapper = containerEl.createDiv({ cls: "sync-todoist-multi-select" });
-    this.renderAllCheckbox(wrapper, "All priorities", this.plugin.settings.dailyNote.priorities.length === 0, async () => {
+    this.renderAllCheckbox(wrapper, this.tr("daily.priority.all"), this.plugin.settings.dailyNote.priorities.length === 0, async () => {
       this.plugin.settings.dailyNote.priorities = [];
       await this.plugin.saveSettings();
       this.display();
@@ -417,7 +615,7 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     for (const priority of PRIORITY_OPTIONS) {
       this.renderCheckbox(
         wrapper,
-        priority.label,
+        this.tr(priority.labelKey),
         this.plugin.settings.dailyNote.priorities.includes(priority.value),
         async (checked) => {
           this.plugin.settings.dailyNote.priorities = updateSelection(
@@ -487,17 +685,19 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     const syncState = this.plugin.getSyncState();
     const taskCount = Object.keys(syncState.tasks).length;
     const statusText = containerEl.createEl("p");
-    statusText.textContent = `Synced tasks: ${taskCount}`;
+    statusText.textContent = this.tr("general.status.synced", { count: taskCount });
     if (syncState.lastFullSync > 0) {
       const lastSync = new Date(syncState.lastFullSync);
       const lastSyncText = containerEl.createEl("p");
-      lastSyncText.textContent = `Last sync: ${lastSync.toLocaleString()}`;
+      lastSyncText.textContent = this.tr("general.status.last", { time: lastSync.toLocaleString() });
     } else {
       const lastSyncText = containerEl.createEl("p");
-      lastSyncText.textContent = "Last sync: never";
+      lastSyncText.textContent = this.tr("general.status.never");
     }
     const apiStatus = containerEl.createEl("p");
-    apiStatus.textContent = `API status: ${this.plugin.todoistService.isInitialized() ? "Connected" : "Not connected"}`;
+    apiStatus.textContent = this.tr("general.status.api", {
+      status: this.plugin.todoistService.isInitialized() ? this.tr("general.status.connected") : this.tr("general.status.disconnected")
+    });
   }
 };
 function updateSelection(values, value, checked) {
@@ -686,7 +886,7 @@ var TodoistService = class {
   }
   async getSubtasks(parentId) {
     const allTasks = await this.getTasks();
-    return allTasks.filter((t) => t.parentId === parentId);
+    return allTasks.filter((t2) => t2.parentId === parentId);
   }
   async getTask(taskId) {
     if (!this.apiToken)
@@ -852,11 +1052,12 @@ var TodoistService = class {
     let cursor = null;
     do {
       const params = new URLSearchParams({
-        filter_query: options.filterQuery,
         since: options.since.toISOString(),
         until: options.until.toISOString(),
         limit: "200"
       });
+      if (options.filterQuery)
+        params.set("filter_query", options.filterQuery);
       if (cursor)
         params.set("cursor", cursor);
       const resp = await (0, import_obsidian3.requestUrl)({
@@ -1236,7 +1437,7 @@ function extractTodoistIdsFromMarkerRegion(content, markerStart, markerEnd) {
 }
 function taskMatchesDailyNoteFilter(task, filter) {
   var _a, _b, _c;
-  if (task.isCompleted)
+  if (task.isCompleted && !filter.includeCompleted)
     return false;
   if (((_b = (_a = task.due) == null ? void 0 : _a.date) != null ? _b : null) !== filter.today)
     return false;
@@ -1259,9 +1460,42 @@ function filterDailyNoteTasks(tasks, settings, today) {
     today,
     projectIds: settings.projectIds,
     labels: settings.labels,
-    priorities: settings.priorities
+    priorities: settings.priorities,
+    includeCompleted: settings.includeCompleted
   };
   return tasks.filter((task) => taskMatchesDailyNoteFilter(task, filter));
+}
+function sortDailyNoteTasks(tasks, settings, resolveProjectName) {
+  return [...tasks].sort((a, b) => compareDailyNoteTasks(a, b, settings, resolveProjectName));
+}
+function compareDailyNoteTasks(a, b, settings, resolveProjectName) {
+  var _a, _b;
+  const primary = settings.sortMode === "priority" ? comparePriority(a, b) || compareTime(a, b) : compareTime(a, b) || comparePriority(a, b);
+  if (primary !== 0)
+    return primary;
+  const aProject = (_a = resolveProjectName(a.projectId)) != null ? _a : a.projectId;
+  const bProject = (_b = resolveProjectName(b.projectId)) != null ? _b : b.projectId;
+  return aProject.localeCompare(bProject) || a.content.localeCompare(b.content) || a.id.localeCompare(b.id);
+}
+function comparePriority(a, b) {
+  return b.priority - a.priority;
+}
+function compareTime(a, b) {
+  const aTime = getDueTimeMinutes(a);
+  const bTime = getDueTimeMinutes(b);
+  if (aTime === bTime)
+    return 0;
+  return aTime < bTime ? -1 : 1;
+}
+function getDueTimeMinutes(task) {
+  var _a;
+  const datetime = (_a = task.due) == null ? void 0 : _a.datetime;
+  if (!datetime)
+    return Number.POSITIVE_INFINITY;
+  const date = new Date(datetime);
+  if (Number.isNaN(date.getTime()))
+    return Number.POSITIVE_INFINITY;
+  return date.getHours() * 60 + date.getMinutes();
 }
 function renderDailyNoteTaskBlock(tasks, markerStart, markerEnd, syncTag, resolveProjectName, filePath) {
   const lines = tasks.map((task, index) => {
@@ -1441,7 +1675,7 @@ var SyncEngine = class {
       this.syncState.lastFullSync = Date.now();
       if (this.settings.dailyNote.enabled) {
         try {
-          const freshTasks = await this.todoistService.getTasks();
+          const freshTasks = await this.getDailyNoteSourceTasks();
           result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks);
           if (result.dailyNote.status === "error" || result.dailyNote.status === "invalid_markers") {
             result.errors.push((_a = result.dailyNote.message) != null ? _a : "Daily Note sync failed");
@@ -1466,7 +1700,7 @@ var SyncEngine = class {
    */
   findParentTodoistId(task, allTasks, createdTaskMap) {
     var _a;
-    const samefile = allTasks.filter((t) => t.filePath === task.filePath && t.lineNumber < task.lineNumber);
+    const samefile = allTasks.filter((t2) => t2.filePath === task.filePath && t2.lineNumber < task.lineNumber);
     for (let i = samefile.length - 1; i >= 0; i--) {
       const candidate = samefile[i];
       if (candidate.indentLevel < task.indentLevel) {
@@ -1509,8 +1743,29 @@ var SyncEngine = class {
       return { status: "error", taskCount: 0, message: "Todoist API not configured" };
     }
     await this.todoistService.ensureProjectCache();
-    const tasks = await this.todoistService.getTasks();
+    const tasks = await this.getDailyNoteSourceTasks();
     return this.syncTasksIntoDailyNote(tasks);
+  }
+  async getDailyNoteSourceTasks() {
+    const activeTasks = await this.todoistService.getTasks();
+    if (!this.settings.dailyNote.includeCompleted) {
+      return activeTasks;
+    }
+    const today = localTodayISODate();
+    const since = /* @__PURE__ */ new Date(`${today}T00:00:00`);
+    const until = new Date(since);
+    until.setDate(since.getDate() + 1);
+    const completedTasks = await this.todoistService.getCompletedTasks({
+      by: "due_date",
+      since,
+      until
+    });
+    const byId = /* @__PURE__ */ new Map();
+    for (const task of activeTasks)
+      byId.set(task.id, task);
+    for (const task of completedTasks)
+      byId.set(task.id, task);
+    return [...byId.values()];
   }
   getDailyNotePath(date) {
     var _a, _b, _c, _d, _e, _f;
@@ -1550,7 +1805,11 @@ var SyncEngine = class {
         message: `Daily Note not found: ${pathResult.path}`
       };
     }
-    const filteredTasks = filterDailyNoteTasks(tasks, settings, today);
+    const filteredTasks = sortDailyNoteTasks(
+      filterDailyNoteTasks(tasks, settings, today),
+      settings,
+      (projectId) => this.resolveProjectName(projectId)
+    );
     const oldContent = await this.app.vault.read(file);
     const staleIds = extractTodoistIdsFromMarkerRegion(oldContent, settings.markerStart, settings.markerEnd);
     const block = renderDailyNoteTaskBlock(
@@ -2033,7 +2292,7 @@ var ImportTaskModal = class extends import_obsidian5.SuggestModal {
   getSuggestions(query) {
     if (this.loading)
       return [];
-    const topLevel = this.allTasks.filter((t) => !t.parentId);
+    const topLevel = this.allTasks.filter((t2) => !t2.parentId);
     if (!query.trim()) {
       return topLevel.slice(0, 50);
     }
@@ -2066,7 +2325,7 @@ var ImportTaskModal = class extends import_obsidian5.SuggestModal {
       parts.push(`\u{1F4C5} ${task.due.date}`);
     if (task.labels.length)
       parts.push(task.labels.map((l) => `#${l}`).join(" "));
-    const subtaskCount = this.allTasks.filter((t) => t.parentId === task.id).length;
+    const subtaskCount = this.allTasks.filter((t2) => t2.parentId === task.id).length;
     if (subtaskCount > 0)
       parts.push(`${subtaskCount} subtask${subtaskCount > 1 ? "s" : ""}`);
     if (parts.length > 0) {
@@ -2074,7 +2333,7 @@ var ImportTaskModal = class extends import_obsidian5.SuggestModal {
     }
   }
   onChooseSuggestion(task) {
-    const subtasks = this.allTasks.filter((t) => t.parentId === task.id);
+    const subtasks = this.allTasks.filter((t2) => t2.parentId === task.id);
     this.onSelect(task, subtasks);
   }
 };
@@ -2136,22 +2395,22 @@ function buildTaskTree(tasks) {
   var _a, _b;
   const taskMap = /* @__PURE__ */ new Map();
   const childrenMap = /* @__PURE__ */ new Map();
-  for (const t of tasks) {
-    taskMap.set(t.id, t);
+  for (const t2 of tasks) {
+    taskMap.set(t2.id, t2);
   }
-  for (const t of tasks) {
-    if (t.parentId && taskMap.has(t.parentId)) {
-      const existing = (_a = childrenMap.get(t.parentId)) != null ? _a : [];
-      existing.push(t);
-      childrenMap.set(t.parentId, existing);
+  for (const t2 of tasks) {
+    if (t2.parentId && taskMap.has(t2.parentId)) {
+      const existing = (_a = childrenMap.get(t2.parentId)) != null ? _a : [];
+      existing.push(t2);
+      childrenMap.set(t2.parentId, existing);
     }
   }
   const roots = [];
-  for (const t of tasks) {
-    if (!t.parentId || !taskMap.has(t.parentId)) {
+  for (const t2 of tasks) {
+    if (!t2.parentId || !taskMap.has(t2.parentId)) {
       roots.push({
-        task: t,
-        children: (_b = childrenMap.get(t.id)) != null ? _b : []
+        task: t2,
+        children: (_b = childrenMap.get(t2.id)) != null ? _b : []
       });
     }
   }

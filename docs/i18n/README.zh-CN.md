@@ -1,6 +1,6 @@
 # Sync Todoist
 
-[![版本](https://img.shields.io/badge/version-0.4.1-7c3aed)](../../RELEASE.md)
+[![版本](https://img.shields.io/badge/version-0.5.0-7c3aed)](../../RELEASE.md)
 [![许可证](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](../../LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![插件 ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](../../manifest.json)
@@ -90,7 +90,11 @@ Sync Todoist 可以把今天匹配的 Todoist 任务写入当天的 Obsidian Dai
 %% sync-todoist:daily:end %%
 ```
 
-你可以自定义 start/end marker，并通过项目、标签、优先级三个多选维度决定哪些任务进入 Daily Note。某个维度为空表示该维度选择 **全部**。Daily Note 区块会在普通同步时刷新，也可以手动运行 **Sync Todoist: Sync today's daily note**。
+你可以自定义 start/end marker，并通过项目、标签、优先级三个多选维度决定哪些任务进入 Daily Note。某个维度为空表示该维度选择 **全部**。Daily Note 任务支持 **时间优先** 或 **重要程度优先** 的嵌套排序；另一个维度会作为第二级排序，最后用项目/内容顺序保证无时间、普通优先级任务的稳定位置。
+
+Daily Note 区块会在普通同步时刷新，也可以手动运行 **Sync Todoist: Sync today's daily note**。开启 **同步已完成任务** 后，今天到期且已完成的 Todoist 任务会继续留在区块中，并按照排序规则保留在对应位置，而不是完成后消失。
+
+Sync Todoist 在同步时会完整重写 Daily Note marker 之间的所有内容。不要在 marker 区间内手动编辑；尚未同步的改动可能会被覆盖。
 
 ## 快速上手
 
@@ -155,11 +159,14 @@ npm run build
 | 设置 | 默认值 | 说明 |
 |---|---|---|
 | Todoist API token | 空 | 调用 Todoist API 所需的 token，存储在本地 Obsidian 插件数据中。 |
+| 界面语言 | 英语 | 设置界面语言，支持英语和简体中文。 |
 | Sync tag | `#todoist` | 标记顶层同步任务的 Markdown 标签。 |
 | Default project | Inbox | 新任务默认进入的 Todoist 项目，除非任务写了 `📁 ProjectName`。 |
 | Sync interval | `5` 分钟 | 自动同步频率。设为 `0` 可关闭自动同步。 |
 | Conflict resolution | `Todoist wins` | Obsidian 和 Todoist 同时改动同一任务时的处理策略。 |
 | Daily Note filters | 全部 | 控制今天 Daily Note 区块的项目、标签和优先级筛选。 |
+| Daily Note 首要排序 | `时间优先` | Daily Note 任务按时间再按优先级排序，或按优先级再按时间排序。 |
+| 同步已完成任务 | 关 | 将今天到期且已完成的 Todoist 任务保留在 Daily Note 区块中。 |
 | Manual sync notices | 开 | 手动同步后显示简短的 `Sync Todoist:` 完成通知。 |
 | Automatic sync notices | 开 | 桌面端和移动端的定时同步都会显示通知，包括 0 变化的摘要。 |
 
