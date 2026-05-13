@@ -79,7 +79,7 @@ completed_since: 30d
 
 ## Quick Start
 
-1. Install the plugin manually or build it from source.
+1. Install the plugin with BRAT.
 2. Get your Todoist API token from [Todoist Settings -> Integrations -> Developer](https://todoist.com/app/settings/integrations/developer).
 3. Open **Settings -> Community plugins -> Sync Todoist**, paste the token, and click **Verify**.
 4. Add `#todoist` to a Markdown task, then run **Sync Todoist: Sync now**.
@@ -87,7 +87,20 @@ completed_since: 30d
 ## Install
 
 <details>
-<summary><b>Community Plugins</b></summary>
+<summary><b>BRAT (recommended)</b></summary>
+
+Use BRAT while Sync Todoist is pending review for the Obsidian Community Plugins directory.
+
+1. Open **Settings -> Community plugins**.
+2. Install and enable [BRAT](https://github.com/TfTHacker/obsidian42-brat).
+3. Run **BRAT: Add a beta plugin for testing**.
+4. Enter `https://github.com/o1xhack/obsidian-sync-todoist`.
+5. Enable **Sync Todoist** and configure your Todoist API token.
+
+</details>
+
+<details>
+<summary><b>Pending: Community Plugins</b></summary>
 
 Sync Todoist is not yet listed in the Obsidian Community Plugins directory. After approval:
 
@@ -99,9 +112,7 @@ Sync Todoist is not yet listed in the Obsidian Community Plugins directory. Afte
 </details>
 
 <details>
-<summary><b>Manual release install</b></summary>
-
-The first Sync Todoist release will use the independent `0.1.0` release line described in [RELEASE.md](RELEASE.md). Once a GitHub release exists:
+<summary><b>Manual Release</b></summary>
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest).
 2. Create `.obsidian/plugins/sync-todoist/` in your vault.
@@ -111,7 +122,7 @@ The first Sync Todoist release will use the independent `0.1.0` release line des
 </details>
 
 <details>
-<summary><b>Build from source</b></summary>
+<summary><b>Build from Source</b></summary>
 
 ```bash
 git clone https://github.com/o1xhack/obsidian-sync-todoist.git
