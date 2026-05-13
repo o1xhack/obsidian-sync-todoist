@@ -26,7 +26,7 @@ export default class TodoistSyncPlugin extends Plugin {
   private statusBarItem: HTMLElement | null = null;
 
   async onload(): Promise<void> {
-    console.debug('Loading Syncist plugin...');
+    console.debug('Loading Sync Todoist plugin...');
 
     // Load settings and sync state
     await this.loadSettings();
@@ -56,7 +56,10 @@ export default class TodoistSyncPlugin extends Plugin {
     // Register commands
     this.registerCommands();
 
-    // Register syncist code block processor for query blocks
+    // Register query block processors. Keep the original syncist block name as a migration alias.
+    this.registerMarkdownCodeBlockProcessor('sync-todoist', (source, el) => {
+      renderQueryBlock(source, el, this);
+    });
     this.registerMarkdownCodeBlockProcessor('syncist', (source, el) => {
       renderQueryBlock(source, el, this);
     });
@@ -64,11 +67,11 @@ export default class TodoistSyncPlugin extends Plugin {
     // Start sync interval
     this.startSyncInterval();
 
-    console.debug('Syncist plugin loaded');
+    console.debug('Sync Todoist plugin loaded');
   }
 
   onunload(): void {
-    console.debug('Unloading Syncist plugin...');
+    console.debug('Unloading Sync Todoist plugin...');
     
     // Stop sync interval
     if (this.syncIntervalId !== null) {
@@ -197,7 +200,7 @@ export default class TodoistSyncPlugin extends Plugin {
         };
         if (appWithSettings.setting) {
           appWithSettings.setting.open();
-          appWithSettings.setting.openTabById('todoist-sync');
+          appWithSettings.setting.openTabById('obsidian-sync-todoist');
         }
       },
     });

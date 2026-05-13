@@ -19,8 +19,6 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    new Setting(containerEl).setName('Syncist').setHeading();
-
     // API Token Setting
     new Setting(containerEl)
       .setName('Todoist API token')

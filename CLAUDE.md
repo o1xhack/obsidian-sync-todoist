@@ -14,7 +14,7 @@ No automated test framework — testing is done manually using the spec in `test
 
 ## Architecture
 
-**Syncist** is an Obsidian plugin for bidirectional task sync between Obsidian markdown and Todoist. TypeScript source in `src/` is compiled to a single `main.js` bundle via esbuild.
+**Sync Todoist** is an Obsidian plugin for bidirectional task sync between Obsidian markdown and Todoist. TypeScript source in `src/` is compiled to a single `main.js` bundle via esbuild.
 
 ### Module Overview
 
@@ -27,7 +27,7 @@ No automated test framework — testing is done manually using the spec in `test
 | [src/types.ts](src/types.ts) | All TypeScript interfaces and types |
 | [src/settings.ts](src/settings.ts) | Plugin settings UI tab |
 | [src/import-modal.ts](src/import-modal.ts) | Fuzzy search modal for importing Todoist tasks |
-| [src/query-renderer.ts](src/query-renderer.ts) | Renders `syncist` code blocks as interactive task lists |
+| [src/query-renderer.ts](src/query-renderer.ts) | Renders `sync-todoist` code blocks as interactive task lists |
 
 ### Sync Flow
 

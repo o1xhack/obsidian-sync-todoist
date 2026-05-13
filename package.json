@@ -1,7 +1,7 @@
 {
-  "name": "syncist-todoist-sync",
+  "name": "obsidian-sync-todoist",
   "version": "2.1.0",
-  "description": "Bidirectional sync between Obsidian tasks and Todoist. Subtasks, import, projects, labels, and query blocks. Created with the help of AI; fully validated and tested by human.",
+  "description": "Bidirectional sync between Obsidian tasks and Todoist, with subtasks, import, projects, labels, query blocks, and completed-task queries.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -14,10 +14,16 @@
     "sync",
     "tasks"
   ],
-  "author": "Bastiaan Schönhage",
+  "author": "o1xhack",
+  "contributors": [
+    {
+      "name": "Bastiaan Schönhage",
+      "url": "https://github.com/bastiaanschonhage"
+    }
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/bastiaanschonhage/syncist.git"
+    "url": "https://github.com/o1xhack/obsidian-sync-todoist.git"
   },
   "license": "MIT",
   "devDependencies": {

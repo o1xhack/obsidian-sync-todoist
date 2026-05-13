@@ -66,7 +66,7 @@ function parseQueryConfig(source: string): ParseResult {
   }
 
   if (!filter) {
-    return { config: null, error: 'Invalid syncist block. Use: filter: today' };
+    return { config: null, error: 'Invalid Sync Todoist block. Use: filter: today' };
   }
 
   return {
@@ -302,7 +302,7 @@ export function renderQueryBlock(
   const { config, error } = parseQueryConfig(source);
 
   if (!config) {
-    el.createDiv({ cls: 'syncist-query-error', text: error ?? 'Invalid syncist block. Use: filter: today' });
+    el.createDiv({ cls: 'syncist-query-error', text: error ?? 'Invalid Sync Todoist block. Use: filter: today' });
     return;
   }
 
@@ -348,7 +348,7 @@ export function renderQueryBlock(
           });
         } catch (completedError) {
           completedWarning = completedError instanceof Error ? completedError.message : String(completedError);
-          console.warn('Syncist query block completed task lookup failed:', completedError);
+          console.warn('Sync Todoist query block completed task lookup failed:', completedError);
         }
       }
 
@@ -390,9 +390,9 @@ export function renderQueryBlock(
       const message = error instanceof Error ? error.message : String(error);
       const isFilterError = message.toLowerCase().startsWith('invalid filter');
       if (isFilterError) {
-        console.warn('Syncist query block: invalid filter —', message);
+        console.warn('Sync Todoist query block: invalid filter —', message);
       } else {
-        console.error('Syncist query block error:', error);
+        console.error('Sync Todoist query block error:', error);
       }
       listContainer.createDiv({
         cls: 'syncist-query-error',

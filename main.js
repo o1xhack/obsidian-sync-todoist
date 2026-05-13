@@ -41,7 +41,6 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    new import_obsidian.Setting(containerEl).setName("Syncist").setHeading();
     new import_obsidian.Setting(containerEl).setName("Todoist API token").setDesc("Your todoist API token. Find it in todoist settings \u2192 integrations \u2192 developer.").addText((text) => {
       text.setPlaceholder("Enter your API token").setValue(this.plugin.settings.apiToken).onChange(async (value) => {
         this.plugin.settings.apiToken = value;
@@ -1523,7 +1522,7 @@ function parseQueryConfig(source) {
     }
   }
   if (!filter) {
-    return { config: null, error: "Invalid syncist block. Use: filter: today" };
+    return { config: null, error: "Invalid Sync Todoist block. Use: filter: today" };
   }
   return {
     config: {
@@ -1719,7 +1718,7 @@ function renderTaskRow(task, container, plugin, indent) {
 function renderQueryBlock(source, el, plugin) {
   const { config, error } = parseQueryConfig(source);
   if (!config) {
-    el.createDiv({ cls: "syncist-query-error", text: error != null ? error : "Invalid syncist block. Use: filter: today" });
+    el.createDiv({ cls: "syncist-query-error", text: error != null ? error : "Invalid Sync Todoist block. Use: filter: today" });
     return;
   }
   if (!plugin.todoistService.isInitialized()) {
@@ -1757,7 +1756,7 @@ function renderQueryBlock(source, el, plugin) {
           });
         } catch (completedError) {
           completedWarning = completedError instanceof Error ? completedError.message : String(completedError);
-          console.warn("Syncist query block completed task lookup failed:", completedError);
+          console.warn("Sync Todoist query block completed task lookup failed:", completedError);
         }
       }
       const tasks = mergeTasks(activeTasks, completedTasks);
@@ -1794,9 +1793,9 @@ function renderQueryBlock(source, el, plugin) {
       const message = error2 instanceof Error ? error2.message : String(error2);
       const isFilterError = message.toLowerCase().startsWith("invalid filter");
       if (isFilterError) {
-        console.warn("Syncist query block: invalid filter \u2014", message);
+        console.warn("Sync Todoist query block: invalid filter \u2014", message);
       } else {
-        console.error("Syncist query block error:", error2);
+        console.error("Sync Todoist query block error:", error2);
       }
       listContainer.createDiv({
         cls: "syncist-query-error",
@@ -1818,7 +1817,7 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
     this.statusBarItem = null;
   }
   async onload() {
-    console.debug("Loading Syncist plugin...");
+    console.debug("Loading Sync Todoist plugin...");
     await this.loadSettings();
     await this.loadSyncState();
     this.todoistService = new TodoistService();
@@ -1835,14 +1834,17 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
     this.statusBarItem = this.addStatusBarItem();
     this.updateStatusBar();
     this.registerCommands();
+    this.registerMarkdownCodeBlockProcessor("sync-todoist", (source, el) => {
+      renderQueryBlock(source, el, this);
+    });
     this.registerMarkdownCodeBlockProcessor("syncist", (source, el) => {
       renderQueryBlock(source, el, this);
     });
     this.startSyncInterval();
-    console.debug("Syncist plugin loaded");
+    console.debug("Sync Todoist plugin loaded");
   }
   onunload() {
-    console.debug("Unloading Syncist plugin...");
+    console.debug("Unloading Sync Todoist plugin...");
     if (this.syncIntervalId !== null) {
       window.clearInterval(this.syncIntervalId);
       this.syncIntervalId = null;
@@ -1944,7 +1946,7 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
         const appWithSettings = this.app;
         if (appWithSettings.setting) {
           appWithSettings.setting.open();
-          appWithSettings.setting.openTabById("todoist-sync");
+          appWithSettings.setting.openTabById("obsidian-sync-todoist");
         }
       }
     });

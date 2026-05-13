@@ -1,6 +1,4 @@
-# Syncist (Todoist Sync) - Obsidian Plugin
-
-> **Created with the help of AI; fully validated and tested by human.**
+# Sync Todoist - Obsidian Plugin
 
 ### Summary
 With this plugin it is possible to create `Todoist` tasks from `Obsidian` and keep them in sync bidirectionally.
@@ -12,34 +10,33 @@ When you add the `#todoist` tag to a task (or checkbox item) it will automatical
 - **Subtasks**: Indented tasks beneath a `#todoist` parent are synced as subtasks automatically — no tag needed on each child
 - **Import from Todoist**: Search and import any Todoist task (with its subtasks) into your note via a fuzzy-search modal
 - **Projects & Labels**: Per-task project assignment with `📁 ProjectName` metadata, bidirectional label sync via `#hashtags`
-- **Query Blocks**: Embed live Todoist task lists in your notes using `syncist` code blocks (e.g., `filter: today`)
+- **Query Blocks**: Embed live Todoist task lists in your notes using `sync-todoist` code blocks (e.g., `filter: today`)
 - **Tasks Plugin Compatible**: Works with the popular Obsidian Tasks plugin emojis (📅, ⏫, 🔼, 🔽)
 - **Configurable**: Customize sync tag, default project, sync interval, and conflict resolution
 - **Commands**: Quick commands to create tasks, import tasks, and trigger sync
 - **Conflict Resolution**: Choose how to handle conflicts (Obsidian wins, Todoist wins, or ask)
 - **Zero Dependencies**: Direct Todoist API v1 integration via Obsidian's built-in `requestUrl` — no external SDKs
-- **AI-Crafted**: Created with the help of AI; fully validated and tested by human
 
 ### Installation
 
-#### From Community Plugins (Recommended)
+#### From Community Plugins (After Approval)
 1. Open Obsidian Settings → Community plugins
-2. Click "Browse" and search for "Syncist"
+2. Click "Browse" and search for "Sync Todoist"
 3. Install and enable the plugin
 4. Configure your Todoist API token in the plugin settings
 
 #### Manual Installation
-1. Download `main.js` and `manifest.json` from the [latest release](https://github.com/bastiaanschonhage/syncist/releases)
-2. Create a folder `syncist-todoist-sync` in your vault's `.obsidian/plugins/` directory
-3. Copy `main.js` and `manifest.json` into that folder
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](https://github.com/o1xhack/obsidian-sync-todoist/releases)
+2. Create a folder `obsidian-sync-todoist` in your vault's `.obsidian/plugins/` directory
+3. Copy `main.js`, `manifest.json`, and `styles.css` into that folder
 4. Enable the plugin in Obsidian settings
 
 #### From Source (Development)
 1. Clone this repository
 2. Run `npm install` and `npm run build`
-3. Open the `TestVault` folder in Obsidian (the plugin is symlinked)
+3. Copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/obsidian-sync-todoist/` in a test vault
 4. Enable Community plugins in Settings → Community plugins
-5. Enable the "Syncist (Todoist Sync)" plugin
+5. Enable the "Sync Todoist" plugin
 
 ### Configuration
 
@@ -83,7 +80,7 @@ Indent tasks beneath a `#todoist`-tagged parent. Subtasks inherit the sync tag a
 Use the command **"Import task from Todoist"** to search for any open Todoist task and insert it at your cursor:
 
 1. Open the command palette (`Ctrl/Cmd + P`)
-2. Run "Syncist: Import task from Todoist"
+2. Run "Sync Todoist: Import task from Todoist"
 3. Search by task content, project, label, or due date
 4. Select a task — it and its subtasks are inserted as synced markdown
 
@@ -98,10 +95,10 @@ Assign a project to a task using the `📁` emoji:
 - Project names are resolved from the Todoist project list and cached
 
 #### Query Blocks (Show Today's Tasks)
-Embed a live, interactive task list in any note using a `syncist` code block:
+Embed a live, interactive task list in any note using a `sync-todoist` code block:
 
 ````markdown
-```syncist
+```sync-todoist
 filter: today
 ```
 ````
@@ -119,17 +116,17 @@ The block renders as a styled task list with checkboxes, priorities, projects, a
 | `filter: @label` | Tasks with a label |
 | `filter: p1` | High priority tasks |
 
-To include completed tasks, keep `filter:` as Todoist filter syntax and add Syncist-specific options:
+To include completed tasks, keep `filter:` as Todoist filter syntax and add Sync Todoist-specific options:
 
 ````markdown
-```syncist
+```sync-todoist
 filter: today
 include_completed: true
 completed_by: due_date
 ```
 ````
 
-Completed task search uses Todoist's completed-task archive endpoints, which require a bounded date window. If no window is configured, Syncist uses the last 6 weeks for `completed_by: due_date` and the last 30 days for `completed_by: completion_date`. Label and project filters default to `completion_date`; date-oriented filters default to `due_date`.
+Completed task search uses Todoist's completed-task archive endpoints, which require a bounded date window. If no window is configured, Sync Todoist uses the last 6 weeks for `completed_by: due_date` and the last 30 days for `completed_by: completion_date`. Label and project filters default to `completion_date`; date-oriented filters default to `due_date`.
 
 | Option | Description |
 |--------|-------------|
@@ -143,7 +140,7 @@ Completed task search uses Todoist's completed-task archive endpoints, which req
 Example for recently completed label work:
 
 ````markdown
-```syncist
+```sync-todoist
 filter: @writing
 include_completed: true
 completed_by: completion_date
@@ -157,7 +154,7 @@ Each query block includes a refresh button and shows when it was last updated.
 - **Create Todoist task from current line**: Convert current line to a synced task
 - **Import task from Todoist**: Search and import a Todoist task at cursor
 - **Sync with Todoist now**: Manually trigger sync
-- **Open Todoist Sync settings**: Quick access to settings
+- **Open Sync Todoist settings**: Quick access to settings
 
 ### Supported Task Formats
 
@@ -188,12 +185,9 @@ npm run lint
 
 ### About This Plugin
 
-**Created with the help of AI; fully validated and tested by human.**
-
-- Built entirely using `Claude` in Cursor IDE
-- API integration guided by `Context7` MCP for up-to-date Todoist and Obsidian documentation
 - Direct Todoist API v1 integration — no external SDKs, only Obsidian's built-in `requestUrl`
-- Every feature manually validated and tested by a human
+- Query blocks support both the primary `sync-todoist` code block language and the original `syncist` alias for migration.
+- This project is based on [Syncist](https://github.com/bastiaanschonhage/syncist) by Bastiaan Schönhage, used under the MIT License. The original copyright and license notice are retained in `LICENSE`, and the upstream git history is preserved.
 
 ### Finally
 If you like this plugin, please give it a star on `GitHub` and in `Obsidian`!

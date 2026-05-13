@@ -1,14 +1,14 @@
-# Syncist v2.0.0 - Test Specification
+# Sync Todoist v2.0.0 - Test Specification
 
 ## Prerequisites
 
 - [ ] Obsidian is open with the TestVault
-- [ ] Syncist plugin is enabled
+- [ ] Sync Todoist plugin is enabled
 - [ ] A valid Todoist API token is configured and verified
 - [ ] You have at least one project in Todoist (besides Inbox)
 - [ ] Open the Obsidian developer console (`Ctrl/Cmd + Shift + I`) to monitor for errors
 
-> **Tip**: Before testing, run "Syncist: Sync now" once to ensure the plugin connects to Todoist. Check the status bar shows "Todoist: N tasks".
+> **Tip**: Before testing, run "Sync Todoist: Sync now" once to ensure the plugin connects to Todoist. Check the status bar shows "Todoist: N tasks".
 
 ---
 
@@ -20,7 +20,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
 
 1. Create a new note called `Regression.md`
 2. Type: `- [ ] Regression test basic #todoist`
-3. Run command: **Syncist: Sync now**
+3. Run command: **Sync Todoist: Sync now**
 4. **Expected**: The line gains a `<!-- todoist-id:XXXX -->` comment
 5. Open Todoist and verify the task "Regression test basic" exists in Inbox
 - [ ] **PASS** / **FAIL**
@@ -29,7 +29,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
 
 1. In `Regression.md`, type a plain line: `- [ ] Created via command`
 2. Place your cursor on that line
-3. Run command: **Syncist: Create task from current line**
+3. Run command: **Sync Todoist: Create task from current line**
 4. **Expected**: The line gets `#todoist` and `<!-- todoist-id:XXXX -->` appended
 5. Verify the task appears in Todoist
 - [ ] **PASS** / **FAIL**
@@ -37,7 +37,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
 ### A3. Complete task in Obsidian -> syncs to Todoist
 
 1. In Obsidian, check the checkbox for "Regression test basic" (change `[ ]` to `[x]`)
-2. Run **Syncist: Sync now**
+2. Run **Sync Todoist: Sync now**
 3. **Expected**: The task is marked complete in Todoist
 - [ ] **PASS** / **FAIL**
 
@@ -46,7 +46,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
 1. Create a new task: `- [ ] Complete from Todoist #todoist`
 2. Sync to create it in Todoist
 3. Open Todoist and complete this task
-4. Run **Syncist: Sync now** in Obsidian
+4. Run **Sync Todoist: Sync now** in Obsidian
 5. **Expected**: The checkbox changes to `[x]` in Obsidian
 - [ ] **PASS** / **FAIL**
 
@@ -82,7 +82,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
 
 ### A9. Settings page
 
-1. Open plugin settings (Settings -> Syncist)
+1. Open plugin settings (Settings -> Sync Todoist)
 2. **Expected**: All settings are visible: API token, sync tag, default project dropdown, sync interval, conflict resolution
 3. Click "Verify" on the API token -- should say "API token is valid!"
 - [ ] **PASS** / **FAIL**
@@ -100,7 +100,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
      - [ ] Bread
      - [ ] Eggs
    ```
-2. Run **Syncist: Sync now**
+2. Run **Sync Todoist: Sync now**
 3. **Expected**:
    - The parent gets `<!-- todoist-id:XXXX -->`
    - Each subtask also gets `<!-- todoist-id:YYYY -->`
@@ -156,7 +156,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
 ### C1. Open the import modal
 
 1. Create a new note `Import.md` and place your cursor on an empty line
-2. Run command: **Syncist: Import task from Todoist**
+2. Run command: **Sync Todoist: Import task from Todoist**
 3. **Expected**: A fuzzy search modal appears with a list of Todoist tasks
 - [ ] **PASS** / **FAIL**
 
@@ -190,7 +190,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
 ### C5. Import without API token
 
 1. Temporarily clear the API token in settings
-2. Run **Syncist: Import task from Todoist**
+2. Run **Sync Todoist: Import task from Todoist**
 3. **Expected**: A notice appears saying to configure the API token
 4. Restore the API token
 - [ ] **PASS** / **FAIL**
@@ -260,7 +260,7 @@ These tests verify that v1.0 functionality still works correctly after the v2.0 
 
 1. In a new note `Queries.md`, add:
    ````
-   ```syncist
+   ```sync-todoist
    filter: today
    ```
    ````
@@ -309,17 +309,17 @@ Test each of these query blocks (create one block per filter):
 
 1. Add a block with no filter:
    ````
-   ```syncist
+   ```sync-todoist
    something: wrong
    ```
    ````
-2. **Expected**: Shows an error message: "Invalid syncist block. Use: filter: today"
+2. **Expected**: Shows an error message: "Invalid Sync Todoist block. Use: filter: today"
 - [ ] **PASS** / **FAIL**
 
 ### E7. Query block without API token
 
 1. Temporarily clear the API token
-2. Create a syncist block
+2. Create a Sync Todoist block
 3. **Expected**: Shows "Todoist API not configured. Add your token in settings."
 4. Restore the token
 - [ ] **PASS** / **FAIL**
@@ -336,7 +336,7 @@ Test each of these query blocks (create one block per filter):
 2. Complete the task in Todoist
 3. Add or refresh:
    ````
-   ```syncist
+   ```sync-todoist
    filter: today
    include_completed: true
    completed_by: due_date
@@ -357,7 +357,7 @@ Test each of these query blocks (create one block per filter):
 2. Complete the task
 3. Add or refresh:
    ````
-   ```syncist
+   ```sync-todoist
    filter: @labelname
    include_completed: true
    completed_by: completion_date
@@ -374,14 +374,14 @@ Test each of these query blocks (create one block per filter):
 ### F1. Sync with no internet
 
 1. Disconnect from the internet
-2. Run **Syncist: Sync now**
+2. Run **Sync Todoist: Sync now**
 3. **Expected**: A notice says sync failed. No crash. Status bar shows "Sync failed".
 4. Reconnect and sync again -- should recover normally.
 - [ ] **PASS** / **FAIL**
 
 ### F2. Multiple syncs in quick succession
 
-1. Run **Syncist: Sync now** twice rapidly
+1. Run **Sync Todoist: Sync now** twice rapidly
 2. **Expected**: The second sync is skipped with "Sync already in progress" (check console). No duplicate tasks.
 - [ ] **PASS** / **FAIL**
 
