@@ -1,7 +1,7 @@
-import { Notice } from 'obsidian';
 import type TodoistSyncPlugin from './main';
 import { TodoistPriority, TodoistTask } from './types';
 import type { TodoistCompletedTaskDateMode } from './todoist-service';
+import { showSyncTodoistNotice } from './notices';
 
 interface QueryConfig {
   filter: string;
@@ -263,10 +263,10 @@ function renderTaskRow(
         } else {
           await plugin.todoistService.reopenTask(task.id);
         }
-        new Notice(checkbox.checked ? `Completed: ${task.content}` : `Reopened: ${task.content}`);
+        showSyncTodoistNotice(checkbox.checked ? `Completed: ${task.content}.` : `Reopened: ${task.content}.`);
       } catch (err) {
         console.error('Failed to toggle task:', err);
-        new Notice(`Failed to update task: ${err}`);
+        showSyncTodoistNotice(`Failed to update task: ${err}`, 10000);
         checkbox.checked = !checkbox.checked;
       }
     })();

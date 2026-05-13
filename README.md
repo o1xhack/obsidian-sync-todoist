@@ -1,6 +1,6 @@
 # Sync Todoist
 
-[![Version](https://img.shields.io/badge/version-0.3.0-7c3aed)](RELEASE.md)
+[![Version](https://img.shields.io/badge/version-0.4.0-7c3aed)](RELEASE.md)
 [![License](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![Plugin ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](manifest.json)
@@ -160,6 +160,9 @@ Then copy `main.js`, `manifest.json`, and `styles.css` into `.obsidian/plugins/s
 | Sync interval | `5` minutes | Auto-sync frequency. Set to `0` to disable automatic sync. |
 | Conflict resolution | `Todoist wins` | Behavior when both Obsidian and Todoist changed the same task. |
 | Daily Note filters | All | Optional project, label, and priority filters for today's Daily Note block. |
+| Manual sync notices | On | Show short `Sync Todoist:` completion notices for manual sync actions. |
+| Automatic sync notices | Off | Show scheduled desktop sync notices, including zero-change summaries, when enabled. |
+| Mobile automatic sync notices | Off | Show scheduled mobile sync notices through auto-dismissing Obsidian notices when enabled. |
 
 ## Commands
 

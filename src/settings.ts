@@ -1,6 +1,11 @@
-import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { App, PluginSettingTab, Setting } from 'obsidian';
 import TodoistSyncPlugin from './main';
 import { ConflictResolution, TodoistLabel, TodoistPriority, TodoistProject } from './types';
+import {
+  formatSyncResult,
+  noticeDurationForResult,
+  showSyncTodoistNotice,
+} from './notices';
 
 type SettingsTabId = 'general' | 'daily';
 const SETTINGS_TABS: SettingsTabId[] = ['general', 'daily'];
@@ -77,15 +82,15 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
               const isValid = await this.plugin.todoistService.verifyToken();
               
               if (isValid) {
-                new Notice('API token is valid!');
+                showSyncTodoistNotice('API token is valid.');
                 // Load projects after successful verification
                 await this.loadTodoistMetadata();
                 this.display(); // Refresh to show projects
               } else {
-                new Notice('API token is invalid. Please check and try again.');
+                showSyncTodoistNotice('API token is invalid. Please check and try again.', 10000);
               }
             } catch (error) {
-              new Notice('Failed to verify token. Please check your internet connection.');
+              showSyncTodoistNotice('Failed to verify token. Please check your internet connection.', 10000);
               console.warn('Token verification error:', error);
             } finally {
               button.setDisabled(false);
@@ -180,6 +185,44 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
           });
       });
 
+    new Setting(containerEl).setName('Notifications').setHeading();
+
+    new Setting(containerEl)
+      .setName('Manual sync notices')
+      .setDesc('Show a short completion notice after manual sync actions.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.notifications.manualSync)
+          .onChange(async (value) => {
+            this.plugin.settings.notifications.manualSync = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName('Automatic sync notices')
+      .setDesc('Show scheduled sync notices on desktop. Errors are always shown.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.notifications.automaticSync)
+          .onChange(async (value) => {
+            this.plugin.settings.notifications.automaticSync = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName('Mobile automatic sync notices')
+      .setDesc('Show scheduled sync notices on mobile. Errors are always shown.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.notifications.mobileAutomaticSync)
+          .onChange(async (value) => {
+            this.plugin.settings.notifications.mobileAutomaticSync = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
     // Manual Sync Section
     new Setting(containerEl).setName('Manual actions').setHeading();
 
@@ -192,7 +235,7 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
           .setCta()
           .onClick(async () => {
             if (!this.plugin.settings.apiToken) {
-              new Notice('Please configure your API token first.');
+              showSyncTodoistNotice('Please configure your API token first.');
               return;
             }
 
@@ -201,18 +244,18 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
 
             try {
               const result = await this.plugin.syncNow();
-              const message = `Sync complete: ${result.created} created, ${result.updated} updated, ${result.completed} completed`;
-              new Notice(message);
+              if (this.plugin.settings.notifications.manualSync) {
+                showSyncTodoistNotice(formatSyncResult(result), noticeDurationForResult(result));
+              }
               
               if (result.errors.length > 0) {
                 console.warn('Sync errors:', result.errors);
-                new Notice(`Sync had ${result.errors.length} error(s). Check console for details.`);
               }
               
               // Refresh the display to show updated status
               this.display();
             } catch (error) {
-              new Notice('Sync failed. Check console for details.');
+              showSyncTodoistNotice('Sync failed. Check console for details.', 10000);
               console.warn('Sync error:', error);
             } finally {
               button.setDisabled(false);
@@ -301,7 +344,7 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
           .setButtonText('Sync today')
           .onClick(async () => {
             const result = await this.plugin.syncDailyNoteNow();
-            new Notice(result.message ?? `Daily note result: ${result.status}`);
+            showSyncTodoistNotice(result.message ?? `Daily note result: ${result.status}`);
           })
       );
 

@@ -1,6 +1,7 @@
-import { App, SuggestModal, Notice } from 'obsidian';
+import { App, SuggestModal } from 'obsidian';
 import { TodoistTask } from './types';
 import { TodoistService } from './todoist-service';
+import { showSyncTodoistNotice } from './notices';
 
 /**
  * Modal for searching and importing a Todoist task into the current note.
@@ -37,7 +38,7 @@ export class ImportTaskModal extends SuggestModal<TodoistTask> {
       this.inputEl.dispatchEvent(new Event('input'));
     } catch (error) {
       console.error('Failed to load tasks for import:', error);
-      new Notice('Failed to load todoist tasks. Check your API token.');
+      showSyncTodoistNotice('Failed to load todoist tasks. Check your API token.', 10000);
       this.close();
     }
   }

@@ -14,6 +14,8 @@ export interface TodoistSyncSettings {
   conflictResolution: ConflictResolution;
   /** Daily Note integration settings */
   dailyNote: DailyNoteSettings;
+  /** Notification behavior */
+  notifications: NotificationSettings;
 }
 
 /**
@@ -36,6 +38,15 @@ export interface DailyNoteSettings {
   priorities: TodoistPriority[];
 }
 
+export interface NotificationSettings {
+  /** Show completion notices for manually triggered sync actions */
+  manualSync: boolean;
+  /** Show completion notices for scheduled desktop syncs */
+  automaticSync: boolean;
+  /** Show completion notices for scheduled mobile syncs */
+  mobileAutomaticSync: boolean;
+}
+
 export const DEFAULT_DAILY_NOTE_MARKER_START = '%% sync-todoist:daily:start %%';
 export const DEFAULT_DAILY_NOTE_MARKER_END = '%% sync-todoist:daily:end %%';
 
@@ -55,6 +66,11 @@ export const DEFAULT_SETTINGS: TodoistSyncSettings = {
     projectIds: [],
     labels: [],
     priorities: [],
+  },
+  notifications: {
+    manualSync: true,
+    automaticSync: false,
+    mobileAutomaticSync: false,
   },
 };
 

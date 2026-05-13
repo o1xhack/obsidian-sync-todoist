@@ -1,9 +1,19 @@
-import { App, Editor, MarkdownView, Notice, Plugin } from 'obsidian';
+import { App, Editor, MarkdownView, Plugin } from 'obsidian';
 import { TodoistSyncSettingTab } from './settings';
 import { TodoistService } from './todoist-service';
 import { SyncEngine } from './sync-engine';
 import { ImportTaskModal } from './import-modal';
 import { renderQueryBlock } from './query-renderer';
+import {
+  createPersistentSyncNotice,
+  formatDailyNoteSummary,
+  formatSyncResult,
+  noticeDurationForDailyNote,
+  noticeDurationForResult,
+  setSyncNoticeMessage,
+  shouldShowAutomaticSyncNotice,
+  showSyncTodoistNotice,
+} from './notices';
 import {
   TodoistSyncSettings,
   DEFAULT_SETTINGS,
@@ -95,7 +105,7 @@ export default class TodoistSyncPlugin extends Plugin {
         const filePath = view.file?.path;
 
         if (!filePath) {
-          new Notice('Cannot determine file path');
+          showSyncTodoistNotice('Cannot determine file path.');
           return;
         }
 
@@ -105,7 +115,7 @@ export default class TodoistSyncPlugin extends Plugin {
           line
         );
 
-        new Notice(result.message);
+        showSyncTodoistNotice(result.message);
         
         if (result.success) {
           // Refresh the editor to show updated line
@@ -125,24 +135,16 @@ export default class TodoistSyncPlugin extends Plugin {
       name: 'Sync now',
       callback: async () => {
         if (!this.settings.apiToken) {
-          new Notice('Please configure your API token in the settings.');
+          showSyncTodoistNotice('Please configure your API token in settings.');
           return;
         }
 
         if (this.syncEngine.isCurrentlySyncing()) {
-          new Notice('Sync already in progress, please wait.');
+          showSyncTodoistNotice('Sync already in progress.');
           return;
         }
 
-        new Notice('Starting sync...');
-        const result = await this.syncNow();
-
-        const message = `Sync complete: ${result.created} created, ${result.updated} updated, ${result.completed} completed`;
-        new Notice(message);
-
-        if (result.errors.length > 0) {
-          new Notice(`Sync had ${result.errors.length} error(s). Check console for details.`);
-        }
+        await this.runSyncWithNotice('manual');
       },
     });
 
@@ -152,13 +154,13 @@ export default class TodoistSyncPlugin extends Plugin {
       name: 'Import task from todoist',
       editorCallback: (editor: Editor, view: MarkdownView) => {
         if (!this.settings.apiToken) {
-          new Notice('Please configure your API token in the settings.');
+          showSyncTodoistNotice('Please configure your API token in settings.');
           return;
         }
 
         const filePath = view.file?.path;
         if (!filePath) {
-          new Notice('Cannot determine file path');
+          showSyncTodoistNotice('Cannot determine file path.');
           return;
         }
 
@@ -181,10 +183,10 @@ export default class TodoistSyncPlugin extends Plugin {
               await this.saveSyncState();
 
               const subtaskMsg = subtasks.length > 0 ? ` (+${subtasks.length} subtask${subtasks.length > 1 ? 's' : ''})` : '';
-              new Notice(`Imported: ${task.content}${subtaskMsg}`);
+              showSyncTodoistNotice(`Imported: ${task.content}${subtaskMsg}.`);
             } catch (error) {
               console.error('Failed to import task:', error);
-              new Notice(`Failed to import task: ${error}`);
+              showSyncTodoistNotice(`Failed to import task: ${error}`, 10000);
             }
           })();
         }).open();
@@ -212,15 +214,21 @@ export default class TodoistSyncPlugin extends Plugin {
       name: 'Sync today\'s daily note',
       callback: async () => {
         if (!this.settings.apiToken) {
-          new Notice('Please configure your API token in the settings.');
+          showSyncTodoistNotice('Please configure your API token in settings.');
           return;
         }
 
         const result = await this.syncDailyNoteNow();
         if (result.status === 'updated') {
-          new Notice(`Daily Note updated: ${result.taskCount} task(s).`);
+          showSyncTodoistNotice(
+            `Daily note updated: ${result.taskCount} task(s).`,
+            noticeDurationForDailyNote(result)
+          );
         } else {
-          new Notice(result.message ?? `Daily Note not updated: ${result.status}`);
+          showSyncTodoistNotice(
+            result.message ?? `Daily note not updated: ${formatDailyNoteSummary(result)}.`,
+            noticeDurationForDailyNote(result)
+          );
         }
       },
     });
@@ -237,6 +245,10 @@ export default class TodoistSyncPlugin extends Plugin {
       dailyNote: {
         ...DEFAULT_SETTINGS.dailyNote,
         ...(data?.dailyNote ?? {}),
+      },
+      notifications: {
+        ...DEFAULT_SETTINGS.notifications,
+        ...(data?.notifications ?? {}),
       },
     };
   }
@@ -310,6 +322,41 @@ export default class TodoistSyncPlugin extends Plugin {
     return result;
   }
 
+  private async runSyncWithNotice(mode: 'manual' | 'automatic'): Promise<void> {
+    const progressNotice = mode === 'manual' && this.settings.notifications.manualSync
+      ? createPersistentSyncNotice('Syncing...')
+      : null;
+    this.updateStatusBar('Syncing...');
+
+    try {
+      const result = await this.syncNow();
+      const shouldNotify = mode === 'manual'
+        ? this.settings.notifications.manualSync
+        : shouldShowAutomaticSyncNotice(result, this.settings.notifications);
+
+      if (shouldNotify) {
+        const message = formatSyncResult(result);
+        if (progressNotice) {
+          setSyncNoticeMessage(progressNotice, message);
+          window.setTimeout(() => progressNotice.hide(), noticeDurationForResult(result));
+        } else {
+          showSyncTodoistNotice(message, noticeDurationForResult(result));
+        }
+      } else if (progressNotice) {
+        progressNotice.hide();
+      }
+    } catch (error) {
+      const message = `Sync failed: ${error}`;
+      if (progressNotice) {
+        setSyncNoticeMessage(progressNotice, message);
+        window.setTimeout(() => progressNotice.hide(), 10000);
+      } else {
+        showSyncTodoistNotice(message, 10000);
+      }
+      throw error;
+    }
+  }
+
   /**
    * Start the automatic sync interval
    */
@@ -326,7 +373,7 @@ export default class TodoistSyncPlugin extends Plugin {
       }
 
       console.debug('Running scheduled sync...');
-      void this.syncNow().catch((error: unknown) => {
+      void this.runSyncWithNotice('automatic').catch((error: unknown) => {
         console.error('Scheduled sync failed:', error);
       });
     }, intervalMs);

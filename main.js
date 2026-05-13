@@ -30,7 +30,7 @@ module.exports = __toCommonJS(main_exports);
 var import_obsidian6 = require("obsidian");
 
 // src/settings.ts
-var import_obsidian = require("obsidian");
+var import_obsidian2 = require("obsidian");
 
 // src/types.ts
 var DEFAULT_DAILY_NOTE_MARKER_START = "%% sync-todoist:daily:start %%";
@@ -48,6 +48,11 @@ var DEFAULT_SETTINGS = {
     projectIds: [],
     labels: [],
     priorities: []
+  },
+  notifications: {
+    manualSync: true,
+    automaticSync: false,
+    mobileAutomaticSync: false
   }
 };
 function normalizeTask(raw) {
@@ -72,6 +77,68 @@ var DEFAULT_SYNC_STATE = {
   lastFullSync: 0
 };
 
+// src/notices.ts
+var import_obsidian = require("obsidian");
+var PREFIX = "Sync Todoist:";
+var DEFAULT_DURATION = 5e3;
+var ERROR_DURATION = 1e4;
+function showSyncTodoistNotice(message, duration = DEFAULT_DURATION) {
+  return new import_obsidian.Notice(`${PREFIX} ${message}`, duration);
+}
+function createPersistentSyncNotice(message) {
+  return new import_obsidian.Notice(`${PREFIX} ${message}`, 0);
+}
+function setSyncNoticeMessage(notice, message) {
+  notice.setMessage(`${PREFIX} ${message}`);
+}
+function formatSyncResult(result) {
+  const parts = [
+    `${result.created} created`,
+    `${result.updated} updated`,
+    `${result.completed} completed`,
+    `${result.conflicts} conflicts`
+  ];
+  if (result.dailyNote && result.dailyNote.status !== "disabled") {
+    parts.push(formatDailyNoteSummary(result.dailyNote));
+  }
+  if (result.errors.length > 0) {
+    parts.push(`${result.errors.length} errors`);
+  }
+  return `Sync done: ${parts.join(", ")}.`;
+}
+function formatDailyNoteSummary(result) {
+  if (result.status === "updated") {
+    return `daily note ${result.taskCount} tasks`;
+  }
+  if (result.status === "skipped_no_tasks") {
+    return "daily note 0 tasks";
+  }
+  if (result.status === "skipped_no_file") {
+    return "daily note missing";
+  }
+  if (result.status === "daily_plugin_disabled") {
+    return "daily notes off";
+  }
+  if (result.status === "invalid_markers") {
+    return "daily note marker error";
+  }
+  if (result.status === "error") {
+    return "daily note error";
+  }
+  return `daily note ${result.status}`;
+}
+function shouldShowAutomaticSyncNotice(result, settings) {
+  if (result.errors.length > 0 || result.conflicts > 0)
+    return true;
+  return import_obsidian.Platform.isMobile ? settings.mobileAutomaticSync : settings.automaticSync;
+}
+function noticeDurationForResult(result) {
+  return result.errors.length > 0 || result.conflicts > 0 ? ERROR_DURATION : DEFAULT_DURATION;
+}
+function noticeDurationForDailyNote(result) {
+  return result.status === "error" || result.status === "invalid_markers" ? ERROR_DURATION : DEFAULT_DURATION;
+}
+
 // src/settings.ts
 var SETTINGS_TABS = ["general", "daily"];
 var ACTIVE_TAB_STORAGE_KEY = "sync-todoist:active-settings-tab";
@@ -81,7 +148,7 @@ var PRIORITY_OPTIONS = [
   { value: 2 /* LOW */, label: "Medium (p3)" },
   { value: 1 /* NONE */, label: "Normal (p4)" }
 ];
-var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
+var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.projects = [];
@@ -103,7 +170,7 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     this.renderGeneralSettings(containerEl);
   }
   renderGeneralSettings(containerEl) {
-    new import_obsidian.Setting(containerEl).setName("Todoist API token").setDesc("Your todoist API token. Find it in todoist settings \u2192 integrations \u2192 developer.").addText((text) => {
+    new import_obsidian2.Setting(containerEl).setName("Todoist API token").setDesc("Your todoist API token. Find it in todoist settings \u2192 integrations \u2192 developer.").addText((text) => {
       text.setPlaceholder("Enter your API token").setValue(this.plugin.settings.apiToken).onChange(async (value) => {
         this.plugin.settings.apiToken = value;
         await this.plugin.saveSettings();
@@ -122,14 +189,14 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
           this.plugin.todoistService.initialize(this.plugin.settings.apiToken);
           const isValid = await this.plugin.todoistService.verifyToken();
           if (isValid) {
-            new import_obsidian.Notice("API token is valid!");
+            showSyncTodoistNotice("API token is valid.");
             await this.loadTodoistMetadata();
             this.display();
           } else {
-            new import_obsidian.Notice("API token is invalid. Please check and try again.");
+            showSyncTodoistNotice("API token is invalid. Please check and try again.", 1e4);
           }
         } catch (error) {
-          new import_obsidian.Notice("Failed to verify token. Please check your internet connection.");
+          showSyncTodoistNotice("Failed to verify token. Please check your internet connection.", 1e4);
           console.warn("Token verification error:", error);
         } finally {
           button.setDisabled(false);
@@ -137,7 +204,7 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Sync tag").setDesc("Tag used to identify tasks for syncing. Include the # symbol.").addText(
+    new import_obsidian2.Setting(containerEl).setName("Sync tag").setDesc("Tag used to identify tasks for syncing. Include the # symbol.").addText(
       (text) => text.setPlaceholder("#todoist").setValue(this.plugin.settings.syncTag).onChange(async (value) => {
         if (value && !value.startsWith("#")) {
           value = "#" + value;
@@ -149,7 +216,7 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     if (this.plugin.settings.apiToken && !this.projectsLoaded) {
       void this.loadTodoistMetadata().then(() => this.display());
     }
-    const projectSetting = new import_obsidian.Setting(containerEl).setName("Default project").setDesc("Default todoist project for new tasks. Leave empty to use inbox.");
+    const projectSetting = new import_obsidian2.Setting(containerEl).setName("Default project").setDesc("Default todoist project for new tasks. Leave empty to use inbox.");
     if (this.projects.length > 0) {
       projectSetting.addDropdown((dropdown) => {
         dropdown.addOption("", "Inbox (default)");
@@ -167,7 +234,7 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         text.setPlaceholder("Verify API token to load projects").setValue(this.plugin.settings.defaultProjectId).setDisabled(true);
       });
     }
-    new import_obsidian.Setting(containerEl).setName("Sync interval").setDesc("How often to sync with todoist (in minutes). Set to 0 to disable auto sync.").addText(
+    new import_obsidian2.Setting(containerEl).setName("Sync interval").setDesc("How often to sync with todoist (in minutes). Set to 0 to disable auto sync.").addText(
       (text) => text.setPlaceholder("5").setValue(String(this.plugin.settings.syncIntervalMinutes)).onChange(async (value) => {
         const num = parseInt(value, 10);
         if (!isNaN(num) && num >= 0) {
@@ -177,32 +244,51 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Conflict resolution").setDesc("How to handle conflicts when both sides have changes.").addDropdown((dropdown) => {
+    new import_obsidian2.Setting(containerEl).setName("Conflict resolution").setDesc("How to handle conflicts when both sides have changes.").addDropdown((dropdown) => {
       dropdown.addOption("todoist-wins", "Todoist wins").addOption("obsidian-wins", "Local wins").addOption("ask-user", "Ask me each time").setValue(this.plugin.settings.conflictResolution).onChange(async (value) => {
         this.plugin.settings.conflictResolution = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Manual actions").setHeading();
-    new import_obsidian.Setting(containerEl).setName("Sync now").setDesc("Manually trigger a sync.").addButton((button) => {
+    new import_obsidian2.Setting(containerEl).setName("Notifications").setHeading();
+    new import_obsidian2.Setting(containerEl).setName("Manual sync notices").setDesc("Show a short completion notice after manual sync actions.").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.notifications.manualSync).onChange(async (value) => {
+        this.plugin.settings.notifications.manualSync = value;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian2.Setting(containerEl).setName("Automatic sync notices").setDesc("Show scheduled sync notices on desktop. Errors are always shown.").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.notifications.automaticSync).onChange(async (value) => {
+        this.plugin.settings.notifications.automaticSync = value;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian2.Setting(containerEl).setName("Mobile automatic sync notices").setDesc("Show scheduled sync notices on mobile. Errors are always shown.").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.notifications.mobileAutomaticSync).onChange(async (value) => {
+        this.plugin.settings.notifications.mobileAutomaticSync = value;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian2.Setting(containerEl).setName("Manual actions").setHeading();
+    new import_obsidian2.Setting(containerEl).setName("Sync now").setDesc("Manually trigger a sync.").addButton((button) => {
       button.setButtonText("Sync now").setCta().onClick(async () => {
         if (!this.plugin.settings.apiToken) {
-          new import_obsidian.Notice("Please configure your API token first.");
+          showSyncTodoistNotice("Please configure your API token first.");
           return;
         }
         button.setDisabled(true);
         button.setButtonText("Syncing...");
         try {
           const result = await this.plugin.syncNow();
-          const message = `Sync complete: ${result.created} created, ${result.updated} updated, ${result.completed} completed`;
-          new import_obsidian.Notice(message);
+          if (this.plugin.settings.notifications.manualSync) {
+            showSyncTodoistNotice(formatSyncResult(result), noticeDurationForResult(result));
+          }
           if (result.errors.length > 0) {
             console.warn("Sync errors:", result.errors);
-            new import_obsidian.Notice(`Sync had ${result.errors.length} error(s). Check console for details.`);
           }
           this.display();
         } catch (error) {
-          new import_obsidian.Notice("Sync failed. Check console for details.");
+          showSyncTodoistNotice("Sync failed. Check console for details.", 1e4);
           console.warn("Sync error:", error);
         } finally {
           button.setDisabled(false);
@@ -210,7 +296,7 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
         }
       });
     });
-    new import_obsidian.Setting(containerEl).setName("Status").setHeading();
+    new import_obsidian2.Setting(containerEl).setName("Status").setHeading();
     const statusEl = containerEl.createDiv({ cls: "todoist-sync-status" });
     this.updateStatusDisplay(statusEl);
   }
@@ -236,7 +322,7 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     return "general";
   }
   renderDailyNoteSettings(containerEl) {
-    new import_obsidian.Setting(containerEl).setName("\u6BCF\u65E5 daily note").setDesc("Write today's matching tasks into the managed marker region of today's daily note.").addToggle(
+    new import_obsidian2.Setting(containerEl).setName("\u6BCF\u65E5 daily note").setDesc("Write today's matching tasks into the managed marker region of today's daily note.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.dailyNote.enabled).onChange(async (value) => {
         this.plugin.settings.dailyNote.enabled = value;
         await this.plugin.saveSettings();
@@ -246,39 +332,39 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     if (!this.plugin.settings.dailyNote.enabled) {
       return;
     }
-    new import_obsidian.Setting(containerEl).setName("Marker start").setDesc("Start marker for the managed daily note source-mode region.").addText(
+    new import_obsidian2.Setting(containerEl).setName("Marker start").setDesc("Start marker for the managed daily note source-mode region.").addText(
       (text) => text.setValue(this.plugin.settings.dailyNote.markerStart).onChange(async (value) => {
         this.plugin.settings.dailyNote.markerStart = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Marker end").setDesc("End marker for the managed daily note source-mode region.").addText(
+    new import_obsidian2.Setting(containerEl).setName("Marker end").setDesc("End marker for the managed daily note source-mode region.").addText(
       (text) => text.setValue(this.plugin.settings.dailyNote.markerEnd).onChange(async (value) => {
         this.plugin.settings.dailyNote.markerEnd = value;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Sync daily note now").setDesc("Refresh today's daily note using the current filter settings.").addButton(
+    new import_obsidian2.Setting(containerEl).setName("Sync daily note now").setDesc("Refresh today's daily note using the current filter settings.").addButton(
       (button) => button.setButtonText("Sync today").onClick(async () => {
         var _a;
         const result = await this.plugin.syncDailyNoteNow();
-        new import_obsidian.Notice((_a = result.message) != null ? _a : `Daily note result: ${result.status}`);
+        showSyncTodoistNotice((_a = result.message) != null ? _a : `Daily note result: ${result.status}`);
       })
     );
-    new import_obsidian.Setting(containerEl).setName("Task filters").setHeading();
-    new import_obsidian.Setting(containerEl).setDesc("Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.");
+    new import_obsidian2.Setting(containerEl).setName("Task filters").setHeading();
+    new import_obsidian2.Setting(containerEl).setDesc("Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.");
     if (this.plugin.settings.apiToken && (!this.projectsLoaded || !this.labelsLoaded)) {
       void this.loadTodoistMetadata().then(() => this.display());
     }
     if (!this.plugin.settings.apiToken || !this.projectsLoaded && !this.labelsLoaded) {
-      new import_obsidian.Setting(containerEl).setDesc("Verify your todoist API token in general settings first to load projects and labels.");
+      new import_obsidian2.Setting(containerEl).setDesc("Verify your todoist API token in general settings first to load projects and labels.");
     }
     this.renderProjectSelector(containerEl);
     this.renderLabelSelector(containerEl);
     this.renderPrioritySelector(containerEl);
   }
   renderProjectSelector(containerEl) {
-    new import_obsidian.Setting(containerEl).setName("Projects").setHeading();
+    new import_obsidian2.Setting(containerEl).setName("Projects").setHeading();
     const wrapper = containerEl.createDiv({ cls: "sync-todoist-multi-select" });
     this.renderAllCheckbox(wrapper, "All projects", this.plugin.settings.dailyNote.projectIds.length === 0, async () => {
       this.plugin.settings.dailyNote.projectIds = [];
@@ -303,7 +389,7 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     }
   }
   renderLabelSelector(containerEl) {
-    new import_obsidian.Setting(containerEl).setName("Labels").setHeading();
+    new import_obsidian2.Setting(containerEl).setName("Labels").setHeading();
     const wrapper = containerEl.createDiv({ cls: "sync-todoist-multi-select" });
     this.renderAllCheckbox(wrapper, "All labels", this.plugin.settings.dailyNote.labels.length === 0, async () => {
       this.plugin.settings.dailyNote.labels = [];
@@ -328,7 +414,7 @@ var TodoistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     }
   }
   renderPrioritySelector(containerEl) {
-    new import_obsidian.Setting(containerEl).setName("Priority").setHeading();
+    new import_obsidian2.Setting(containerEl).setName("Priority").setHeading();
     const wrapper = containerEl.createDiv({ cls: "sync-todoist-multi-select" });
     this.renderAllCheckbox(wrapper, "All priorities", this.plugin.settings.dailyNote.priorities.length === 0, async () => {
       this.plugin.settings.dailyNote.priorities = [];
@@ -429,7 +515,7 @@ function updateSelection(values, value, checked) {
 }
 
 // src/todoist-service.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 var API_BASE = "https://api.todoist.com/api/v1";
 var TodoistService = class {
   constructor() {
@@ -455,7 +541,7 @@ var TodoistService = class {
     if (!this.apiToken)
       return false;
     try {
-      await (0, import_obsidian2.requestUrl)({ url: `${API_BASE}/projects?limit=1`, headers: this.headers() });
+      await (0, import_obsidian3.requestUrl)({ url: `${API_BASE}/projects?limit=1`, headers: this.headers() });
       return true;
     } catch (error) {
       console.error("Todoist token verification failed:", error);
@@ -473,7 +559,7 @@ var TodoistService = class {
         const params = new URLSearchParams({ limit: "200" });
         if (cursor)
           params.set("cursor", cursor);
-        const resp = await (0, import_obsidian2.requestUrl)({
+        const resp = await (0, import_obsidian3.requestUrl)({
           url: `${API_BASE}/projects?${params.toString()}`,
           headers: this.headers()
         });
@@ -508,7 +594,7 @@ var TodoistService = class {
       const params = new URLSearchParams({ limit: "200" });
       if (personalCursor)
         params.set("cursor", personalCursor);
-      const personalResp = await (0, import_obsidian2.requestUrl)({
+      const personalResp = await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/labels?${params.toString()}`,
         headers: this.headers(),
         throw: false
@@ -531,7 +617,7 @@ var TodoistService = class {
       const params = new URLSearchParams({ limit: "200" });
       if (sharedCursor)
         params.set("cursor", sharedCursor);
-      const sharedResp = await (0, import_obsidian2.requestUrl)({
+      const sharedResp = await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/labels/shared?${params.toString()}`,
         headers: this.headers(),
         throw: false
@@ -588,7 +674,7 @@ var TodoistService = class {
           params.set("project_id", projectId);
         if (cursor)
           params.set("cursor", cursor);
-        const resp = await (0, import_obsidian2.requestUrl)({
+        const resp = await (0, import_obsidian3.requestUrl)({
           url: `${API_BASE}/tasks?${params.toString()}`,
           headers: this.headers()
         });
@@ -613,7 +699,7 @@ var TodoistService = class {
     if (!this.apiToken)
       throw new Error("Todoist API not initialized");
     try {
-      const resp = await (0, import_obsidian2.requestUrl)({
+      const resp = await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/tasks/${taskId}`,
         headers: this.headers()
       });
@@ -643,7 +729,7 @@ var TodoistService = class {
         body.labels = options.labels;
       if (options == null ? void 0 : options.description)
         body.description = options.description;
-      const resp = await (0, import_obsidian2.requestUrl)({
+      const resp = await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/tasks`,
         method: "POST",
         headers: { ...this.headers(), "Content-Type": "application/json" },
@@ -671,7 +757,7 @@ var TodoistService = class {
         body.labels = updates.labels;
       if (updates.description !== void 0)
         body.description = updates.description;
-      const resp = await (0, import_obsidian2.requestUrl)({
+      const resp = await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/tasks/${taskId}`,
         method: "POST",
         headers: { ...this.headers(), "Content-Type": "application/json" },
@@ -688,7 +774,7 @@ var TodoistService = class {
     if (!this.apiToken)
       throw new Error("Todoist API not initialized");
     try {
-      await (0, import_obsidian2.requestUrl)({
+      await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/tasks/${taskId}/close`,
         method: "POST",
         headers: this.headers()
@@ -704,7 +790,7 @@ var TodoistService = class {
     if (!this.apiToken)
       throw new Error("Todoist API not initialized");
     try {
-      await (0, import_obsidian2.requestUrl)({
+      await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/tasks/${taskId}/reopen`,
         method: "POST",
         headers: this.headers()
@@ -720,7 +806,7 @@ var TodoistService = class {
     if (!this.apiToken)
       throw new Error("Todoist API not initialized");
     try {
-      await (0, import_obsidian2.requestUrl)({
+      await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/tasks/${taskId}`,
         method: "DELETE",
         headers: this.headers()
@@ -742,7 +828,7 @@ var TodoistService = class {
       const params = new URLSearchParams({ query: filter, limit: "200" });
       if (cursor)
         params.set("cursor", cursor);
-      const resp = await (0, import_obsidian2.requestUrl)({
+      const resp = await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/tasks/filter?${params.toString()}`,
         headers: this.headers(),
         throw: false
@@ -780,7 +866,7 @@ var TodoistService = class {
       });
       if (cursor)
         params.set("cursor", cursor);
-      const resp = await (0, import_obsidian2.requestUrl)({
+      const resp = await (0, import_obsidian3.requestUrl)({
         url: `${API_BASE}/${endpoint}?${params.toString()}`,
         headers: this.headers(),
         throw: false
@@ -819,7 +905,7 @@ var TodoistService = class {
 };
 
 // src/sync-engine.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/task-parser.ts
 var PATTERNS = {
@@ -1446,10 +1532,10 @@ var SyncEngine = class {
     const options = (_d = (_c = dailyNotesPlugin.instance) == null ? void 0 : _c.options) != null ? _d : {};
     const format = ((_e = options.format) == null ? void 0 : _e.trim()) || "YYYY-MM-DD";
     const folder = ((_f = options.folder) != null ? _f : "").trim().replace(/^\/+|\/+$/g, "");
-    const filename = (0, import_obsidian3.moment)(date, "YYYY-MM-DD").format(format);
+    const filename = (0, import_obsidian4.moment)(date, "YYYY-MM-DD").format(format);
     return {
       status: "ok",
-      path: (0, import_obsidian3.normalizePath)(folder ? `${folder}/${filename}.md` : `${filename}.md`)
+      path: (0, import_obsidian4.normalizePath)(folder ? `${folder}/${filename}.md` : `${filename}.md`)
     };
   }
   async syncTasksIntoDailyNote(tasks) {
@@ -1463,7 +1549,7 @@ var SyncEngine = class {
       return { status: pathResult.status, taskCount: 0, message: pathResult.message };
     }
     const file = this.app.vault.getAbstractFileByPath(pathResult.path);
-    if (!(file instanceof import_obsidian3.TFile)) {
+    if (!(file instanceof import_obsidian4.TFile)) {
       return {
         status: "skipped_no_file",
         filePath: pathResult.path,
@@ -1734,7 +1820,7 @@ var SyncEngine = class {
    */
   async updateObsidianTaskLine(task, transform) {
     const file = this.app.vault.getAbstractFileByPath(task.filePath);
-    if (!(file instanceof import_obsidian3.TFile)) {
+    if (!(file instanceof import_obsidian4.TFile)) {
       throw new Error(`File not found: ${task.filePath}`);
     }
     const content = await this.app.vault.read(file);
@@ -1750,7 +1836,7 @@ var SyncEngine = class {
    */
   async replaceLineInFile(filePath, lineNumber, newLine) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof import_obsidian3.TFile)) {
+    if (!(file instanceof import_obsidian4.TFile)) {
       throw new Error(`File not found: ${filePath}`);
     }
     const content = await this.app.vault.read(file);
@@ -1830,7 +1916,7 @@ var SyncEngine = class {
       };
     }
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof import_obsidian3.TFile)) {
+    if (!(file instanceof import_obsidian4.TFile)) {
       throw new Error(`File not found: ${filePath}`);
     }
     const fileContent = await this.app.vault.read(file);
@@ -1881,7 +1967,7 @@ var SyncEngine = class {
         projectId: this.settings.defaultProjectId || void 0
       });
       const file = this.app.vault.getAbstractFileByPath(filePath);
-      if (!(file instanceof import_obsidian3.TFile)) {
+      if (!(file instanceof import_obsidian4.TFile)) {
         return { success: false, message: "File not found." };
       }
       const fileContent = await this.app.vault.read(file);
@@ -1923,8 +2009,8 @@ var SyncEngine = class {
 };
 
 // src/import-modal.ts
-var import_obsidian4 = require("obsidian");
-var ImportTaskModal = class extends import_obsidian4.SuggestModal {
+var import_obsidian5 = require("obsidian");
+var ImportTaskModal = class extends import_obsidian5.SuggestModal {
   constructor(app, todoistService, onSelect) {
     super(app);
     this.allTasks = [];
@@ -1947,7 +2033,7 @@ var ImportTaskModal = class extends import_obsidian4.SuggestModal {
       this.inputEl.dispatchEvent(new Event("input"));
     } catch (error) {
       console.error("Failed to load tasks for import:", error);
-      new import_obsidian4.Notice("Failed to load todoist tasks. Check your API token.");
+      showSyncTodoistNotice("Failed to load todoist tasks. Check your API token.", 1e4);
       this.close();
     }
   }
@@ -2001,7 +2087,6 @@ var ImportTaskModal = class extends import_obsidian4.SuggestModal {
 };
 
 // src/query-renderer.ts
-var import_obsidian5 = require("obsidian");
 var DAY_MS = 24 * 60 * 60 * 1e3;
 var MAX_COMPLETED_WINDOW_DAYS = {
   due_date: 42,
@@ -2205,10 +2290,10 @@ function renderTaskRow(task, container, plugin, indent) {
         } else {
           await plugin.todoistService.reopenTask(task.id);
         }
-        new import_obsidian5.Notice(checkbox.checked ? `Completed: ${task.content}` : `Reopened: ${task.content}`);
+        showSyncTodoistNotice(checkbox.checked ? `Completed: ${task.content}.` : `Reopened: ${task.content}.`);
       } catch (err) {
         console.error("Failed to toggle task:", err);
-        new import_obsidian5.Notice(`Failed to update task: ${err}`);
+        showSyncTodoistNotice(`Failed to update task: ${err}`, 1e4);
         checkbox.checked = !checkbox.checked;
       }
     })();
@@ -2381,7 +2466,7 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
         const line = editor.getLine(cursor.line);
         const filePath = (_a = view.file) == null ? void 0 : _a.path;
         if (!filePath) {
-          new import_obsidian6.Notice("Cannot determine file path");
+          showSyncTodoistNotice("Cannot determine file path.");
           return;
         }
         const result = await this.syncEngine.createTaskFromLine(
@@ -2389,7 +2474,7 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
           cursor.line,
           line
         );
-        new import_obsidian6.Notice(result.message);
+        showSyncTodoistNotice(result.message);
         if (result.success) {
           const newContent = await this.app.vault.read(view.file);
           editor.setValue(newContent);
@@ -2403,20 +2488,14 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
       name: "Sync now",
       callback: async () => {
         if (!this.settings.apiToken) {
-          new import_obsidian6.Notice("Please configure your API token in the settings.");
+          showSyncTodoistNotice("Please configure your API token in settings.");
           return;
         }
         if (this.syncEngine.isCurrentlySyncing()) {
-          new import_obsidian6.Notice("Sync already in progress, please wait.");
+          showSyncTodoistNotice("Sync already in progress.");
           return;
         }
-        new import_obsidian6.Notice("Starting sync...");
-        const result = await this.syncNow();
-        const message = `Sync complete: ${result.created} created, ${result.updated} updated, ${result.completed} completed`;
-        new import_obsidian6.Notice(message);
-        if (result.errors.length > 0) {
-          new import_obsidian6.Notice(`Sync had ${result.errors.length} error(s). Check console for details.`);
-        }
+        await this.runSyncWithNotice("manual");
       }
     });
     this.addCommand({
@@ -2425,12 +2504,12 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
       editorCallback: (editor, view) => {
         var _a;
         if (!this.settings.apiToken) {
-          new import_obsidian6.Notice("Please configure your API token in the settings.");
+          showSyncTodoistNotice("Please configure your API token in settings.");
           return;
         }
         const filePath = (_a = view.file) == null ? void 0 : _a.path;
         if (!filePath) {
-          new import_obsidian6.Notice("Cannot determine file path");
+          showSyncTodoistNotice("Cannot determine file path.");
           return;
         }
         const cursor = editor.getCursor();
@@ -2448,10 +2527,10 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
               editor.setCursor({ line: cursor.line + linesInserted, ch: 0 });
               await this.saveSyncState();
               const subtaskMsg = subtasks.length > 0 ? ` (+${subtasks.length} subtask${subtasks.length > 1 ? "s" : ""})` : "";
-              new import_obsidian6.Notice(`Imported: ${task.content}${subtaskMsg}`);
+              showSyncTodoistNotice(`Imported: ${task.content}${subtaskMsg}.`);
             } catch (error) {
               console.error("Failed to import task:", error);
-              new import_obsidian6.Notice(`Failed to import task: ${error}`);
+              showSyncTodoistNotice(`Failed to import task: ${error}`, 1e4);
             }
           })();
         }).open();
@@ -2474,14 +2553,20 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
       callback: async () => {
         var _a;
         if (!this.settings.apiToken) {
-          new import_obsidian6.Notice("Please configure your API token in the settings.");
+          showSyncTodoistNotice("Please configure your API token in settings.");
           return;
         }
         const result = await this.syncDailyNoteNow();
         if (result.status === "updated") {
-          new import_obsidian6.Notice(`Daily Note updated: ${result.taskCount} task(s).`);
+          showSyncTodoistNotice(
+            `Daily note updated: ${result.taskCount} task(s).`,
+            noticeDurationForDailyNote(result)
+          );
         } else {
-          new import_obsidian6.Notice((_a = result.message) != null ? _a : `Daily Note not updated: ${result.status}`);
+          showSyncTodoistNotice(
+            (_a = result.message) != null ? _a : `Daily note not updated: ${formatDailyNoteSummary(result)}.`,
+            noticeDurationForDailyNote(result)
+          );
         }
       }
     });
@@ -2490,7 +2575,7 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
    * Load plugin settings
    */
   async loadSettings() {
-    var _a;
+    var _a, _b;
     const data = await this.loadData();
     this.settings = {
       ...DEFAULT_SETTINGS,
@@ -2498,6 +2583,10 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
       dailyNote: {
         ...DEFAULT_SETTINGS.dailyNote,
         ...(_a = data == null ? void 0 : data.dailyNote) != null ? _a : {}
+      },
+      notifications: {
+        ...DEFAULT_SETTINGS.notifications,
+        ...(_b = data == null ? void 0 : data.notifications) != null ? _b : {}
       }
     };
   }
@@ -2564,6 +2653,34 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
     this.updateStatusBar();
     return result;
   }
+  async runSyncWithNotice(mode) {
+    const progressNotice = mode === "manual" && this.settings.notifications.manualSync ? createPersistentSyncNotice("Syncing...") : null;
+    this.updateStatusBar("Syncing...");
+    try {
+      const result = await this.syncNow();
+      const shouldNotify = mode === "manual" ? this.settings.notifications.manualSync : shouldShowAutomaticSyncNotice(result, this.settings.notifications);
+      if (shouldNotify) {
+        const message = formatSyncResult(result);
+        if (progressNotice) {
+          setSyncNoticeMessage(progressNotice, message);
+          window.setTimeout(() => progressNotice.hide(), noticeDurationForResult(result));
+        } else {
+          showSyncTodoistNotice(message, noticeDurationForResult(result));
+        }
+      } else if (progressNotice) {
+        progressNotice.hide();
+      }
+    } catch (error) {
+      const message = `Sync failed: ${error}`;
+      if (progressNotice) {
+        setSyncNoticeMessage(progressNotice, message);
+        window.setTimeout(() => progressNotice.hide(), 1e4);
+      } else {
+        showSyncTodoistNotice(message, 1e4);
+      }
+      throw error;
+    }
+  }
   /**
    * Start the automatic sync interval
    */
@@ -2577,7 +2694,7 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
         return;
       }
       console.debug("Running scheduled sync...");
-      void this.syncNow().catch((error) => {
+      void this.runSyncWithNotice("automatic").catch((error) => {
         console.error("Scheduled sync failed:", error);
       });
     }, intervalMs);

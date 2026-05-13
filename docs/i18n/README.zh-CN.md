@@ -1,6 +1,6 @@
 # Sync Todoist
 
-[![版本](https://img.shields.io/badge/version-0.3.0-7c3aed)](../../RELEASE.md)
+[![版本](https://img.shields.io/badge/version-0.4.0-7c3aed)](../../RELEASE.md)
 [![许可证](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](../../LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![插件 ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](../../manifest.json)
@@ -160,6 +160,9 @@ npm run build
 | Sync interval | `5` 分钟 | 自动同步频率。设为 `0` 可关闭自动同步。 |
 | Conflict resolution | `Todoist wins` | Obsidian 和 Todoist 同时改动同一任务时的处理策略。 |
 | Daily Note filters | 全部 | 控制今天 Daily Note 区块的项目、标签和优先级筛选。 |
+| Manual sync notices | 开 | 手动同步后显示简短的 `Sync Todoist:` 完成通知。 |
+| Automatic sync notices | 关 | 开启后，桌面端定时同步会显示通知，包括 0 变化的摘要。 |
+| Mobile automatic sync notices | 关 | 开启后，移动端定时同步会通过自动消失的 Obsidian notice 显示通知。 |
 
 ## 命令
 

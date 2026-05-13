@@ -415,6 +415,49 @@ Test each of these query blocks (create one block per filter):
 
 ---
 
+## Part G: Daily Notes & Notices
+
+### G1. Daily Note block sync
+
+1. Enable Obsidian core **Daily notes** plugin
+2. Enable **Sync Todoist -> 每日 Daily Note**
+3. Create or choose a Todoist task due today
+4. Run **Sync Todoist: Sync today's daily note**
+5. **Expected**: Today's Daily Note contains the task between `%% sync-todoist:daily:start %%` and `%% sync-todoist:daily:end %%`, with a `todoist-id` comment.
+- [ ] **PASS** / **FAIL**
+
+### G2. Daily Note marker safety
+
+1. In today's Daily Note, leave only the start marker and remove the end marker
+2. Run **Sync Todoist: Sync today's daily note**
+3. **Expected**: Content is not modified, and a `Sync Todoist:` notice reports a marker problem.
+- [ ] **PASS** / **FAIL**
+
+### G3. Manual sync notice
+
+1. Run **Sync Todoist: Sync now**
+2. **Expected**: A notice starts with `Sync Todoist:` and reports created, updated, completed, conflicts, and Daily Note status counts.
+- [ ] **PASS** / **FAIL**
+
+### G4. Automatic sync notice controls
+
+1. Enable **Automatic sync notices**
+2. Set sync interval to a short value for testing
+3. Wait for scheduled sync
+4. **Expected**: A `Sync Todoist:` notice appears, including zero-count results when nothing changed.
+5. Disable **Automatic sync notices**
+6. **Expected**: Scheduled successful syncs stop showing notices unless there is an error.
+- [ ] **PASS** / **FAIL**
+
+### G5. Mobile automatic sync notice controls
+
+1. On mobile, enable **Mobile automatic sync notices**
+2. Wait for scheduled sync
+3. **Expected**: A `Sync Todoist:` notice appears and auto-dismisses.
+- [ ] **PASS** / **FAIL**
+
+---
+
 ## Test Summary
 
 | Section | Tests | Passed | Failed |
@@ -425,9 +468,10 @@ Test each of these query blocks (create one block per filter):
 | D. Projects & Labels | 6 | | |
 | E. Query Blocks | 10 | | |
 | F. Edge Cases | 6 | | |
-| **Total** | **41** | | |
+| G. Daily Notes & Notices | 5 | | |
+| **Total** | **46** | | |
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 2.0.0
+**Plugin version**: 0.4.0
 **Obsidian version**: ___________________
