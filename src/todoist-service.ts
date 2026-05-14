@@ -513,6 +513,24 @@ export class TodoistService {
 
   static parseDueDate(task: TodoistTask): string | null {
     if (!task.due) return null;
-    return task.due.date;
+    if (task.due.datetime) {
+      return TodoistService.localDateFromTimestamp(task.due.datetime) ?? TodoistService.datePrefix(task.due.datetime);
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(task.due.date)) return task.due.date;
+    return TodoistService.localDateFromTimestamp(task.due.date) ?? TodoistService.datePrefix(task.due.date);
+  }
+
+  private static localDateFromTimestamp(value: string): string | null {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private static datePrefix(value: string): string | null {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    return match?.[1] ?? null;
   }
 }

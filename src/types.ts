@@ -219,6 +219,8 @@ export interface ParsedObsidianTask {
   projectName: string | null;
   /** Last modification timestamp (from file) */
   lastModified: number;
+  /** True when this line lives inside the generated Daily Note marker region */
+  isDailyNoteGenerated?: boolean;
 }
 
 /**

@@ -3,6 +3,8 @@ import { ParsedObsidianTask, TodoistPriority } from './types';
 /**
  * Regex patterns for task parsing
  */
+const DATE_WITH_OPTIONAL_TIME = String.raw`(\d{4}-\d{2}-\d{2})(?:[T ]\d{1,2}:\d{2}(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?`;
+
 const PATTERNS = {
   // Matches markdown task: - [ ] or - [x] or * [ ] etc.
   task: /^(\s*)[-*]\s+\[([ xX])\]\s+(.*)$/,
@@ -11,16 +13,16 @@ const PATTERNS = {
   // Matches hashtags: #tag (but not #project/ prefixed)
   hashtag: /#([a-zA-Z0-9_-]+)/g,
   // Tasks plugin emoji patterns
-  dueDate: /📅\s*(\d{4}-\d{2}-\d{2})/,
-  scheduledDate: /⏳\s*(\d{4}-\d{2}-\d{2})/,
-  startDate: /🛫\s*(\d{4}-\d{2}-\d{2})/,
-  doneDate: /✅\s*(\d{4}-\d{2}-\d{2})/,
+  dueDate: new RegExp(`📅\\s*${DATE_WITH_OPTIONAL_TIME}`),
+  scheduledDate: new RegExp(`⏳\\s*${DATE_WITH_OPTIONAL_TIME}`),
+  startDate: new RegExp(`🛫\\s*${DATE_WITH_OPTIONAL_TIME}`),
+  doneDate: new RegExp(`✅\\s*${DATE_WITH_OPTIONAL_TIME}`),
   urgentPriority: /🔺/,
   highPriority: /⏫/,
   mediumPriority: /🔼/,
   lowPriority: /🔽/,
   // Alternative text-based due date: due:YYYY-MM-DD
-  textDueDate: /due:(\d{4}-\d{2}-\d{2})/i,
+  textDueDate: new RegExp(`due:${DATE_WITH_OPTIONAL_TIME}`, 'i'),
   // Project metadata: 📁 ProjectName
   project: new RegExp('📁\\s*([^\\s#📅🔺⏫🔼🔽<]+)', 'u'),
 };

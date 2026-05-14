@@ -134,18 +134,20 @@ export class SyncEngine {
       const obsidianTasks = await this.getAllObsidianTasks();
       console.debug(`Todoist Sync: Found ${obsidianTasks.length} tasks with ${this.settings.syncTag} tag`);
 
-      const syncedObsidianTasks = new Map<string, ParsedObsidianTask>();
+      const syncedObsidianTaskGroups = new Map<string, ParsedObsidianTask[]>();
       const newObsidianTasks: ParsedObsidianTask[] = [];
 
       for (const task of obsidianTasks) {
         if (task.todoistId) {
-          syncedObsidianTasks.set(task.todoistId, task);
-        } else {
+          const group = syncedObsidianTaskGroups.get(task.todoistId) ?? [];
+          group.push(task);
+          syncedObsidianTaskGroups.set(task.todoistId, group);
+        } else if (!task.isDailyNoteGenerated) {
           newObsidianTasks.push(task);
         }
       }
 
-      console.debug(`Todoist Sync: ${newObsidianTasks.length} new tasks to create, ${syncedObsidianTasks.size} existing tasks to sync`);
+      console.debug(`Todoist Sync: ${newObsidianTasks.length} new tasks to create, ${syncedObsidianTaskGroups.size} existing tasks to sync`);
 
       // Sort new tasks: parents first (lower indentLevel), then children.
       // This ensures parent Todoist IDs are available when creating subtasks.
@@ -181,6 +183,10 @@ export class SyncEngine {
       }
 
       // Sync existing tasks
+      const syncedObsidianTasks = new Map<string, ParsedObsidianTask>();
+      for (const [todoistId, group] of syncedObsidianTaskGroups.entries()) {
+        syncedObsidianTasks.set(todoistId, this.selectTaskForSync(group, todoistTaskMap.get(todoistId)));
+      }
       const syncEntries = [...syncedObsidianTasks.entries()];
       for (let i = 0; i < syncEntries.length; i++) {
         await new Promise(resolve => window.setTimeout(resolve, 0));
@@ -278,6 +284,15 @@ export class SyncEngine {
     return null;
   }
 
+  private selectTaskForSync(tasks: ParsedObsidianTask[], todoistTask: TodoistTask | undefined): ParsedObsidianTask {
+    const completedGeneratedTask = tasks.find(task =>
+      task.isDailyNoteGenerated && task.isCompleted && todoistTask && !todoistTask.isCompleted
+    );
+    if (completedGeneratedTask) return completedGeneratedTask;
+
+    return tasks.find(task => !task.isDailyNoteGenerated) ?? tasks[0];
+  }
+
   /**
    * Get all tasks from all markdown files in the vault
    */
@@ -299,6 +314,7 @@ export class SyncEngine {
           this.settings.syncTag,
           file.stat.mtime
         );
+        this.markDailyNoteGeneratedTasks(fileTasks, content);
         tasks.push(...fileTasks);
       } catch (error) {
         console.error(`Failed to read file ${file.path}:`, error);
@@ -307,6 +323,38 @@ export class SyncEngine {
 
     console.debug(`Todoist Sync: Scan complete — ${files.length} files, ${tasks.length} tasks found`);
     return tasks;
+  }
+
+  private markDailyNoteGeneratedTasks(tasks: ParsedObsidianTask[], content: string): void {
+    const generatedLines = this.getDailyNoteGeneratedLineNumbers(content);
+    if (generatedLines.size === 0) return;
+    for (const task of tasks) {
+      if (generatedLines.has(task.lineNumber)) {
+        task.isDailyNoteGenerated = true;
+      }
+    }
+  }
+
+  private getDailyNoteGeneratedLineNumbers(content: string): Set<number> {
+    const generatedLines = new Set<number>();
+    const markerStart = this.settings.dailyNote.markerStart;
+    const markerEnd = this.settings.dailyNote.markerEnd;
+    if (!markerStart || !markerEnd || markerStart === markerEnd) return generatedLines;
+
+    let insideMarker = false;
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (!insideMarker && lines[i].includes(markerStart)) {
+        insideMarker = true;
+        continue;
+      }
+      if (insideMarker && lines[i].includes(markerEnd)) {
+        insideMarker = false;
+        continue;
+      }
+      if (insideMarker) generatedLines.add(i);
+    }
+    return generatedLines;
   }
 
   async syncDailyNoteNow(): Promise<DailyNoteSyncResult> {
@@ -536,6 +584,25 @@ export class SyncEngine {
     const obsidianCompleted = obsidianTask.isCompleted;
     const todoistCompleted = todoistTask.isCompleted;
 
+    if (obsidianTask.isDailyNoteGenerated) {
+      if (obsidianCompleted && !todoistCompleted) {
+        if (!this.canCompleteTodoistFromGeneratedDailyNote(obsidianTask, todoistTask)) {
+          this.updateCompletionOnlySyncState(todoistTask.id, false, todoistTask);
+          return 'unchanged';
+        }
+        await this.todoistService.completeTask(todoistTask.id);
+        this.updateCompletionOnlySyncState(todoistTask.id, true, todoistTask);
+        return 'completed';
+      }
+      if (!obsidianCompleted && todoistCompleted) {
+        await this.markObsidianTaskCompleted(obsidianTask);
+        this.updateCompletionOnlySyncState(todoistTask.id, true, todoistTask);
+        return 'completed';
+      }
+      this.updateCompletionOnlySyncState(todoistTask.id, todoistCompleted, todoistTask);
+      return 'unchanged';
+    }
+
     // Handle completion status sync
     if (obsidianCompleted !== todoistCompleted) {
       if (obsidianCompleted && !todoistCompleted) {
@@ -614,12 +681,15 @@ export class SyncEngine {
 
     // Only Obsidian changed → push to Todoist regardless of conflict policy
     if (obsidianChanged && !todoistChanged) {
-      await this.todoistService.updateTask(todoistTask.id, {
+      const updates = {
         content: obsidianTask.content,
         priority: obsidianTask.priority,
-        dueString: obsidianTask.dueDate ?? undefined,
         labels: obsidianTask.labels,
-      });
+      };
+      if (this.shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate)) {
+        Object.assign(updates, { dueString: obsidianTask.dueDate ?? undefined });
+      }
+      await this.todoistService.updateTask(todoistTask.id, updates);
       this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
       return 'updated';
     }
@@ -633,12 +703,15 @@ export class SyncEngine {
 
     // Both sides changed (or hash unavailable) → apply conflict resolution policy
     if (this.settings.conflictResolution === 'obsidian-wins') {
-      await this.todoistService.updateTask(todoistTask.id, {
+      const updates = {
         content: obsidianTask.content,
         priority: obsidianTask.priority,
-        dueString: obsidianTask.dueDate ?? undefined,
         labels: obsidianTask.labels,
-      });
+      };
+      if (this.shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate)) {
+        Object.assign(updates, { dueString: obsidianTask.dueDate ?? undefined });
+      }
+      await this.todoistService.updateTask(todoistTask.id, updates);
       this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
       return 'updated';
     } else if (this.settings.conflictResolution === 'todoist-wins') {
@@ -657,6 +730,35 @@ export class SyncEngine {
       });
       return 'conflict';
     }
+  }
+
+  private canCompleteTodoistFromGeneratedDailyNote(
+    obsidianTask: ParsedObsidianTask,
+    todoistTask: TodoistTask
+  ): boolean {
+    const todoistDueDate = TodoistService.parseDueDate(todoistTask);
+    if (obsidianTask.dueDate && todoistDueDate && obsidianTask.dueDate !== todoistDueDate) {
+      console.warn(
+        `Todoist Sync: Skipping Daily Note completion for ${todoistTask.id} because the generated row is for ${obsidianTask.dueDate}, but Todoist is now due ${todoistDueDate}.`
+      );
+      return false;
+    }
+    return true;
+  }
+
+  private shouldPushDueDateToTodoist(
+    obsidianTask: ParsedObsidianTask,
+    todoistTask: TodoistTask,
+    todoistDueDate: string | null
+  ): boolean {
+    if (obsidianTask.dueDate === todoistDueDate) return false;
+    if (todoistTask.due?.datetime || todoistTask.due?.isRecurring) {
+      console.warn(
+        `Todoist Sync: Skipping due-date push for ${todoistTask.id} because Obsidian cannot represent timed or recurring Todoist due rules.`
+      );
+      return false;
+    }
+    return true;
   }
 
   /**
@@ -678,6 +780,22 @@ export class SyncEngine {
       obsidianCompleted: completed,
       todoistCompleted: completed,
       projectId: todoistTask?.projectId ?? obsidianTask.projectId ?? null,
+    };
+  }
+
+  private updateCompletionOnlySyncState(
+    todoistId: string,
+    completed: boolean,
+    todoistTask: TodoistTask
+  ): void {
+    const existing = this.syncState.tasks[todoistId];
+    if (!existing) return;
+    this.syncState.tasks[todoistId] = {
+      ...existing,
+      lastSynced: Date.now(),
+      obsidianCompleted: completed,
+      todoistCompleted: completed,
+      projectId: todoistTask.projectId,
     };
   }
 
