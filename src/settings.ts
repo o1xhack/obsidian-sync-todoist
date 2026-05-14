@@ -7,6 +7,7 @@ import {
   noticeDurationForResult,
   showSyncTodoistNotice,
 } from './notices';
+import { formatBuildDate, getBuildInfo } from './build-info';
 
 type SettingsTabId = 'general' | 'daily';
 const SETTINGS_TABS: SettingsTabId[] = ['general', 'daily'];
@@ -277,6 +278,15 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
 
     const statusEl = containerEl.createDiv({ cls: 'todoist-sync-status' });
     this.updateStatusDisplay(statusEl);
+
+    const buildInfo = getBuildInfo();
+    new Setting(containerEl)
+      .setName(this.tr('general.buildInfo.name'))
+      .setDesc(this.tr('general.buildInfo.desc', {
+        version: buildInfo.version,
+        build: buildInfo.buildNumber,
+        date: formatBuildDate(buildInfo.buildDate),
+      }));
   }
 
   private renderTabBar(parent: HTMLElement): void {

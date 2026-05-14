@@ -47,6 +47,8 @@ export type I18nKey =
   | 'general.status.api'
   | 'general.status.connected'
   | 'general.status.disconnected'
+  | 'general.buildInfo.name'
+  | 'general.buildInfo.desc'
   | 'daily.enable.name'
   | 'daily.enable.desc'
   | 'daily.markerStart.name'
@@ -130,6 +132,8 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'general.status.api': 'API status: {{status}}',
     'general.status.connected': 'Connected',
     'general.status.disconnected': 'Not connected',
+    'general.buildInfo.name': 'Build info',
+    'general.buildInfo.desc': 'Version {{version}} · Build {{build}} · Built {{date}}',
     'daily.enable.name': 'Daily Note',
     'daily.enable.desc': 'Write today\'s matching tasks into the managed marker region of today\'s Daily Note.',
     'daily.markerStart.name': 'Marker start',
@@ -212,6 +216,8 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'general.status.api': 'API 状态：{{status}}',
     'general.status.connected': '已连接',
     'general.status.disconnected': '未连接',
+    'general.buildInfo.name': '构建信息',
+    'general.buildInfo.desc': '版本 {{version}} · Build {{build}} · 构建时间 {{date}}',
     'daily.enable.name': '每日 Daily Note',
     'daily.enable.desc': '将今天符合条件的任务写入当天 Daily Note 的受控 Marker 区间。',
     'daily.markerStart.name': '开始 Marker',

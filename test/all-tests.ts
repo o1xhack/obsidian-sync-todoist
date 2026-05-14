@@ -1,3 +1,4 @@
+import './build-info.test';
 import './daily-note.test';
 import './due.test';
 import './i18n.test';

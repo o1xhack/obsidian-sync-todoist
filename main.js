@@ -141,6 +141,8 @@ var STRINGS = {
     "general.status.api": "API status: {{status}}",
     "general.status.connected": "Connected",
     "general.status.disconnected": "Not connected",
+    "general.buildInfo.name": "Build info",
+    "general.buildInfo.desc": "Version {{version}} \xB7 Build {{build}} \xB7 Built {{date}}",
     "daily.enable.name": "Daily Note",
     "daily.enable.desc": "Write today's matching tasks into the managed marker region of today's Daily Note.",
     "daily.markerStart.name": "Marker start",
@@ -223,6 +225,8 @@ var STRINGS = {
     "general.status.api": "API \u72B6\u6001\uFF1A{{status}}",
     "general.status.connected": "\u5DF2\u8FDE\u63A5",
     "general.status.disconnected": "\u672A\u8FDE\u63A5",
+    "general.buildInfo.name": "\u6784\u5EFA\u4FE1\u606F",
+    "general.buildInfo.desc": "\u7248\u672C {{version}} \xB7 Build {{build}} \xB7 \u6784\u5EFA\u65F6\u95F4 {{date}}",
     "daily.enable.name": "\u6BCF\u65E5 Daily Note",
     "daily.enable.desc": "\u5C06\u4ECA\u5929\u7B26\u5408\u6761\u4EF6\u7684\u4EFB\u52A1\u5199\u5165\u5F53\u5929 Daily Note \u7684\u53D7\u63A7 Marker \u533A\u95F4\u3002",
     "daily.markerStart.name": "\u5F00\u59CB Marker",
@@ -328,6 +332,21 @@ function noticeDurationForResult(result) {
 }
 function noticeDurationForDailyNote(result) {
   return result.status === "error" || result.status === "invalid_markers" ? ERROR_DURATION : DEFAULT_DURATION;
+}
+
+// src/build-info.ts
+function getBuildInfo() {
+  return {
+    version: "0.7.0",
+    buildDate: "2026-05-14T03:24:34.989Z",
+    buildNumber: "202605140324"
+  };
+}
+function formatBuildDate(buildDate) {
+  const date = new Date(buildDate);
+  if (Number.isNaN(date.getTime()))
+    return buildDate;
+  return date.toLocaleString();
 }
 
 // src/settings.ts
@@ -494,6 +513,12 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     new import_obsidian2.Setting(containerEl).setName(this.tr("general.status")).setHeading();
     const statusEl = containerEl.createDiv({ cls: "todoist-sync-status" });
     this.updateStatusDisplay(statusEl);
+    const buildInfo = getBuildInfo();
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.buildInfo.name")).setDesc(this.tr("general.buildInfo.desc", {
+      version: buildInfo.version,
+      build: buildInfo.buildNumber,
+      date: formatBuildDate(buildInfo.buildDate)
+    }));
   }
   renderTabBar(parent) {
     const bar = parent.createDiv({ cls: "sync-todoist-tab-bar" });
