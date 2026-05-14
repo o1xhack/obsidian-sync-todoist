@@ -1,5 +1,7 @@
 import './daily-note.test';
+import './due.test';
 import './i18n.test';
 import './notices.test';
 import './sync-rules.test';
 import './task-parser.test';
+import './todoist-service-due.test';

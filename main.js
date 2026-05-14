@@ -82,6 +82,8 @@ function normalizeDue(due) {
     date: due.date,
     datetime: due.datetime,
     string: due.string,
+    timezone: due.timezone,
+    lang: due.lang,
     isRecurring: due.is_recurring
   };
 }
@@ -738,8 +740,201 @@ function updateSelection(values, value, checked) {
 
 // src/todoist-service.ts
 var import_obsidian3 = require("obsidian");
+
+// src/due.ts
+var EMPTY_DUE = {
+  kind: "none",
+  date: null,
+  time: null,
+  rawDate: null,
+  timezone: null,
+  string: null,
+  lang: null,
+  isRecurring: false,
+  source: "markdown"
+};
+var DATE_TIME_PATTERN = /(\d{4}-\d{2}-\d{2})(?:[T ](\d{1,2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?/;
+var MARKDOWN_DUE_PATTERN = new RegExp(`(?:\u{1F4C5}\\s*|due:)${DATE_TIME_PATTERN.source}`, "i");
+var DUE_METADATA_PATTERN = /<!--\s*todoist-due:\s*(\{.*?\})\s*-->/;
+function emptyDue(source = "markdown") {
+  return { ...EMPTY_DUE, source };
+}
+function parseMarkdownDue(content) {
+  const metadata = parseDueMetadata(content);
+  const match = content.match(MARKDOWN_DUE_PATTERN);
+  if (!match)
+    return metadata != null ? metadata : emptyDue("markdown");
+  const date = match[1];
+  const hour = match[2];
+  const minute = match[3];
+  const visibleDue = {
+    ...emptyDue("markdown"),
+    kind: hour && minute ? "floating" : "date",
+    date,
+    time: hour && minute ? `${hour.padStart(2, "0")}:${minute}` : null,
+    rawDate: hour && minute ? `${date}T${hour.padStart(2, "0")}:${minute}:00` : date
+  };
+  if (!metadata)
+    return visibleDue;
+  return {
+    ...metadata,
+    date: visibleDue.date,
+    time: visibleDue.time,
+    source: metadata.source
+  };
+}
+function parseDueMetadata(content) {
+  var _a, _b, _c, _d, _e, _f;
+  const match = content.match(DUE_METADATA_PATTERN);
+  if (!match)
+    return null;
+  try {
+    const raw = JSON.parse(match[1]);
+    return normalizeStructuredDue({
+      ...emptyDue("metadata"),
+      ...raw,
+      date: (_b = (_a = raw.visibleDate) != null ? _a : raw.date) != null ? _b : null,
+      time: (_d = (_c = raw.visibleTime) != null ? _c : raw.time) != null ? _d : null,
+      rawDate: (_f = (_e = raw.rawDate) != null ? _e : raw.date) != null ? _f : null,
+      source: "metadata"
+    });
+  } catch (e) {
+    return null;
+  }
+}
+function normalizeTodoistDue(due) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  if (!due)
+    return emptyDue("todoist");
+  const rawDate = (_a = due.datetime) != null ? _a : due.date;
+  const fixed = Boolean(due.timezone || /(?:Z|[+-]\d{2}:?\d{2})$/.test(rawDate));
+  const hasTime = rawDate.includes("T");
+  const local = fixed ? localDateTimeFromTimestamp(rawDate) : dateTimeParts(rawDate);
+  const date = (_b = local == null ? void 0 : local.date) != null ? _b : datePrefix(rawDate);
+  const time = (_c = local == null ? void 0 : local.time) != null ? _c : null;
+  let kind = "date";
+  if (due.isRecurring) {
+    kind = "recurring";
+  } else if (fixed) {
+    kind = "fixed";
+  } else if (hasTime) {
+    kind = "floating";
+  }
+  return normalizeStructuredDue({
+    kind,
+    date,
+    time,
+    rawDate,
+    timezone: (_d = due.timezone) != null ? _d : null,
+    string: (_e = due.string) != null ? _e : null,
+    lang: (_f = due.lang) != null ? _f : null,
+    isRecurring: (_g = due.isRecurring) != null ? _g : false,
+    source: "todoist"
+  });
+}
+function normalizeStructuredDue(due) {
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+  if (!due.date) {
+    return {
+      ...emptyDue(due.source),
+      timezone: (_a = due.timezone) != null ? _a : null,
+      string: (_b = due.string) != null ? _b : null,
+      lang: (_c = due.lang) != null ? _c : null,
+      isRecurring: (_d = due.isRecurring) != null ? _d : false
+    };
+  }
+  const time = due.time ? normalizeTime(due.time) : null;
+  const kind = due.isRecurring ? "recurring" : due.kind;
+  return {
+    kind,
+    date: due.date,
+    time,
+    rawDate: (_e = due.rawDate) != null ? _e : time ? `${due.date}T${time}:00` : due.date,
+    timezone: (_f = due.timezone) != null ? _f : null,
+    string: (_g = due.string) != null ? _g : null,
+    lang: (_h = due.lang) != null ? _h : null,
+    isRecurring: (_i = due.isRecurring) != null ? _i : kind === "recurring",
+    source: due.source
+  };
+}
+function formatDueForMarkdown(due) {
+  if (!due.date)
+    return null;
+  return due.time ? `${due.date} ${due.time}` : due.date;
+}
+function formatDueMetadata(due) {
+  if (!requiresDueMetadata(due))
+    return null;
+  const payload = {
+    kind: due.kind,
+    date: due.rawDate,
+    visibleDate: due.date,
+    visibleTime: due.time,
+    timezone: due.timezone,
+    string: due.string,
+    lang: due.lang,
+    isRecurring: due.isRecurring
+  };
+  return `<!-- todoist-due:${JSON.stringify(payload)} -->`;
+}
+function stripDueMetadata(content) {
+  return content.replace(DUE_METADATA_PATTERN, "");
+}
+function requiresDueMetadata(due) {
+  return due.kind === "fixed" || due.kind === "recurring" || Boolean(due.timezone || due.string || due.lang || due.isRecurring);
+}
+function dueHash(due) {
+  var _a, _b, _c, _d, _e;
+  if (!due.date)
+    return "";
+  const preserved = due.kind === "fixed" || due.kind === "recurring" ? [(_a = due.rawDate) != null ? _a : "", (_b = due.timezone) != null ? _b : "", (_c = due.string) != null ? _c : "", (_d = due.lang) != null ? _d : ""] : [];
+  return [due.kind, due.date, (_e = due.time) != null ? _e : "", due.isRecurring ? "recurring" : "one-time", ...preserved].join("|");
+}
+function todoistDueUpdate(due) {
+  if (!due.date || due.isRecurring || due.kind === "fixed" || due.kind === "recurring")
+    return {};
+  if (due.time)
+    return { dueDatetime: `${due.date}T${due.time}:00` };
+  return { dueDate: due.date };
+}
+function canPushDueToTodoist(due) {
+  return due.kind === "date" || due.kind === "floating";
+}
+function dateOnlyFromDue(due) {
+  return due.date;
+}
+function normalizeTime(value) {
+  const match = value.match(/^(\d{1,2}):(\d{2})/);
+  if (!match)
+    return null;
+  return `${match[1].padStart(2, "0")}:${match[2]}`;
+}
+function dateTimeParts(value) {
+  const match = value.match(DATE_TIME_PATTERN);
+  if (!match)
+    return null;
+  const time = match[2] && match[3] ? `${match[2].padStart(2, "0")}:${match[3]}` : null;
+  return { date: match[1], time };
+}
+function localDateTimeFromTimestamp(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime()))
+    return dateTimeParts(value);
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const hour = String(parsed.getHours()).padStart(2, "0");
+  const minute = String(parsed.getMinutes()).padStart(2, "0");
+  return { date: `${year}-${month}-${day}`, time: `${hour}:${minute}` };
+}
+function datePrefix(value) {
+  var _a, _b;
+  return (_b = (_a = value.match(/^(\d{4}-\d{2}-\d{2})/)) == null ? void 0 : _a[1]) != null ? _b : null;
+}
+
+// src/todoist-service.ts
 var API_BASE = "https://api.todoist.com/api/v1";
-var TodoistService = class _TodoistService {
+var TodoistService = class {
   constructor() {
     this.apiToken = null;
     this.projectCache = /* @__PURE__ */ new Map();
@@ -945,8 +1140,11 @@ var TodoistService = class _TodoistService {
         body.parent_id = options.parentId;
       if (options == null ? void 0 : options.priority)
         body.priority = options.priority;
-      if (options == null ? void 0 : options.dueDate)
-        body.due_date = options.dueDate;
+      const duePayload = (options == null ? void 0 : options.due) ? todoistDueUpdate(options.due) : { dueDate: options == null ? void 0 : options.dueDate };
+      if (duePayload.dueDate)
+        body.due_date = duePayload.dueDate;
+      if (duePayload.dueDatetime)
+        body.due_datetime = duePayload.dueDatetime;
       if (options == null ? void 0 : options.labels)
         body.labels = options.labels;
       if (options == null ? void 0 : options.description)
@@ -975,6 +1173,10 @@ var TodoistService = class _TodoistService {
         body.priority = updates.priority;
       if (updates.dueString !== void 0)
         body.due_string = updates.dueString;
+      if (updates.dueDate !== void 0)
+        body.due_date = updates.dueDate;
+      if (updates.dueDatetime !== void 0)
+        body.due_datetime = updates.dueDatetime;
       if (updates.labels !== void 0)
         body.labels = updates.labels;
       if (updates.description !== void 0)
@@ -1160,29 +1362,7 @@ var TodoistService = class _TodoistService {
     return date.toISOString().split("T")[0];
   }
   static parseDueDate(task) {
-    var _a, _b;
-    if (!task.due)
-      return null;
-    if (task.due.datetime) {
-      return (_a = _TodoistService.localDateFromTimestamp(task.due.datetime)) != null ? _a : _TodoistService.datePrefix(task.due.datetime);
-    }
-    if (/^\d{4}-\d{2}-\d{2}$/.test(task.due.date))
-      return task.due.date;
-    return (_b = _TodoistService.localDateFromTimestamp(task.due.date)) != null ? _b : _TodoistService.datePrefix(task.due.date);
-  }
-  static localDateFromTimestamp(value) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime()))
-      return null;
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-  static datePrefix(value) {
-    var _a;
-    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
-    return (_a = match == null ? void 0 : match[1]) != null ? _a : null;
+    return dateOnlyFromDue(normalizeTodoistDue(task.due));
   }
 };
 
@@ -1247,7 +1427,8 @@ function parseTaskLine(line, lineNumber, filePath, syncTag, lastModified, requir
   }
   const todoistIdMatch = taskContent.match(PATTERNS.todoistId);
   const todoistId = todoistIdMatch ? todoistIdMatch[1] : null;
-  const dueDate = extractDueDate(taskContent);
+  const due = parseMarkdownDue(taskContent);
+  const dueDate = due.date;
   const priority = extractPriority(taskContent);
   const labels = extractLabels(taskContent, syncTag);
   const content = cleanTaskContent(taskContent, syncTag);
@@ -1263,6 +1444,7 @@ function parseTaskLine(line, lineNumber, filePath, syncTag, lastModified, requir
     parentId: null,
     indentLevel,
     dueDate,
+    due,
     priority,
     labels,
     description: "",
@@ -1274,18 +1456,6 @@ function parseTaskLine(line, lineNumber, filePath, syncTag, lastModified, requir
 function extractProjectName(content) {
   const match = content.match(PATTERNS.project);
   return match ? match[1] : null;
-}
-function extractDueDate(content) {
-  const emojiMatch = content.match(PATTERNS.dueDate);
-  if (emojiMatch)
-    return emojiMatch[1];
-  const scheduledMatch = content.match(PATTERNS.scheduledDate);
-  if (scheduledMatch)
-    return scheduledMatch[1];
-  const textMatch = content.match(PATTERNS.textDueDate);
-  if (textMatch)
-    return textMatch[1];
-  return null;
 }
 function extractPriority(content) {
   if (PATTERNS.urgentPriority.test(content)) {
@@ -1317,6 +1487,7 @@ function extractLabels(content, syncTag) {
 }
 function cleanTaskContent(content, syncTag) {
   let cleaned = content;
+  cleaned = stripDueMetadata(cleaned);
   cleaned = cleaned.replace(/<!--\s*todoist-id:\s*[\w]+\s*-->/g, "");
   const syncTagPattern = new RegExp(escapeRegex(syncTag), "gi");
   cleaned = cleaned.replace(syncTagPattern, "");
@@ -1338,8 +1509,10 @@ function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 function buildTaskLine(task, syncTag) {
+  var _a, _b;
   const indent = "	".repeat(task.indentLevel);
   const checkbox = task.isCompleted ? "[x]" : "[ ]";
+  const due = (_a = task.due) != null ? _a : emptyDue();
   let line = `${indent}- ${checkbox} ${task.content}`;
   if (task.indentLevel === 0) {
     line += ` ${syncTag}`;
@@ -1358,7 +1531,13 @@ function buildTaskLine(task, syncTag) {
     line += " \u{1F53C}";
   }
   if (task.dueDate) {
-    line += ` \u{1F4C5} ${task.dueDate}`;
+    line += ` \u{1F4C5} ${(_b = formatDueForMarkdown(due)) != null ? _b : task.dueDate}`;
+  } else if (due.date) {
+    line += ` \u{1F4C5} ${formatDueForMarkdown(due)}`;
+  }
+  const dueMetadata = formatDueMetadata(due);
+  if (dueMetadata) {
+    line += ` ${dueMetadata}`;
   }
   if (task.todoistId) {
     line += ` <!-- todoist-id:${task.todoistId} -->`;
@@ -1450,7 +1629,7 @@ function extractDescription(lines, taskIndex) {
 function generateContentHash(task) {
   var _a;
   const sortedLabels = [...task.labels].sort().join(",");
-  const data = `${task.content}|${task.isCompleted}|${(_a = task.dueDate) != null ? _a : ""}|${task.priority}|${sortedLabels}`;
+  const data = `${task.content}|${task.isCompleted}|${dueHash((_a = task.due) != null ? _a : emptyDue())}|${task.priority}|${sortedLabels}`;
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
     const char = data.charCodeAt(i);
@@ -1561,15 +1740,15 @@ function localDateFromTodoistDue(due) {
   if (!due)
     return null;
   if (due.datetime) {
-    return (_a = localDateFromTimestamp(due.datetime)) != null ? _a : datePrefix(due.datetime);
+    return (_a = localDateFromTimestamp(due.datetime)) != null ? _a : datePrefix2(due.datetime);
   }
   if (!due.date)
     return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(due.date))
     return due.date;
-  return (_b = localDateFromTimestamp(due.date)) != null ? _b : datePrefix(due.date);
+  return (_b = localDateFromTimestamp(due.date)) != null ? _b : datePrefix2(due.date);
 }
-function datePrefix(value) {
+function datePrefix2(value) {
   var _a;
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
   return (_a = match == null ? void 0 : match[1]) != null ? _a : null;
@@ -1614,7 +1793,7 @@ function dueValueToDate(value) {
   if (typeof value === "string") {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value))
       return value;
-    return (_a = localDateFromTimestamp(value)) != null ? _a : datePrefix(value);
+    return (_a = localDateFromTimestamp(value)) != null ? _a : datePrefix2(value);
   }
   if (value && typeof value === "object" && "date" in value) {
     const date = value.date;
@@ -1622,7 +1801,7 @@ function dueValueToDate(value) {
       return null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(date))
       return date;
-    return (_b = localDateFromTimestamp(date)) != null ? _b : datePrefix(date);
+    return (_b = localDateFromTimestamp(date)) != null ? _b : datePrefix2(date);
   }
   return null;
 }
@@ -1690,6 +1869,7 @@ function buildDailyNoteParsedTask(task, filePath, lineNumber, resolveProjectName
     parentId: task.parentId,
     indentLevel: 0,
     dueDate: localDateFromTodoistDue(task.due),
+    due: normalizeTodoistDue(task.due),
     priority: task.priority,
     labels: (_a = task.labels) != null ? _a : [],
     description: (_b = task.description) != null ? _b : "",
@@ -1713,13 +1893,17 @@ function canCompleteTodoistFromGeneratedDailyNote(obsidianTask, todoistTask) {
   const todoistDueDate = TodoistService.parseDueDate(todoistTask);
   return !(obsidianTask.dueDate && todoistDueDate && obsidianTask.dueDate !== todoistDueDate);
 }
-function shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate) {
-  var _a, _b;
-  if (obsidianTask.dueDate === todoistDueDate)
+function shouldPushDueDateToTodoist(obsidianTask, todoistTask, _todoistDueDate) {
+  if (!obsidianTask.due)
     return false;
-  if (((_a = todoistTask.due) == null ? void 0 : _a.datetime) || ((_b = todoistTask.due) == null ? void 0 : _b.isRecurring))
+  const todoistDue = normalizeTodoistDue(todoistTask.due);
+  if (dueHash(obsidianTask.due) === dueHash(todoistDue))
     return false;
-  return true;
+  if (todoistDue.kind === "fixed" || todoistDue.kind === "recurring" || todoistDue.isRecurring)
+    return false;
+  if (todoistDue.kind === "floating" && obsidianTask.due.kind === "date")
+    return false;
+  return canPushDueToTodoist(obsidianTask.due);
 }
 
 // src/sync-engine.ts
@@ -2126,7 +2310,7 @@ var SyncEngine = class {
    * Create a Todoist task from an Obsidian task, with optional parentId
    */
   async createTodoistTaskWithParent(task, parentId) {
-    var _a;
+    var _a, _b;
     let projectId = this.settings.defaultProjectId || void 0;
     if (task.projectName) {
       const resolvedId = this.todoistService.getProjectIdByName(task.projectName);
@@ -2139,6 +2323,7 @@ var SyncEngine = class {
       parentId: parentId != null ? parentId : void 0,
       priority: task.priority,
       dueDate: (_a = task.dueDate) != null ? _a : void 0,
+      due: (_b = task.due) != null ? _b : emptyDue(),
       labels: task.labels,
       description: task.description
     });
@@ -2169,7 +2354,7 @@ var SyncEngine = class {
    * Sync an existing task between Obsidian and Todoist
    */
   async syncExistingTask(obsidianTask, todoistTask) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     const obsidianCompleted = obsidianTask.isCompleted;
     const todoistCompleted = todoistTask.isCompleted;
     if (obsidianTask.isDailyNoteGenerated) {
@@ -2214,29 +2399,31 @@ var SyncEngine = class {
     const todoistContent = todoistTask.content;
     const todoistPriority = TodoistService.fromTodoistPriority(todoistTask.priority);
     const todoistDueDate = TodoistService.parseDueDate(todoistTask);
+    const todoistDue = normalizeTodoistDue(todoistTask.due);
     const contentDiffers = obsidianTask.content !== todoistContent;
     const priorityDiffers = obsidianTask.priority !== todoistPriority;
-    const dueDateDiffers = obsidianTask.dueDate !== todoistDueDate;
-    const todoistLabels = [...(_a = todoistTask.labels) != null ? _a : []].sort();
+    const dueDateDiffers = dueHash((_a = obsidianTask.due) != null ? _a : emptyDue()) !== dueHash(todoistDue);
+    const todoistLabels = [...(_b = todoistTask.labels) != null ? _b : []].sort();
     const obsidianLabels = [...obsidianTask.labels].sort();
     const labelsDiffer = JSON.stringify(todoistLabels) !== JSON.stringify(obsidianLabels);
-    const todoistProjectName = (_b = this.todoistService.getProjectName(todoistTask.projectId)) != null ? _b : null;
-    const projectDiffers = todoistProjectName !== ((_c = obsidianTask.projectName) != null ? _c : null);
+    const todoistProjectName = (_c = this.todoistService.getProjectName(todoistTask.projectId)) != null ? _c : null;
+    const projectDiffers = todoistProjectName !== ((_d = obsidianTask.projectName) != null ? _d : null);
     const hasChanges = contentDiffers || priorityDiffers || dueDateDiffers || labelsDiffer || projectDiffers;
     if (!hasChanges) {
       this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
       return "unchanged";
     }
-    const storedHash = (_e = (_d = this.syncState.tasks[todoistTask.id]) == null ? void 0 : _d.contentHash) != null ? _e : "";
+    const storedHash = (_f = (_e = this.syncState.tasks[todoistTask.id]) == null ? void 0 : _e.contentHash) != null ? _f : "";
     const currentObsidianHash = generateContentHash(obsidianTask);
     const todoistAsObsidian = {
       ...obsidianTask,
       content: todoistContent,
       priority: todoistPriority,
       dueDate: todoistDueDate,
-      labels: (_f = todoistTask.labels) != null ? _f : [],
+      due: todoistDue,
+      labels: (_g = todoistTask.labels) != null ? _g : [],
       isCompleted: todoistTask.isCompleted,
-      parentId: (_g = todoistTask.parentId) != null ? _g : null,
+      parentId: (_h = todoistTask.parentId) != null ? _h : null,
       projectId: todoistTask.projectId
     };
     const currentTodoistHash = generateContentHash(todoistAsObsidian);
@@ -2244,7 +2431,7 @@ var SyncEngine = class {
     const todoistChanged = currentTodoistHash !== storedHash;
     if (projectDiffers && !obsidianChanged && !todoistChanged) {
       await this.updateObsidianTaskFromTodoist(obsidianTask, todoistTask);
-      this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
+      this.updateSyncStateTaskFromTodoist(todoistTask.id, obsidianTask, todoistTask);
       return "updated";
     }
     if (obsidianChanged && !todoistChanged) {
@@ -2255,7 +2442,7 @@ var SyncEngine = class {
       };
       const canPushDueDate = shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate);
       if (canPushDueDate) {
-        Object.assign(updates, { dueString: (_h = obsidianTask.dueDate) != null ? _h : void 0 });
+        Object.assign(updates, todoistDueUpdate((_i = obsidianTask.due) != null ? _i : emptyDue()));
       }
       const updatedTodoistTask = await this.todoistService.updateTask(todoistTask.id, updates);
       if (dueDateDiffers && !canPushDueDate) {
@@ -2268,7 +2455,7 @@ var SyncEngine = class {
     }
     if (todoistChanged && !obsidianChanged) {
       await this.updateObsidianTaskFromTodoist(obsidianTask, todoistTask);
-      this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
+      this.updateSyncStateTaskFromTodoist(todoistTask.id, obsidianTask, todoistTask);
       return "updated";
     }
     if (this.settings.conflictResolution === "obsidian-wins") {
@@ -2279,7 +2466,7 @@ var SyncEngine = class {
       };
       const canPushDueDate = shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate);
       if (canPushDueDate) {
-        Object.assign(updates, { dueString: (_i = obsidianTask.dueDate) != null ? _i : void 0 });
+        Object.assign(updates, todoistDueUpdate((_j = obsidianTask.due) != null ? _j : emptyDue()));
       }
       const updatedTodoistTask = await this.todoistService.updateTask(todoistTask.id, updates);
       if (dueDateDiffers && !canPushDueDate) {
@@ -2291,7 +2478,7 @@ var SyncEngine = class {
       return "updated";
     } else if (this.settings.conflictResolution === "todoist-wins") {
       await this.updateObsidianTaskFromTodoist(obsidianTask, todoistTask);
-      this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
+      this.updateSyncStateTaskFromTodoist(todoistTask.id, obsidianTask, todoistTask);
       return "updated";
     } else {
       this.pendingConflicts.push({
@@ -2343,6 +2530,7 @@ var SyncEngine = class {
       content: todoistTask.content,
       priority: TodoistService.fromTodoistPriority(todoistTask.priority),
       dueDate: TodoistService.parseDueDate(todoistTask),
+      due: normalizeTodoistDue(todoistTask.due),
       isCompleted: todoistTask.isCompleted,
       labels: (_a = todoistTask.labels) != null ? _a : [],
       parentId: (_b = todoistTask.parentId) != null ? _b : null,
@@ -2362,6 +2550,7 @@ var SyncEngine = class {
       content: todoistTask.content,
       priority: TodoistService.fromTodoistPriority(todoistTask.priority),
       dueDate: TodoistService.parseDueDate(todoistTask),
+      due: normalizeTodoistDue(todoistTask.due),
       isCompleted: todoistTask.isCompleted,
       labels: (_a = todoistTask.labels) != null ? _a : [],
       projectName
@@ -2424,6 +2613,7 @@ var SyncEngine = class {
       parentId: (_a = task.parentId) != null ? _a : null,
       indentLevel: 0,
       dueDate: TodoistService.parseDueDate(task),
+      due: normalizeTodoistDue(task.due),
       priority: TodoistService.fromTodoistPriority(task.priority),
       labels: (_b = task.labels) != null ? _b : [],
       description: (_c = task.description) != null ? _c : "",
@@ -2455,6 +2645,7 @@ var SyncEngine = class {
         parentId: (_e = sub.parentId) != null ? _e : task.id,
         indentLevel: 1,
         dueDate: TodoistService.parseDueDate(sub),
+        due: normalizeTodoistDue(sub.due),
         priority: TodoistService.fromTodoistPriority(sub.priority),
         labels: (_f = sub.labels) != null ? _f : [],
         description: (_g = sub.description) != null ? _g : "",
@@ -2615,7 +2806,7 @@ var ImportTaskModal = class extends import_obsidian5.SuggestModal {
     }).slice(0, 50);
   }
   renderSuggestion(task, el) {
-    var _a;
+    var _a, _b;
     const container = el.createDiv({ cls: "syncist-import-suggestion" });
     const priorityMap = { 4: "\u{1F53A}", 3: "\u23EB", 2: "\u{1F53C}" };
     const priorityEmoji = (_a = priorityMap[task.priority]) != null ? _a : "";
@@ -2630,7 +2821,7 @@ var ImportTaskModal = class extends import_obsidian5.SuggestModal {
     if (projectName)
       parts.push(`\u{1F4C1} ${projectName}`);
     if (task.due)
-      parts.push(`\u{1F4C5} ${task.due.date}`);
+      parts.push(`\u{1F4C5} ${(_b = formatDueForMarkdown(normalizeTodoistDue(task.due))) != null ? _b : task.due.date}`);
     if (task.labels.length)
       parts.push(task.labels.map((l) => `#${l}`).join(" "));
     const subtaskCount = this.allTasks.filter((t2) => t2.parentId === task.id).length;
@@ -2839,6 +3030,7 @@ function formatDateForLabel(date) {
   return `${year}-${month}-${day}`;
 }
 function renderTaskRow(task, container, plugin, indent) {
+  var _a;
   const row = container.createDiv({ cls: `syncist-query-task${indent ? " syncist-query-subtask" : ""}` });
   const checkbox = row.createEl("input", { type: "checkbox", cls: "syncist-query-checkbox" });
   checkbox.checked = task.isCompleted;
@@ -2871,7 +3063,7 @@ function renderTaskRow(task, container, plugin, indent) {
   if (projectName)
     badges.push(`\u{1F4C1} ${projectName}`);
   if (task.due)
-    badges.push(`\u{1F4C5} ${task.due.date}`);
+    badges.push(`\u{1F4C5} ${(_a = formatDueForMarkdown(normalizeTodoistDue(task.due))) != null ? _a : task.due.date}`);
   if (task.labels.length)
     badges.push(task.labels.map((l) => `#${l}`).join(" "));
   if (badges.length > 0) {

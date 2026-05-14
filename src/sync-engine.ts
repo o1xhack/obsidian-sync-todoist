@@ -31,6 +31,7 @@ import {
   selectTaskForTodoistSync,
   shouldPushDueDateToTodoist,
 } from './sync-rules';
+import { dueHash, emptyDue, normalizeTodoistDue, todoistDueUpdate } from './due';
 
 interface DailyNotesCorePlugin {
   enabled?: boolean;
@@ -538,6 +539,7 @@ export class SyncEngine {
       parentId: parentId ?? undefined,
       priority: task.priority,
       dueDate: task.dueDate ?? undefined,
+      due: task.due ?? emptyDue(),
       labels: task.labels,
       description: task.description,
     });
@@ -626,10 +628,11 @@ export class SyncEngine {
     const todoistContent = todoistTask.content;
     const todoistPriority = TodoistService.fromTodoistPriority(todoistTask.priority);
     const todoistDueDate = TodoistService.parseDueDate(todoistTask);
+    const todoistDue = normalizeTodoistDue(todoistTask.due);
 
     const contentDiffers = obsidianTask.content !== todoistContent;
     const priorityDiffers = obsidianTask.priority !== todoistPriority;
-    const dueDateDiffers = obsidianTask.dueDate !== todoistDueDate;
+    const dueDateDiffers = dueHash(obsidianTask.due ?? emptyDue()) !== dueHash(todoistDue);
 
     const todoistLabels = [...(todoistTask.labels ?? [])].sort();
     const obsidianLabels = [...obsidianTask.labels].sort();
@@ -658,6 +661,7 @@ export class SyncEngine {
       content: todoistContent,
       priority: todoistPriority,
       dueDate: todoistDueDate,
+      due: todoistDue,
       labels: todoistTask.labels ?? [],
       isCompleted: todoistTask.isCompleted,
       parentId: todoistTask.parentId ?? null,
@@ -671,7 +675,7 @@ export class SyncEngine {
     // Project moved in Todoist (content hash unchanged on both sides) → pull to Obsidian
     if (projectDiffers && !obsidianChanged && !todoistChanged) {
       await this.updateObsidianTaskFromTodoist(obsidianTask, todoistTask);
-      this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
+      this.updateSyncStateTaskFromTodoist(todoistTask.id, obsidianTask, todoistTask);
       return 'updated';
     }
 
@@ -684,7 +688,7 @@ export class SyncEngine {
       };
       const canPushDueDate = shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate);
       if (canPushDueDate) {
-        Object.assign(updates, { dueString: obsidianTask.dueDate ?? undefined });
+        Object.assign(updates, todoistDueUpdate(obsidianTask.due ?? emptyDue()));
       }
       const updatedTodoistTask = await this.todoistService.updateTask(todoistTask.id, updates);
       if (dueDateDiffers && !canPushDueDate) {
@@ -699,7 +703,7 @@ export class SyncEngine {
     // Only Todoist changed → pull to Obsidian regardless of conflict policy
     if (todoistChanged && !obsidianChanged) {
       await this.updateObsidianTaskFromTodoist(obsidianTask, todoistTask);
-      this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
+      this.updateSyncStateTaskFromTodoist(todoistTask.id, obsidianTask, todoistTask);
       return 'updated';
     }
 
@@ -712,7 +716,7 @@ export class SyncEngine {
       };
       const canPushDueDate = shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate);
       if (canPushDueDate) {
-        Object.assign(updates, { dueString: obsidianTask.dueDate ?? undefined });
+        Object.assign(updates, todoistDueUpdate(obsidianTask.due ?? emptyDue()));
       }
       const updatedTodoistTask = await this.todoistService.updateTask(todoistTask.id, updates);
       if (dueDateDiffers && !canPushDueDate) {
@@ -724,7 +728,7 @@ export class SyncEngine {
       return 'updated';
     } else if (this.settings.conflictResolution === 'todoist-wins') {
       await this.updateObsidianTaskFromTodoist(obsidianTask, todoistTask);
-      this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
+      this.updateSyncStateTaskFromTodoist(todoistTask.id, obsidianTask, todoistTask);
       return 'updated';
     } else {
       this.pendingConflicts.push({
@@ -789,6 +793,7 @@ export class SyncEngine {
       content: todoistTask.content,
       priority: TodoistService.fromTodoistPriority(todoistTask.priority),
       dueDate: TodoistService.parseDueDate(todoistTask),
+      due: normalizeTodoistDue(todoistTask.due),
       isCompleted: todoistTask.isCompleted,
       labels: todoistTask.labels ?? [],
       parentId: todoistTask.parentId ?? null,
@@ -812,6 +817,7 @@ export class SyncEngine {
       content: todoistTask.content,
       priority: TodoistService.fromTodoistPriority(todoistTask.priority),
       dueDate: TodoistService.parseDueDate(todoistTask),
+      due: normalizeTodoistDue(todoistTask.due),
       isCompleted: todoistTask.isCompleted,
       labels: todoistTask.labels ?? [],
       projectName,
@@ -897,6 +903,7 @@ export class SyncEngine {
       parentId: task.parentId ?? null,
       indentLevel: 0,
       dueDate: TodoistService.parseDueDate(task),
+      due: normalizeTodoistDue(task.due),
       priority: TodoistService.fromTodoistPriority(task.priority),
       labels: task.labels ?? [],
       description: task.description ?? '',
@@ -933,6 +940,7 @@ export class SyncEngine {
         parentId: sub.parentId ?? task.id,
         indentLevel: 1,
         dueDate: TodoistService.parseDueDate(sub),
+        due: normalizeTodoistDue(sub.due),
         priority: TodoistService.fromTodoistPriority(sub.priority),
         labels: sub.labels ?? [],
         description: sub.description ?? '',

@@ -26,12 +26,28 @@ export interface TodoistSyncSettings {
 export type ConflictResolution = 'obsidian-wins' | 'todoist-wins' | 'ask-user';
 export type UiLanguage = 'en' | 'zh-CN';
 export type DailyNoteSortMode = 'time' | 'priority';
+export type StructuredDueKind = 'none' | 'date' | 'floating' | 'fixed' | 'recurring';
+export type StructuredDueSource = 'markdown' | 'todoist' | 'metadata';
 
 export interface TodoistDue {
   date: string;
   datetime?: string;
   string?: string;
+  timezone?: string | null;
+  lang?: string | null;
   isRecurring?: boolean;
+}
+
+export interface StructuredDue {
+  kind: StructuredDueKind;
+  date: string | null;
+  time: string | null;
+  rawDate: string | null;
+  timezone: string | null;
+  string: string | null;
+  lang: string | null;
+  isRecurring: boolean;
+  source: StructuredDueSource;
 }
 
 export interface DailyNoteSettings {
@@ -133,7 +149,7 @@ export interface TodoistApiRawTask {
   project_id: string;
   parent_id: string | null;
   priority: number;
-  due: { date: string; datetime?: string; string?: string; is_recurring?: boolean } | null;
+  due: { date: string; datetime?: string; string?: string; timezone?: string | null; lang?: string | null; is_recurring?: boolean } | null;
   labels: string[];
   checked?: boolean;
   added_at?: string;
@@ -164,6 +180,8 @@ function normalizeDue(due: TodoistApiRawTask['due']): TodoistDue | null {
     date: due.date,
     datetime: due.datetime,
     string: due.string,
+    timezone: due.timezone,
+    lang: due.lang,
     isRecurring: due.is_recurring,
   };
 }
@@ -207,6 +225,8 @@ export interface ParsedObsidianTask {
   indentLevel: number;
   /** Due date in YYYY-MM-DD format */
   dueDate: string | null;
+  /** Structured due metadata for date, time, fixed-time, and recurring tasks */
+  due?: StructuredDue;
   /** Priority level (1-4) */
   priority: TodoistPriority;
   /** Labels/tags on the task (excluding sync tag) */
@@ -285,6 +305,7 @@ export interface TaskOptions {
   parentId?: string;
   priority?: TodoistPriority;
   dueDate?: string;
+  due?: StructuredDue;
   labels?: string[];
   description?: string;
 }

@@ -2,6 +2,7 @@ import type TodoistSyncPlugin from './main';
 import { TodoistPriority, TodoistTask } from './types';
 import type { TodoistCompletedTaskDateMode } from './todoist-service';
 import { showSyncTodoistNotice } from './notices';
+import { formatDueForMarkdown, normalizeTodoistDue } from './due';
 
 interface QueryConfig {
   filter: string;
@@ -286,7 +287,7 @@ function renderTaskRow(
 
   const projectName = plugin.todoistService.getProjectName(task.projectId);
   if (projectName) badges.push(`📁 ${projectName}`);
-  if (task.due) badges.push(`📅 ${task.due.date}`);
+  if (task.due) badges.push(`📅 ${formatDueForMarkdown(normalizeTodoistDue(task.due)) ?? task.due.date}`);
   if (task.labels.length) badges.push(task.labels.map(l => `#${l}`).join(' '));
 
   if (badges.length > 0) {

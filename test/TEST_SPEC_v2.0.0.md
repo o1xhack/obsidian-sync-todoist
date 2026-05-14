@@ -1,4 +1,4 @@
-# Sync Todoist v2.0.0 - Test Specification
+# Sync Todoist v0.7.0 - Test Specification
 
 ## Prerequisites
 
@@ -531,6 +531,89 @@ Test each of these query blocks (create one block per filter):
 
 ---
 
+## Part H: Structured Due, Time, and Recurring Safety
+
+### H1. Ordinary all-day date edit
+
+1. In Todoist, create a normal non-recurring task due `2026-06-01`.
+2. Import it into an ordinary note with **Sync Todoist: Import task from Todoist**.
+3. Change the Markdown due marker to `📅 2026-06-02`.
+4. Run **Sync Todoist: Sync now**.
+5. **Expected**: Todoist due date becomes `2026-06-02`.
+- [ ] **PASS** / **FAIL**
+
+### H2. Ordinary floating time edit
+
+1. In Todoist, create a normal non-recurring task due `2026-06-01 15:00`.
+2. Import it into an ordinary note.
+3. **Expected**: Markdown shows `📅 2026-06-01 15:00`.
+4. Change the Markdown due marker to `📅 2026-06-01 16:30`.
+5. Run **Sync Todoist: Sync now**.
+6. **Expected**: Todoist keeps the task non-recurring and updates the local due time to `16:30`.
+- [ ] **PASS** / **FAIL**
+
+### H3. Date-only Markdown must not drop an existing Todoist time
+
+1. Import a normal non-recurring Todoist task due `2026-06-01 15:00`.
+2. Change only the Markdown due marker to `📅 2026-06-01`.
+3. Run **Sync Todoist: Sync now**.
+4. **Expected**: Todoist still has a timed due value.
+5. **Expected**: Obsidian is restored to the Todoist due display instead of silently dropping the time.
+- [ ] **PASS** / **FAIL**
+
+### H4. Fixed-time task must not be downgraded
+
+1. In Todoist, create a task with a timezone-specific reminder/due time.
+2. Import it into an ordinary note.
+3. Edit the visible Markdown date/time.
+4. Run **Sync Todoist: Sync now**.
+5. **Expected**: Todoist keeps the fixed-time semantics and timezone.
+6. **Expected**: The Obsidian line is restored from Todoist if the Markdown edit cannot be represented safely.
+- [ ] **PASS** / **FAIL**
+
+### H5. Recurring task rule must survive ordinary note edits
+
+1. In Todoist, create a recurring task such as `every month on the 1st at 15:00`.
+2. Import it into an ordinary note.
+3. Edit the visible Markdown date/time, but leave the `todoist-id` comment in place.
+4. Run **Sync Todoist: Sync now**.
+5. **Expected**: Todoist still shows the task as recurring.
+6. **Expected**: Todoist still has the original recurrence rule and time.
+7. **Expected**: Obsidian is restored to the current Todoist occurrence if needed.
+- [ ] **PASS** / **FAIL**
+
+### H6. Recurring task completion from ordinary note
+
+1. Import a recurring Todoist task into an ordinary note.
+2. Check the Markdown checkbox.
+3. Run **Sync Todoist: Sync now**.
+4. **Expected**: Todoist completes the current occurrence and advances the task to the next occurrence.
+5. Run **Sync Todoist: Sync now** again.
+6. **Expected**: The Obsidian line reflects the next occurrence instead of becoming a completed one-time task.
+- [ ] **PASS** / **FAIL**
+
+### H7. Query block structured due display and completion
+
+1. Create one all-day task, one floating-time task, and one recurring timed task that match a `sync-todoist` query block.
+2. Refresh the query block.
+3. **Expected**: Due badges show dates and `HH:mm` when Todoist provides a time.
+4. Complete the recurring timed task from the rendered query block checkbox.
+5. **Expected**: Todoist completes the current occurrence directly, without Markdown due metadata mutation.
+- [ ] **PASS** / **FAIL**
+
+### H8. Daily Note generated rows remain completion-focused
+
+1. Sync today's Daily Note with one normal task and one recurring timed task due today.
+2. Edit generated row text/date metadata inside the marker region.
+3. Check both generated checkboxes.
+4. Run **Sync Todoist: Sync now**.
+5. **Expected**: Completion syncs to Todoist for matching current rows.
+6. **Expected**: Generated row title/date/project/label edits do not overwrite Todoist.
+7. **Expected**: Recurring task advances to the next occurrence and keeps its recurring rule.
+- [ ] **PASS** / **FAIL**
+
+---
+
 ## Test Summary
 
 | Section | Tests | Passed | Failed |
@@ -542,9 +625,10 @@ Test each of these query blocks (create one block per filter):
 | E. Query Blocks | 10 | | |
 | F. Edge Cases | 6 | | |
 | G. Daily Notes & Notices | 12 | | |
-| **Total** | **53** | | |
+| H. Structured Due Safety | 8 | | |
+| **Total** | **61** | | |
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.6.2
+**Plugin version**: 0.7.0
 **Obsidian version**: ___________________

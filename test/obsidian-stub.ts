@@ -20,6 +20,15 @@ export const Platform = {
   isMobile: false,
 };
 
-export function requestUrl(): never {
+type RequestUrlHandler = (options: unknown) => unknown | Promise<unknown>;
+
+let requestUrlHandler: RequestUrlHandler | null = null;
+
+export function setRequestUrlHandler(handler: RequestUrlHandler | null): void {
+  requestUrlHandler = handler;
+}
+
+export function requestUrl(options: unknown): unknown | Promise<unknown> {
+  if (requestUrlHandler) return requestUrlHandler(options);
   throw new Error('requestUrl is not available in tests');
 }

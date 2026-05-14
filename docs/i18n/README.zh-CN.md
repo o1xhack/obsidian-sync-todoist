@@ -12,15 +12,15 @@
 
 Sync Todoist 已可通过 Obsidian Community Plugins 安装。如果你之前通过 BRAT 安装了 beta 版本，可以按下面的迁移步骤停止 BRAT 更新，并继续使用社区插件版本。
 
-## 0.6.2 新功能
+## 0.7.0 新功能
 
-- 清理 Community Plugin 审核问题：Obsidian `minAppVersion` 兼容性、内置模块打包依赖和 settings 持久化类型安全。
-- Daily Note 增加“包含已完成的循环任务”子选项。
-- 当 **同步已完成任务** 开启时，可以把今天完成的循环任务保留在 Daily Note 中。
-- Todoist 在循环任务完成后会把任务移动到下一次出现，因此 Sync Todoist 会通过活动日志恢复今天完成的这一轮。
-- 防止 Daily Note 生成行在双向同步时把 Todoist 的带时间或循环截止规则降级覆盖。
-- 防止普通笔记中导入的循环任务或带时间任务被 Markdown 的纯日期修改降级覆盖 Todoist 截止规则。
-- README 补充 Daily Note 扁平化显示、已完成任务逻辑和 Query Block completed 查询窗口说明。
+- 增加结构化 due 处理，覆盖 Todoist 的全天日期、浮动本地时间、固定时间和循环任务当前 occurrence。
+- 支持 Markdown 浮动时间语法：`📅 2026-06-01 15:00` 和 `due:2026-06-01 15:00`。
+- 可编辑的浮动时间会通过 Todoist `due_datetime` 同步，不再丢失几点几分。
+- 对 Markdown 无法完整表达的固定时间和循环规则，使用隐藏的 `todoist-due` 注释保留 Todoist 元数据。
+- 防止固定时间和循环任务在双向同步时被降级成一次性的纯日期任务。
+- 导入任务、查询块和 Daily Note 输出使用同一套结构化 due 显示。
+- 增加 due 解析、格式化、Todoist API payload、同步规则和 Daily Note 保护逻辑的增量测试。
 
 ## 为什么用它？
 
@@ -111,13 +111,27 @@ Sync Todoist 读取和写入普通 Markdown task line。`todoist-id` 注释是 O
 | `#todoist` | 同步标记 | 标记顶层任务需要同步 |
 | `<!-- todoist-id:... -->` | 任务身份 | 后续同步继续关联同一个 Todoist 任务 |
 | `📅 2026-01-28` | 截止日期 | Todoist due date |
+| `📅 2026-01-28 15:00` | 浮动截止时间 | Todoist 本地墙钟时间 |
 | `due:2026-01-28` | 截止日期 | Todoist due date |
+| `due:2026-01-28 15:00` | 浮动截止时间 | Todoist 本地墙钟时间 |
+| `<!-- todoist-due:{...} -->` | 受保护 due 元数据 | 保留固定时间和循环任务规则 |
 | `🔺` | 紧急优先级 | Priority 4 |
 | `⏫` | 高优先级 | Priority 3 |
 | `🔼` | 中优先级 | Priority 2 |
 | `🔽` | 普通优先级 | Priority 1 |
 | `📁 Work` | 项目 | 名为 `Work` 的 Todoist 项目 |
 | `#label` | 标签 | Todoist 标签，同步标签除外 |
+
+### 截止日期和时间
+
+Sync Todoist 支持 Todoist API v1 暴露的结构化 due 类型：
+
+- **全天日期**：`📅 2026-06-01` 或 `due:2026-06-01`。
+- **浮动本地时间**：`📅 2026-06-01 15:00` 或 `due:2026-06-01 15:00`。
+- **固定时间**：显示为本地日期/时间，同时保留隐藏元数据，避免丢失 timezone 语义。
+- **循环任务 occurrence**：显示当前 occurrence，同时保留隐藏元数据；勾选完成时让 Todoist 推进下一次循环，而不是替换循环规则。
+
+Markdown 里的 due 编辑只支持结构化格式。本版本不会从 Markdown 解析 `every Friday at 15:00` 或 `tomorrow at 5pm` 这类自然语言循环规则；请在 Todoist 中编辑这些循环规则。
 
 ## 子任务
 
@@ -237,6 +251,7 @@ Daily Note 可控制：
 - 开启 **同步已完成任务** 后，今天完成的普通任务会以 checked 状态保留。
 - 开启 **包含已完成的循环任务** 后，Sync Todoist 会额外查询活动日志，把今天完成的循环任务这一轮以 checked 状态保留。
 - Todoist 在循环任务完成后会把任务移动到下一次出现，因此需要活动日志 fallback 才能保留今天完成的这一轮。
+- Daily Note 生成行以完成状态同步为主。勾选生成行可以完成匹配的 Todoist 任务，但生成区内的标题、项目、标签、优先级和不安全 due 规则编辑不会反向推送到 Todoist。
 
 ## 设置
 

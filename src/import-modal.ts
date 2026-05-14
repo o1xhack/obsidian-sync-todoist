@@ -2,6 +2,7 @@ import { App, SuggestModal } from 'obsidian';
 import { TodoistTask } from './types';
 import { TodoistService } from './todoist-service';
 import { showSyncTodoistNotice } from './notices';
+import { formatDueForMarkdown, normalizeTodoistDue } from './due';
 
 /**
  * Modal for searching and importing a Todoist task into the current note.
@@ -83,7 +84,7 @@ export class ImportTaskModal extends SuggestModal<TodoistTask> {
 
     const projectName = this.todoistService.getProjectName(task.projectId);
     if (projectName) parts.push(`📁 ${projectName}`);
-    if (task.due) parts.push(`📅 ${task.due.date}`);
+    if (task.due) parts.push(`📅 ${formatDueForMarkdown(normalizeTodoistDue(task.due)) ?? task.due.date}`);
     if (task.labels.length) parts.push(task.labels.map(l => `#${l}`).join(' '));
 
     const subtaskCount = this.allTasks.filter(t => t.parentId === task.id).length;

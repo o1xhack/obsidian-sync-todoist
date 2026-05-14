@@ -1,4 +1,12 @@
 import { ParsedObsidianTask, TodoistPriority } from './types';
+import {
+  dueHash,
+  emptyDue,
+  formatDueForMarkdown,
+  formatDueMetadata,
+  parseMarkdownDue,
+  stripDueMetadata,
+} from './due';
 
 /**
  * Regex patterns for task parsing
@@ -84,7 +92,8 @@ export function parseTaskLine(
   const todoistIdMatch = taskContent.match(PATTERNS.todoistId);
   const todoistId = todoistIdMatch ? todoistIdMatch[1] : null;
 
-  const dueDate = extractDueDate(taskContent);
+  const due = parseMarkdownDue(taskContent);
+  const dueDate = due.date;
   const priority = extractPriority(taskContent);
   const labels = extractLabels(taskContent, syncTag);
   const content = cleanTaskContent(taskContent, syncTag);
@@ -101,6 +110,7 @@ export function parseTaskLine(
     parentId: null,
     indentLevel,
     dueDate,
+    due,
     priority,
     labels,
     description: '',
@@ -116,22 +126,6 @@ export function parseTaskLine(
 function extractProjectName(content: string): string | null {
   const match = content.match(PATTERNS.project);
   return match ? match[1] : null;
-}
-
-/**
- * Extract due date from task content
- */
-function extractDueDate(content: string): string | null {
-  const emojiMatch = content.match(PATTERNS.dueDate);
-  if (emojiMatch) return emojiMatch[1];
-
-  const scheduledMatch = content.match(PATTERNS.scheduledDate);
-  if (scheduledMatch) return scheduledMatch[1];
-
-  const textMatch = content.match(PATTERNS.textDueDate);
-  if (textMatch) return textMatch[1];
-
-  return null;
 }
 
 /**
@@ -180,6 +174,7 @@ function extractLabels(content: string, syncTag: string): string[] {
 function cleanTaskContent(content: string, syncTag: string): string {
   let cleaned = content;
 
+  cleaned = stripDueMetadata(cleaned);
   cleaned = cleaned.replace(/<!--\s*todoist-id:\s*[\w]+\s*-->/g, '');
 
   const syncTagPattern = new RegExp(escapeRegex(syncTag), 'gi');
@@ -223,6 +218,7 @@ function escapeRegex(str: string): string {
 export function buildTaskLine(task: ParsedObsidianTask, syncTag: string): string {
   const indent = '\t'.repeat(task.indentLevel);
   const checkbox = task.isCompleted ? '[x]' : '[ ]';
+  const due = task.due ?? emptyDue();
   let line = `${indent}- ${checkbox} ${task.content}`;
 
   // Only top-level tasks carry the sync tag; subtasks inherit from parent
@@ -247,7 +243,14 @@ export function buildTaskLine(task: ParsedObsidianTask, syncTag: string): string
   }
 
   if (task.dueDate) {
-    line += ` 📅 ${task.dueDate}`;
+    line += ` 📅 ${formatDueForMarkdown(due) ?? task.dueDate}`;
+  } else if (due.date) {
+    line += ` 📅 ${formatDueForMarkdown(due)}`;
+  }
+
+  const dueMetadata = formatDueMetadata(due);
+  if (dueMetadata) {
+    line += ` ${dueMetadata}`;
   }
 
   if (task.todoistId) {
@@ -398,7 +401,7 @@ export function generateContentHash(task: ParsedObsidianTask): string {
   // they differ between the Obsidian and Todoist representations and would
   // cause false positives in change detection.
   const sortedLabels = [...task.labels].sort().join(',');
-  const data = `${task.content}|${task.isCompleted}|${task.dueDate ?? ''}|${task.priority}|${sortedLabels}`;
+  const data = `${task.content}|${task.isCompleted}|${dueHash(task.due ?? emptyDue())}|${task.priority}|${sortedLabels}`;
   let hash = 0;
   for (let i = 0; i < data.length; i++) {
     const char = data.charCodeAt(i);

@@ -1,5 +1,6 @@
 import { ParsedObsidianTask, TodoistTask } from './types';
 import { TodoistService } from './todoist-service';
+import { canPushDueToTodoist, dueHash, normalizeTodoistDue } from './due';
 
 export function selectTaskForTodoistSync(
   tasks: ParsedObsidianTask[],
@@ -24,9 +25,17 @@ export function canCompleteTodoistFromGeneratedDailyNote(
 export function shouldPushDueDateToTodoist(
   obsidianTask: ParsedObsidianTask,
   todoistTask: TodoistTask,
-  todoistDueDate: string | null
+  _todoistDueDate: string | null
 ): boolean {
-  if (obsidianTask.dueDate === todoistDueDate) return false;
-  if (todoistTask.due?.datetime || todoistTask.due?.isRecurring) return false;
-  return true;
+  if (!obsidianTask.due) return false;
+
+  const todoistDue = normalizeTodoistDue(todoistTask.due);
+  if (dueHash(obsidianTask.due) === dueHash(todoistDue)) return false;
+  if (todoistDue.kind === 'fixed' || todoistDue.kind === 'recurring' || todoistDue.isRecurring) return false;
+
+  // Date-only Markdown cannot safely replace an existing timed Todoist due:
+  // that would silently drop the wall-clock time.
+  if (todoistDue.kind === 'floating' && obsidianTask.due.kind === 'date') return false;
+
+  return canPushDueToTodoist(obsidianTask.due);
 }

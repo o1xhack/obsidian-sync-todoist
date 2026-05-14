@@ -12,15 +12,15 @@
 
 Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
-## What's New in 0.6.2
+## What's New in 0.7.0
 
-- Cleans up Community Plugin review issues for Obsidian `minAppVersion`, bundled built-in modules, and typed settings persistence.
-- Adds a Daily Note sub-option for completed recurring tasks.
-- Keeps completed recurring occurrences in today's Daily Note when **Include completed tasks** is enabled.
-- Uses Todoist activity logs to recover the completed occurrence because Todoist moves recurring tasks to their next due date after completion.
-- Prevents Daily Note generated rows from downgrading Todoist timed or recurring due rules during bidirectional sync.
-- Prevents ordinary imported recurring or timed tasks from having their Todoist due rules downgraded by Markdown date-only edits.
-- Clarifies Daily Note flat rendering, completed-task behavior, and Query Block completed-task date windows in the documentation.
+- Adds structured due handling for Todoist all-day dates, floating local times, fixed times, and recurring occurrences.
+- Supports Markdown floating-time syntax: `📅 2026-06-01 15:00` and `due:2026-06-01 15:00`.
+- Sends editable floating times to Todoist through `due_datetime` instead of dropping the time.
+- Preserves Todoist fixed-time and recurring due metadata with a hidden `todoist-due` comment when Markdown cannot represent the full rule.
+- Prevents fixed-time and recurring tasks from being downgraded into one-time date-only tasks during bidirectional sync.
+- Shows the same structured due display in imported tasks, query blocks, and Daily Note output.
+- Adds incremental unit/API/display tests for due parsing, formatting, Todoist payloads, sync rules, and Daily Note safeguards.
 
 ## Why Use It?
 
@@ -111,13 +111,27 @@ Sync Todoist reads and writes plain Markdown task lines. The `todoist-id` commen
 | `#todoist` | Sync marker | Marks a top-level task for sync |
 | `<!-- todoist-id:... -->` | Task identity | Keeps future syncs attached to the same Todoist task |
 | `📅 2026-01-28` | Due date | Todoist due date |
+| `📅 2026-01-28 15:00` | Floating due time | Todoist local wall-clock due time |
 | `due:2026-01-28` | Due date | Todoist due date |
+| `due:2026-01-28 15:00` | Floating due time | Todoist local wall-clock due time |
+| `<!-- todoist-due:{...} -->` | Protected due metadata | Preserves fixed-time and recurring Todoist rules |
 | `🔺` | Urgent priority | Priority 4 |
 | `⏫` | High priority | Priority 3 |
 | `🔼` | Medium priority | Priority 2 |
 | `🔽` | Normal priority | Priority 1 |
 | `📁 Work` | Project | Todoist project named `Work` |
 | `#label` | Label | Todoist label, except the sync tag |
+
+### Due Dates and Times
+
+Sync Todoist supports the structured due shapes exposed by Todoist API v1:
+
+- **All-day dates**: `📅 2026-06-01` or `due:2026-06-01`.
+- **Floating local times**: `📅 2026-06-01 15:00` or `due:2026-06-01 15:00`.
+- **Fixed times**: displayed as a visible local date/time, with hidden metadata preserved so timezone semantics are not lost.
+- **Recurring occurrences**: displayed as the current occurrence, with hidden metadata preserved so completing the task advances the Todoist recurrence instead of replacing it.
+
+Markdown due editing is intentionally structured. Natural-language recurrence editing such as `every Friday at 15:00` or `tomorrow at 5pm` is not parsed from Markdown in this release; edit those recurrence rules in Todoist.
 
 ## Subtasks
 
@@ -237,6 +251,7 @@ Completed and recurring behavior:
 - With **Include completed tasks**, regular tasks completed today remain checked in the Daily Note block.
 - With **Include completed recurring tasks**, Sync Todoist also checks today's activity log and keeps recurring tasks completed today as checked rows.
 - Todoist moves recurring tasks to the next occurrence after completion, so the activity-log fallback is required to preserve today's completed occurrence.
+- Generated Daily Note rows are completion-focused. Checking a generated row can complete the matching Todoist task, but title, project, label, priority, and unsafe due-rule edits inside the generated block are not pushed back to Todoist.
 
 ## Settings
 

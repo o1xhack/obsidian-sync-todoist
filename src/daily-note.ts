@@ -7,6 +7,7 @@ import {
   TodoistTask,
 } from './types';
 import { buildTaskLine } from './task-parser';
+import { normalizeTodoistDue } from './due';
 
 export const DAILY_NOTE_DEFAULT_MARKER_START = DEFAULT_DAILY_NOTE_MARKER_START;
 export const DAILY_NOTE_DEFAULT_MARKER_END = DEFAULT_DAILY_NOTE_MARKER_END;
@@ -306,6 +307,7 @@ export function buildDailyNoteParsedTask(
     parentId: task.parentId,
     indentLevel: 0,
     dueDate: localDateFromTodoistDue(task.due),
+    due: normalizeTodoistDue(task.due),
     priority: task.priority,
     labels: task.labels ?? [],
     description: task.description ?? '',

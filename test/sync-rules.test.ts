@@ -5,6 +5,7 @@ import {
   shouldPushDueDateToTodoist,
 } from '../src/sync-rules';
 import { ParsedObsidianTask, TodoistPriority, TodoistTask } from '../src/types';
+import { emptyDue, normalizeStructuredDue } from '../src/due';
 
 function obsidianTask(overrides: Partial<ParsedObsidianTask>): ParsedObsidianTask {
   return {
@@ -17,6 +18,12 @@ function obsidianTask(overrides: Partial<ParsedObsidianTask>): ParsedObsidianTas
     parentId: null,
     indentLevel: 0,
     dueDate: '2026-05-13',
+    due: normalizeStructuredDue({
+      ...emptyDue('markdown'),
+      kind: 'date',
+      date: '2026-05-13',
+      rawDate: '2026-05-13',
+    }),
     priority: TodoistPriority.NONE,
     labels: [],
     description: '',
@@ -88,7 +95,15 @@ assert.equal(
 
 assert.equal(
   shouldPushDueDateToTodoist(
-    obsidianTask({ dueDate: '2026-05-14' }),
+    obsidianTask({
+      dueDate: '2026-05-14',
+      due: normalizeStructuredDue({
+        ...emptyDue('markdown'),
+        kind: 'date',
+        date: '2026-05-14',
+        rawDate: '2026-05-14',
+      }),
+    }),
     todoistTask({ due: { date: '2026-05-13' } }),
     '2026-05-13'
   ),
@@ -104,6 +119,50 @@ assert.equal(
   ),
   false,
   'timed Todoist due dates must not be downgraded to date-only Markdown'
+);
+
+assert.equal(
+  shouldPushDueDateToTodoist(
+    obsidianTask({
+      dueDate: '2026-05-13',
+      due: normalizeStructuredDue({
+        ...emptyDue('markdown'),
+        kind: 'floating',
+        date: '2026-05-13',
+        time: '16:30',
+        rawDate: '2026-05-13T16:30:00',
+      }),
+    }),
+    todoistTask({ due: { date: '2026-05-13T15:00:00', datetime: '2026-05-13T15:00:00' } }),
+    '2026-05-13'
+  ),
+  true,
+  'floating Todoist due times can be updated from structured Markdown time'
+);
+
+assert.equal(
+  shouldPushDueDateToTodoist(
+    obsidianTask({
+      dueDate: '2026-05-14',
+      due: normalizeStructuredDue({
+        ...emptyDue('markdown'),
+        kind: 'floating',
+        date: '2026-05-14',
+        time: '16:30',
+        rawDate: '2026-05-14T16:30:00',
+      }),
+    }),
+    todoistTask({
+      due: {
+        date: '2026-05-13T22:00:00Z',
+        datetime: '2026-05-13T22:00:00Z',
+        timezone: 'America/Los_Angeles',
+      },
+    }),
+    '2026-05-13'
+  ),
+  false,
+  'fixed Todoist due times must not be overwritten by local Markdown time'
 );
 
 assert.equal(
