@@ -174,7 +174,7 @@ export function buildCompletedRecurringTaskSnapshots(
     const activeTask = activeById.get(activity.objectId) ?? (activity.v2ObjectId ? activeById.get(activity.v2ObjectId) : undefined);
     if (!activeTask || !activeTask.due?.isRecurring || seen.has(activity.objectId)) continue;
 
-    const occurrenceDate = activityDueDate(activity.extraData) ?? today;
+    const occurrenceDate = activityDueValue(activity.extraData) ?? today;
     snapshots.push({
       ...activeTask,
       content: activityContent(activity.extraData) ?? activeTask.content,
@@ -197,19 +197,26 @@ function activityContent(extraData: Record<string, unknown> | null): string | nu
   return typeof content === 'string' && content.trim() ? content : null;
 }
 
-function activityDueDate(extraData: Record<string, unknown> | null): string | null {
-  return dueValueToDate(extraData?.due_date) ?? dueValueToDate(extraData?.last_due_date);
+function activityDueValue(extraData: Record<string, unknown> | null): string | null {
+  return (
+    dueValueToDateTime(extraData?.completed_due_date_local) ??
+    dueValueToDateTime(extraData?.completed_due_date) ??
+    dueValueToDateTime(extraData?.last_due_date) ??
+    dueValueToDateTime(extraData?.due_date)
+  );
 }
 
-function dueValueToDate(value: unknown): string | null {
+function dueValueToDateTime(value: unknown): string | null {
   if (typeof value === 'string') {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return value;
     return localDateFromTimestamp(value) ?? datePrefix(value);
   }
   if (value && typeof value === 'object' && 'date' in value) {
     const date = (value as { date?: unknown }).date;
     if (typeof date !== 'string') return null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(date)) return date;
     return localDateFromTimestamp(date) ?? datePrefix(date);
   }
   return null;

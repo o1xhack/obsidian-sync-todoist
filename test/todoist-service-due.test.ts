@@ -15,6 +15,24 @@ const requests: RequestOptions[] = [];
 setRequestUrlHandler((options: unknown) => {
   const request = options as RequestOptions;
   requests.push(request);
+  if (request.url.includes('/activities?')) {
+    return {
+      status: 200,
+      json: {
+        results: [
+          {
+            object_id: 'task',
+            v2_object_id: 'task-v2',
+            event_type: 'completed',
+            event_date: '2026-05-13T18:30:00Z',
+            extra_data: { content: 'Recurring task', completed_due_date_local: '2026-05-13T13:00:00' },
+          },
+        ],
+        next_cursor: null,
+      },
+    };
+  }
+
   const body = request.body ? JSON.parse(request.body) as Record<string, unknown> : {};
   const dueDatetime = typeof body.due_datetime === 'string' ? body.due_datetime : undefined;
   const dueDate = typeof body.due_date === 'string' ? body.due_date : undefined;
@@ -82,6 +100,16 @@ await service.updateTask('task', {
 assert.deepEqual(JSON.parse(requests.at(-1)?.body ?? '{}'), {
   due_date: '2026-06-03',
 });
+
+const activities = await service.getCompletedTaskActivities(
+  new Date('2026-05-13T00:00:00'),
+  new Date('2026-05-14T00:00:00')
+);
+assert.equal(activities.length, 1);
+assert.equal(activities[0].objectId, 'task');
+const activitiesUrl = requests.at(-1)?.url ?? '';
+const activityParams = new URL(activitiesUrl).searchParams;
+assert.equal(activityParams.get('object_event_types'), '["item:completed"]');
 
 setRequestUrlHandler(null);
 

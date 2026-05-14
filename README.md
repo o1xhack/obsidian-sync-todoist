@@ -20,6 +20,7 @@ Sync Todoist is available through Obsidian Community Plugins. If you installed a
 - Preserves Todoist fixed-time and recurring due metadata with a hidden `todoist-due` comment when Markdown cannot represent the full rule.
 - Prevents fixed-time and recurring tasks from being downgraded into one-time date-only tasks during bidirectional sync.
 - Shows the same structured due display in imported tasks, query blocks, and Daily Note output.
+- Fixes Daily Note completed recurring recovery by reading Todoist activity logs with the required list parameter and using the completed occurrence date instead of the next due date.
 - Adds incremental unit/API/display tests for due parsing, formatting, Todoist payloads, sync rules, and Daily Note safeguards.
 
 ## Why Use It?

@@ -1328,7 +1328,7 @@ var TodoistService = class {
         date_to: until.toISOString(),
         limit: "100"
       });
-      params.append("object_event_types", "item:completed");
+      params.append("object_event_types", JSON.stringify(["item:completed"]));
       if (cursor)
         params.set("cursor", cursor);
       const resp = await (0, import_obsidian3.requestUrl)({
@@ -1764,7 +1764,7 @@ function buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, 
     const activeTask = (_a = activeById.get(activity.objectId)) != null ? _a : activity.v2ObjectId ? activeById.get(activity.v2ObjectId) : void 0;
     if (!activeTask || !((_b = activeTask.due) == null ? void 0 : _b.isRecurring) || seen.has(activity.objectId))
       continue;
-    const occurrenceDate = (_c = activityDueDate(activity.extraData)) != null ? _c : today;
+    const occurrenceDate = (_c = activityDueValue(activity.extraData)) != null ? _c : today;
     snapshots.push({
       ...activeTask,
       content: (_d = activityContent(activity.extraData)) != null ? _d : activeTask.content,
@@ -1784,14 +1784,16 @@ function activityContent(extraData) {
   const content = extraData == null ? void 0 : extraData.content;
   return typeof content === "string" && content.trim() ? content : null;
 }
-function activityDueDate(extraData) {
-  var _a;
-  return (_a = dueValueToDate(extraData == null ? void 0 : extraData.due_date)) != null ? _a : dueValueToDate(extraData == null ? void 0 : extraData.last_due_date);
+function activityDueValue(extraData) {
+  var _a, _b, _c;
+  return (_c = (_b = (_a = dueValueToDateTime(extraData == null ? void 0 : extraData.completed_due_date_local)) != null ? _a : dueValueToDateTime(extraData == null ? void 0 : extraData.completed_due_date)) != null ? _b : dueValueToDateTime(extraData == null ? void 0 : extraData.last_due_date)) != null ? _c : dueValueToDateTime(extraData == null ? void 0 : extraData.due_date);
 }
-function dueValueToDate(value) {
+function dueValueToDateTime(value) {
   var _a, _b;
   if (typeof value === "string") {
     if (/^\d{4}-\d{2}-\d{2}$/.test(value))
+      return value;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value))
       return value;
     return (_a = localDateFromTimestamp(value)) != null ? _a : datePrefix2(value);
   }
@@ -1800,6 +1802,8 @@ function dueValueToDate(value) {
     if (typeof date !== "string")
       return null;
     if (/^\d{4}-\d{2}-\d{2}$/.test(date))
+      return date;
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(date))
       return date;
     return (_b = localDateFromTimestamp(date)) != null ? _b : datePrefix2(date);
   }

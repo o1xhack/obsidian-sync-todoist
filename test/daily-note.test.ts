@@ -219,7 +219,11 @@ function runDailyNoteTests(): void {
       {
         objectId: 'recurring',
         eventDate: '2026-05-13T18:30:00Z',
-        extraData: { content: 'Weekly review', last_due_date: '2026-05-13' },
+        extraData: {
+          content: 'Weekly review',
+          due_date: '2026-05-20T13:00:00',
+          completed_due_date_local: '2026-05-13T13:00:00',
+        },
       },
       {
         objectId: 'plain',
@@ -234,7 +238,7 @@ function runDailyNoteTests(): void {
   assert.equal(recurringSnapshot[0].isCompleted, true);
   assert.equal(recurringSnapshot[0].completedAt, '2026-05-13T18:30:00Z');
   assert.deepEqual(recurringSnapshot[0].due, {
-    date: '2026-05-13',
+    date: '2026-05-13T13:00:00',
     datetime: undefined,
     isRecurring: true,
   });

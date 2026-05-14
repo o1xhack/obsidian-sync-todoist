@@ -20,6 +20,7 @@ Sync Todoist 已可通过 Obsidian Community Plugins 安装。如果你之前通
 - 对 Markdown 无法完整表达的固定时间和循环规则，使用隐藏的 `todoist-due` 注释保留 Todoist 元数据。
 - 防止固定时间和循环任务在双向同步时被降级成一次性的纯日期任务。
 - 导入任务、查询块和 Daily Note 输出使用同一套结构化 due 显示。
+- 修复 Daily Note 已完成循环任务补回逻辑：按 Todoist API 要求用 list 参数读取活动日志，并使用已完成 occurrence 日期，而不是任务推进后的下一次 due date。
 - 增加 due 解析、格式化、Todoist API payload、同步规则和 Daily Note 保护逻辑的增量测试。
 
 ## 为什么用它？

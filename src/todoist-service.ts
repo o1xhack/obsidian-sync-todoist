@@ -480,7 +480,7 @@ export class TodoistService {
         date_to: until.toISOString(),
         limit: '100',
       });
-      params.append('object_event_types', 'item:completed');
+      params.append('object_event_types', JSON.stringify(['item:completed']));
       if (cursor) params.set('cursor', cursor);
 
       const resp = await requestUrl({
