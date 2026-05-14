@@ -21,6 +21,9 @@ Sync Todoist 已可通过 Obsidian Community Plugins 安装。如果你之前通
 - 防止固定时间和循环任务在双向同步时被降级成一次性的纯日期任务。
 - 导入任务、查询块和 Daily Note 输出使用同一套结构化 due 显示。
 - 修复 Daily Note 已完成循环任务补回逻辑：按 Todoist API 要求用 list 参数读取活动日志，并使用已完成 occurrence 日期，而不是任务推进后的下一次 due date。
+- 当 Todoist Activity Log 延迟返回时，保留本轮同步刚完成的循环任务快照，避免 Daily Note 立刻重写时短暂消失。
+- 保留 Obsidian wikilink heading，例如 `[[note#heading]]`，不会把 heading anchor 误当成 Todoist 标签。
+- 在通用设置底部显示版本和构建信息，方便区分重复构建的 draft 包。
 - 增加 due 解析、格式化、Todoist API payload、同步规则和 Daily Note 保护逻辑的增量测试。
 
 ## 为什么用它？
@@ -157,6 +160,7 @@ Markdown 里的 due 编辑只支持结构化格式。本版本不会从 Markdown
 - 用 `📁 ProjectName` 把任务放进指定 Todoist 项目。
 - 如果没有写项目，新任务会进入默认项目或 Inbox。
 - 除同步标签外的 hashtags 会成为 Todoist 标签。
+- Obsidian wikilink 和 embed 内部的 hashtag 会保留在标题中，例如 `[[Project#Heading]]` 或 `![[clip#frame]]`，不会被当成 Todoist 标签。
 - Todoist 里的项目移动和标签变化，在冲突策略允许时会同步回 Obsidian。
 
 ## 查询块
@@ -252,6 +256,7 @@ Daily Note 可控制：
 - 开启 **同步已完成任务** 后，今天完成的普通任务会以 checked 状态保留。
 - 开启 **包含已完成的循环任务** 后，Sync Todoist 会额外查询活动日志，把今天完成的循环任务这一轮以 checked 状态保留。
 - Todoist 在循环任务完成后会把任务移动到下一次出现，因此需要活动日志 fallback 才能保留今天完成的这一轮。
+- Todoist Activity Log 可能不会立刻返回刚完成的循环任务。若 Sync Todoist 在本轮同步中完成了循环任务，会先保留本地 checked 快照，直到活动日志追上。
 - Daily Note 生成行以完成状态同步为主。勾选生成行可以完成匹配的 Todoist 任务，但生成区内的标题、项目、标签、优先级和不安全 due 规则编辑不会反向推送到 Todoist。
 
 ## 设置
@@ -270,6 +275,7 @@ Daily Note 可控制：
 | 包含已完成的循环任务 | 关 | 只在同步已完成任务开启时显示。通过活动日志补回今天完成的循环任务。 |
 | Manual sync notices | 开 | 手动同步后显示简短的 `Sync Todoist:` 完成通知。 |
 | Automatic sync notices | 开 | 桌面端和移动端的定时同步都会显示通知，包括 0 变化摘要。 |
+| 构建信息 | 当前构建 | 在通用设置底部显示插件版本、构建号和构建时间。 |
 
 ## 命令
 

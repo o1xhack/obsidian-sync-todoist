@@ -338,8 +338,8 @@ function noticeDurationForDailyNote(result) {
 function getBuildInfo() {
   return {
     version: "0.7.0",
-    buildDate: "2026-05-14T04:39:57.212Z",
-    buildNumber: "202605140439"
+    buildDate: "2026-05-14T04:46:23.567Z",
+    buildNumber: "202605140446"
   };
 }
 function formatBuildDate(buildDate) {

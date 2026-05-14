@@ -21,6 +21,9 @@ Sync Todoist is available through Obsidian Community Plugins. If you installed a
 - Prevents fixed-time and recurring tasks from being downgraded into one-time date-only tasks during bidirectional sync.
 - Shows the same structured due display in imported tasks, query blocks, and Daily Note output.
 - Fixes Daily Note completed recurring recovery by reading Todoist activity logs with the required list parameter and using the completed occurrence date instead of the next due date.
+- Preserves recurring completions made during the current sync cycle while Todoist Activity Log is still delayed.
+- Preserves Obsidian wikilink headings such as `[[note#heading]]` instead of treating the heading anchor as a Todoist label.
+- Shows version and build information at the bottom of General settings so repeated draft builds can be identified.
 - Adds incremental unit/API/display tests for due parsing, formatting, Todoist payloads, sync rules, and Daily Note safeguards.
 
 ## Why Use It?
@@ -157,6 +160,7 @@ How inheritance works:
 - Use `📁 ProjectName` to route a task to a Todoist project.
 - If no project is written, new tasks use the configured default project or Inbox.
 - Hashtags other than the sync tag become Todoist labels.
+- Hashtags inside Obsidian wikilinks and embeds, such as `[[Project#Heading]]` or `![[clip#frame]]`, stay in the task title and are not treated as Todoist labels.
 - Todoist project moves and label changes sync back to Obsidian when conflict handling allows Todoist to win.
 
 ## Query Blocks
@@ -252,6 +256,7 @@ Completed and recurring behavior:
 - With **Include completed tasks**, regular tasks completed today remain checked in the Daily Note block.
 - With **Include completed recurring tasks**, Sync Todoist also checks today's activity log and keeps recurring tasks completed today as checked rows.
 - Todoist moves recurring tasks to the next occurrence after completion, so the activity-log fallback is required to preserve today's completed occurrence.
+- Todoist Activity Log can lag behind a just-completed recurring task. When Sync Todoist completes a recurring task during the current sync cycle, it keeps a local checked snapshot until the activity log catches up.
 - Generated Daily Note rows are completion-focused. Checking a generated row can complete the matching Todoist task, but title, project, label, priority, and unsafe due-rule edits inside the generated block are not pushed back to Todoist.
 
 ## Settings
@@ -270,6 +275,7 @@ Completed and recurring behavior:
 | Include completed recurring tasks | Off | Sub-option shown only when completed tasks are enabled. Uses activity log fallback. |
 | Manual sync notices | On | Show short `Sync Todoist:` completion notices for manual sync actions. |
 | Automatic sync notices | On | Show scheduled sync notices on desktop and mobile, including zero-change summaries. |
+| Build info | Current build | Shows plugin version, build number, and build date at the bottom of General settings. |
 
 ## Commands
 
