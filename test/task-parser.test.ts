@@ -87,4 +87,24 @@ assert.equal(parsedRecurringLine?.content, 'Monthly payment');
 assert.equal(parsedRecurringLine?.due?.kind, 'recurring');
 assert.equal(parsedRecurringLine?.due?.time, '15:00');
 
+const parsedWikilinkHeading = parseTaskLine(
+  '- [ ] Read [[xx#t2]] and [[Project Note|alias #not-label]] #todoist #realLabel',
+  0,
+  'Tasks.md',
+  '#todoist',
+  Date.now()
+);
+assert.equal(parsedWikilinkHeading?.content, 'Read [[xx#t2]] and [[Project Note|alias #not-label]]');
+assert.deepEqual(parsedWikilinkHeading?.labels, ['realLabel']);
+
+const parsedEmbeddedLink = parseTaskLine(
+  '- [ ] Review ![[clip#frame-1]] #todoist #media',
+  0,
+  'Tasks.md',
+  '#todoist',
+  Date.now()
+);
+assert.equal(parsedEmbeddedLink?.content, 'Review ![[clip#frame-1]]');
+assert.deepEqual(parsedEmbeddedLink?.labels, ['media']);
+
 console.log('task-parser tests passed');

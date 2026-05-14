@@ -338,8 +338,8 @@ function noticeDurationForDailyNote(result) {
 function getBuildInfo() {
   return {
     version: "0.7.0",
-    buildDate: "2026-05-14T03:24:34.989Z",
-    buildNumber: "202605140324"
+    buildDate: "2026-05-14T04:39:57.212Z",
+    buildNumber: "202605140439"
   };
 }
 function formatBuildDate(buildDate) {
@@ -1417,6 +1417,7 @@ var PATTERNS = {
   // Project metadata: 📁 ProjectName
   project: new RegExp("\u{1F4C1}\\s*([^\\s#\u{1F4C5}\u{1F53A}\u23EB\u{1F53C}\u{1F53D}<]+)", "u")
 };
+var OBSIDIAN_WIKILINK_PATTERN = /!?\[\[[^\]]+\]\]/g;
 function getIndentLevel(line) {
   var _a, _b;
   const leading = (_b = (_a = line.match(/^(\s*)/)) == null ? void 0 : _a[1]) != null ? _b : "";
@@ -1500,8 +1501,9 @@ function extractPriority(content) {
 function extractLabels(content, syncTag) {
   const labels = [];
   const syncTagName = syncTag.replace(/^#/, "").toLowerCase();
+  const labelSource = maskObsidianLinks(content);
   let match;
-  while ((match = PATTERNS.hashtag.exec(content)) !== null) {
+  while ((match = PATTERNS.hashtag.exec(labelSource)) !== null) {
     const tag = match[1];
     if (tag.toLowerCase() !== syncTagName) {
       labels.push(tag);
@@ -1512,8 +1514,10 @@ function extractLabels(content, syncTag) {
 }
 function cleanTaskContent(content, syncTag) {
   let cleaned = content;
+  const protectedLinks = /* @__PURE__ */ new Map();
   cleaned = stripDueMetadata(cleaned);
   cleaned = cleaned.replace(/<!--\s*todoist-id:\s*[\w]+\s*-->/g, "");
+  cleaned = protectObsidianLinks(cleaned, protectedLinks);
   const syncTagPattern = new RegExp(escapeRegex(syncTag), "gi");
   cleaned = cleaned.replace(syncTagPattern, "");
   cleaned = cleaned.replace(PATTERNS.dueDate, "");
@@ -1527,8 +1531,26 @@ function cleanTaskContent(content, syncTag) {
   cleaned = cleaned.replace(PATTERNS.textDueDate, "");
   cleaned = cleaned.replace(PATTERNS.project, "");
   cleaned = cleaned.replace(/#[a-zA-Z0-9_-]+/g, "");
+  cleaned = restoreObsidianLinks(cleaned, protectedLinks);
   cleaned = cleaned.replace(/\s+/g, " ").trim();
   return cleaned;
+}
+function maskObsidianLinks(content) {
+  return content.replace(OBSIDIAN_WIKILINK_PATTERN, (match) => " ".repeat(match.length));
+}
+function protectObsidianLinks(content, links) {
+  return content.replace(OBSIDIAN_WIKILINK_PATTERN, (match) => {
+    const token = `@@SYNC_TODOIST_LINK_${links.size}@@`;
+    links.set(token, match);
+    return token;
+  });
+}
+function restoreObsidianLinks(content, links) {
+  let restored = content;
+  for (const [token, link] of links) {
+    restored = restored.replace(token, link);
+  }
+  return restored;
 }
 function escapeRegex(str) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

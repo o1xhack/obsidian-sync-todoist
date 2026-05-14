@@ -35,6 +35,8 @@ const PATTERNS = {
   project: new RegExp('📁\\s*([^\\s#📅🔺⏫🔼🔽<]+)', 'u'),
 };
 
+const OBSIDIAN_WIKILINK_PATTERN = /!?\[\[[^\]]+\]\]/g;
+
 /**
  * Compute indentation level from leading whitespace.
  * Tabs count as one level each (Obsidian default); spaces use 2-per-level.
@@ -153,9 +155,10 @@ function extractPriority(content: string): TodoistPriority {
 function extractLabels(content: string, syncTag: string): string[] {
   const labels: string[] = [];
   const syncTagName = syncTag.replace(/^#/, '').toLowerCase();
+  const labelSource = maskObsidianLinks(content);
   
   let match;
-  while ((match = PATTERNS.hashtag.exec(content)) !== null) {
+  while ((match = PATTERNS.hashtag.exec(labelSource)) !== null) {
     // Preserve original case so Todoist label names are matched exactly.
     const tag = match[1];
     if (tag.toLowerCase() !== syncTagName) {
@@ -173,9 +176,11 @@ function extractLabels(content: string, syncTag: string): string[] {
  */
 function cleanTaskContent(content: string, syncTag: string): string {
   let cleaned = content;
+  const protectedLinks = new Map<string, string>();
 
   cleaned = stripDueMetadata(cleaned);
   cleaned = cleaned.replace(/<!--\s*todoist-id:\s*[\w]+\s*-->/g, '');
+  cleaned = protectObsidianLinks(cleaned, protectedLinks);
 
   const syncTagPattern = new RegExp(escapeRegex(syncTag), 'gi');
   cleaned = cleaned.replace(syncTagPattern, '');
@@ -198,10 +203,31 @@ function cleanTaskContent(content: string, syncTag: string): string {
   // not part of the task title). Use a fresh regex to avoid lastIndex issues
   // with the shared global PATTERNS.hashtag.
   cleaned = cleaned.replace(/#[a-zA-Z0-9_-]+/g, '');
+  cleaned = restoreObsidianLinks(cleaned, protectedLinks);
 
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
 
   return cleaned;
+}
+
+function maskObsidianLinks(content: string): string {
+  return content.replace(OBSIDIAN_WIKILINK_PATTERN, (match) => ' '.repeat(match.length));
+}
+
+function protectObsidianLinks(content: string, links: Map<string, string>): string {
+  return content.replace(OBSIDIAN_WIKILINK_PATTERN, (match) => {
+    const token = `@@SYNC_TODOIST_LINK_${links.size}@@`;
+    links.set(token, match);
+    return token;
+  });
+}
+
+function restoreObsidianLinks(content: string, links: Map<string, string>): string {
+  let restored = content;
+  for (const [token, link] of links) {
+    restored = restored.replace(token, link);
+  }
+  return restored;
 }
 
 /**
