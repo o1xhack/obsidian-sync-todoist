@@ -21,8 +21,7 @@ Sync Todoist has an independent release line. Upstream Syncist tags and releases
 - `0.5.0`: Daily Note polish release. Adds English/Simplified Chinese settings UI, configurable Daily Note primary sorting, completed-task inclusion for today's Daily Note, and a bilingual marker overwrite warning.
 - `0.5.1`: Daily Note completed-task fix. Treats "Include completed tasks" as tasks completed today, regardless of due date.
 - `0.5.2`: Daily Note due-date fix. Treats Todoist due datetimes that fall today as due today, so timed tasks and current recurring occurrences are not missed.
-- `0.6.0`: Daily Note recurring completion release. Adds a nested "Include completed recurring tasks" option under "Include completed tasks", uses Todoist activity logs to keep completed recurring occurrences in today's Daily Note, and rewrites the README structure.
-- `0.6.1`: Community review cleanup. Removes Obsidian 1.8.7-only local storage API usage, replaces `builtin-modules` with Node's `builtinModules`, and clears unsafe `any` settings persistence warnings.
+- `0.6.0`: Daily Note recurring completion and community review cleanup release. Adds a nested "Include completed recurring tasks" option under "Include completed tasks", uses Todoist activity logs to keep completed recurring occurrences in today's Daily Note, prevents generated Daily Note rows from downgrading timed or recurring Todoist due rules during bidirectional sync, removes Obsidian 1.8.7-only local storage API usage, replaces `builtin-modules` with Node's `builtinModules`, clears unsafe `any` settings persistence warnings, and rewrites the README structure.
 - `1.0.0`: first community-submission candidate after the test release line is stable.
 
 ## 0.1.0 Scope

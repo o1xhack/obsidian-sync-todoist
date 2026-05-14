@@ -12,12 +12,13 @@
 
 Sync Todoist 已可通过 Obsidian Community Plugins 安装。如果你之前通过 BRAT 安装了 beta 版本，可以按下面的迁移步骤停止 BRAT 更新，并继续使用社区插件版本。
 
-## 0.6.1 新功能
+## 0.6.0 新功能
 
 - 清理 Community Plugin 审核问题：Obsidian `minAppVersion` 兼容性、内置模块打包依赖和 settings 持久化类型安全。
 - Daily Note 增加“包含已完成的循环任务”子选项。
 - 当 **同步已完成任务** 开启时，可以把今天完成的循环任务保留在 Daily Note 中。
 - Todoist 在循环任务完成后会把任务移动到下一次出现，因此 Sync Todoist 会通过活动日志恢复今天完成的这一轮。
+- 防止 Daily Note 生成行在双向同步时把 Todoist 的带时间或循环截止规则降级覆盖。
 - README 补充 Daily Note 扁平化显示、已完成任务逻辑和 Query Block completed 查询窗口说明。
 
 ## 为什么用它？

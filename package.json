@@ -1,6 +1,6 @@
 {
   "name": "obsidian-sync-todoist",
-  "version": "0.6.1",
+  "version": "0.6.0",
   "description": "Bidirectional sync between Obsidian tasks and Todoist, with subtasks, import, projects, labels, query blocks, and completed-task queries.",
   "main": "main.js",
   "scripts": {

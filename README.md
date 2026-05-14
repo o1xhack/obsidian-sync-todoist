@@ -12,12 +12,13 @@
 
 Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
-## What's New in 0.6.1
+## What's New in 0.6.0
 
 - Cleans up Community Plugin review issues for Obsidian `minAppVersion`, bundled built-in modules, and typed settings persistence.
 - Adds a Daily Note sub-option for completed recurring tasks.
 - Keeps completed recurring occurrences in today's Daily Note when **Include completed tasks** is enabled.
 - Uses Todoist activity logs to recover the completed occurrence because Todoist moves recurring tasks to their next due date after completion.
+- Prevents Daily Note generated rows from downgrading Todoist timed or recurring due rules during bidirectional sync.
 - Clarifies Daily Note flat rendering, completed-task behavior, and Query Block completed-task date windows in the documentation.
 
 ## Why Use It?

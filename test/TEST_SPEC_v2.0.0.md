@@ -506,6 +506,29 @@ Test each of these query blocks (create one block per filter):
 7. **Expected**: Today's completed recurring occurrence appears as a checked row in the marker block.
 - [ ] **PASS** / **FAIL**
 
+### G11. Daily Note checkbox completion sync
+
+1. Create or choose one normal Todoist task due today and one recurring Todoist task whose current occurrence is due today.
+2. Sync today's Daily Note.
+3. In Obsidian, check both generated Daily Note rows.
+4. Run **Sync Todoist: Sync now** or wait for the configured automatic sync interval.
+5. **Expected**: The normal Todoist task is completed.
+6. **Expected**: The recurring Todoist task's current occurrence is completed and Todoist advances it to the next occurrence.
+7. Sync today's Daily Note again.
+8. **Expected**: The old completed recurring occurrence is not used to complete the next occurrence again.
+- [ ] **PASS** / **FAIL**
+
+### G12. Daily Note must not downgrade timed or recurring due rules
+
+1. Create or choose a recurring Todoist task due today with a time, such as every Friday at 15:00.
+2. Sync today's Daily Note.
+3. Edit only the generated Daily Note row title or date text, leaving its `todoist-id` in place.
+4. Run **Sync Todoist: Sync now** or wait for the configured automatic sync interval.
+5. **Expected**: Todoist keeps the original recurring rule and time.
+6. **Expected**: Todoist task title is not changed by the generated Daily Note row.
+7. **Expected**: The task does not become a one-time date-only task.
+- [ ] **PASS** / **FAIL**
+
 ---
 
 ## Test Summary
@@ -518,8 +541,8 @@ Test each of these query blocks (create one block per filter):
 | D. Projects & Labels | 6 | | |
 | E. Query Blocks | 10 | | |
 | F. Edge Cases | 6 | | |
-| G. Daily Notes & Notices | 10 | | |
-| **Total** | **51** | | |
+| G. Daily Notes & Notices | 12 | | |
+| **Total** | **53** | | |
 
 **Tested by**: ___________________
 **Date**: ___________________
