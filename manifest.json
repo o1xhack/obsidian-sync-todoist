@@ -1,7 +1,7 @@
 {
   "id": "sync-todoist",
   "name": "Sync Todoist",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "minAppVersion": "1.5.0",
   "description": "Bidirectional task sync with Todoist. Subtasks, import, projects, labels, inline query blocks, and completed-task queries.",
   "author": "o1xhack",

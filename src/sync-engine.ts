@@ -682,11 +682,17 @@ export class SyncEngine {
         priority: obsidianTask.priority,
         labels: obsidianTask.labels,
       };
-      if (shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate)) {
+      const canPushDueDate = shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate);
+      if (canPushDueDate) {
         Object.assign(updates, { dueString: obsidianTask.dueDate ?? undefined });
       }
-      await this.todoistService.updateTask(todoistTask.id, updates);
-      this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
+      const updatedTodoistTask = await this.todoistService.updateTask(todoistTask.id, updates);
+      if (dueDateDiffers && !canPushDueDate) {
+        await this.updateObsidianTaskFromTodoist(obsidianTask, updatedTodoistTask);
+        this.updateSyncStateTaskFromTodoist(todoistTask.id, obsidianTask, updatedTodoistTask);
+      } else {
+        this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, updatedTodoistTask);
+      }
       return 'updated';
     }
 
@@ -704,11 +710,17 @@ export class SyncEngine {
         priority: obsidianTask.priority,
         labels: obsidianTask.labels,
       };
-      if (shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate)) {
+      const canPushDueDate = shouldPushDueDateToTodoist(obsidianTask, todoistTask, todoistDueDate);
+      if (canPushDueDate) {
         Object.assign(updates, { dueString: obsidianTask.dueDate ?? undefined });
       }
-      await this.todoistService.updateTask(todoistTask.id, updates);
-      this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, todoistTask);
+      const updatedTodoistTask = await this.todoistService.updateTask(todoistTask.id, updates);
+      if (dueDateDiffers && !canPushDueDate) {
+        await this.updateObsidianTaskFromTodoist(obsidianTask, updatedTodoistTask);
+        this.updateSyncStateTaskFromTodoist(todoistTask.id, obsidianTask, updatedTodoistTask);
+      } else {
+        this.updateSyncStateTask(todoistTask.id, obsidianTask, obsidianCompleted, updatedTodoistTask);
+      }
       return 'updated';
     } else if (this.settings.conflictResolution === 'todoist-wins') {
       await this.updateObsidianTaskFromTodoist(obsidianTask, todoistTask);
@@ -764,6 +776,26 @@ export class SyncEngine {
       todoistCompleted: completed,
       projectId: todoistTask.projectId,
     };
+  }
+
+  private updateSyncStateTaskFromTodoist(
+    todoistId: string,
+    obsidianTask: ParsedObsidianTask,
+    todoistTask: TodoistTask
+  ): void {
+    const projectName = this.resolveProjectName(todoistTask.projectId);
+    const todoistAsObsidian: ParsedObsidianTask = {
+      ...obsidianTask,
+      content: todoistTask.content,
+      priority: TodoistService.fromTodoistPriority(todoistTask.priority),
+      dueDate: TodoistService.parseDueDate(todoistTask),
+      isCompleted: todoistTask.isCompleted,
+      labels: todoistTask.labels ?? [],
+      parentId: todoistTask.parentId ?? null,
+      projectId: todoistTask.projectId,
+      projectName,
+    };
+    this.updateSyncStateTask(todoistId, todoistAsObsidian, todoistTask.isCompleted, todoistTask);
   }
 
   /**

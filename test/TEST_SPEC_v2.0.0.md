@@ -546,5 +546,5 @@ Test each of these query blocks (create one block per filter):
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.6.0
+**Plugin version**: 0.6.2
 **Obsidian version**: ___________________
