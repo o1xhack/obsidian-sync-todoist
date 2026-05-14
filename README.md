@@ -137,6 +137,18 @@ Sync Todoist supports the structured due shapes exposed by Todoist API v1:
 
 Markdown due editing is intentionally structured. Natural-language recurrence editing such as `every Friday at 15:00` or `tomorrow at 5pm` is not parsed from Markdown in this release; edit those recurrence rules in Todoist.
 
+## Current Limitations
+
+These Todoist fields are intentionally preserved but not fully synchronized yet:
+
+| Todoist feature | Current behavior | Recommended handling |
+|---|---|---|
+| Duration | Preserved in Todoist when Sync Todoist updates other fields, but not shown, created, edited, or synced from Markdown. | Set and edit duration in Todoist. Sync Todoist will omit `duration` and `duration_unit` so existing values are not cleared. |
+| Sections / boards | Preserved in Todoist when other fields sync, but not shown, created, edited, or synced from Markdown. New Markdown tasks can target a project, not a project section. | Move tasks between sections in Todoist. Use `📁 ProjectName` only for project routing. |
+| Natural-language recurrence editing | Not parsed from Markdown. Recurring tasks are displayed as the current occurrence and protected with hidden metadata. | Edit recurrence rules in Todoist. Complete the task from Obsidian to advance the current occurrence. |
+| Fixed-time timezone editing | Displayed and protected, but not edited from Markdown because a plain Markdown date/time cannot represent timezone semantics safely. | Edit fixed-time and timezone-specific due rules in Todoist. |
+| Daily Note generated block edits | Generated rows are completion-focused. Title, due, project, label, and priority edits inside the marker block are not pushed to Todoist. | Edit task details in Todoist or in ordinary synced task lines outside the generated Daily Note block. |
+
 ## Subtasks
 
 Indented Markdown tasks under a synced parent become Todoist subtasks. Child lines do not need `#todoist`; they inherit sync from the parent outline.

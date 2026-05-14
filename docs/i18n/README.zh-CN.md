@@ -137,6 +137,18 @@ Sync Todoist 支持 Todoist API v1 暴露的结构化 due 类型：
 
 Markdown 里的 due 编辑只支持结构化格式。本版本不会从 Markdown 解析 `every Friday at 15:00` 或 `tomorrow at 5pm` 这类自然语言循环规则；请在 Todoist 中编辑这些循环规则。
 
+## 当前限制
+
+以下 Todoist 字段目前会尽量保留，但还没有完整双向同步：
+
+| Todoist 功能 | 当前行为 | 建议处理方式 |
+|---|---|---|
+| Duration / 持续时间 | 当 Sync Todoist 更新其他字段时，Todoist 中已有 duration 会保留；但不会在 Markdown 中显示、创建、编辑或同步。 | 在 Todoist 中设置和修改 duration。Sync Todoist 会省略 `duration` 和 `duration_unit`，避免清掉已有值。 |
+| Section / 板块 | 当其他字段同步时，Todoist 中已有 section 通常会保留；但不会在 Markdown 中显示、创建、编辑或同步。Markdown 新任务只能指定项目，不能指定项目下的板块。 | 在 Todoist 中移动任务到不同 section。Markdown 里只用 `📁 ProjectName` 做项目路由。 |
+| 自然语言循环规则编辑 | 不从 Markdown 解析。循环任务会显示当前 occurrence，并用隐藏元数据保护规则。 | 在 Todoist 中编辑循环规则。可以在 Obsidian 中勾选完成当前 occurrence。 |
+| 固定时间 / timezone 编辑 | 会显示并保护，但不会从 Markdown 直接编辑，因为普通 Markdown 日期/时间无法安全表达 timezone 语义。 | 在 Todoist 中编辑固定时间和带 timezone 的 due 规则。 |
+| Daily Note 生成区编辑 | 生成行以完成状态同步为主。Marker block 里的标题、due、项目、标签和优先级改动不会推送到 Todoist。 | 在 Todoist 中编辑任务详情，或在 Daily Note 生成区外的普通同步任务行中编辑。 |
+
 ## 子任务
 
 带同步标签的父任务下面，缩进的 Markdown 任务会成为 Todoist 子任务。子任务不需要自己写 `#todoist`，它会从父级 outline 继承同步关系。

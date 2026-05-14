@@ -68,3 +68,4 @@ Compared with the upstream Syncist baseline, `0.1.0` includes:
 - The Obsidian plugin display name is `Sync Todoist`.
 - Completed recurring Daily Note occurrences are intentionally behind a nested setting because Todoist moves recurring tasks to their next occurrence after completion and the plugin must use the Activity Log fallback to recover today's completed occurrence.
 - `0.7.0` intentionally does not parse natural-language recurrence edits from Markdown. Recurrence rules should be edited in Todoist; Sync Todoist preserves those rules and supports completion/next-occurrence round trips.
+- `0.7.0` does not fully synchronize Todoist duration or section fields. They are omitted from update payloads so existing Todoist values are preserved, but users should edit them in Todoist.
