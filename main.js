@@ -1780,6 +1780,16 @@ function buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, 
   }
   return snapshots;
 }
+function buildRecentlyCompletedRecurringTaskSnapshot(task, completedAt) {
+  var _a;
+  if (!((_a = task.due) == null ? void 0 : _a.isRecurring))
+    return null;
+  return {
+    ...task,
+    isCompleted: true,
+    completedAt
+  };
+}
 function activityContent(extraData) {
   const content = extraData == null ? void 0 : extraData.content;
   return typeof content === "string" && content.trim() ? content : null;
@@ -1915,6 +1925,7 @@ var SyncEngine = class {
   constructor(app, todoistService, settings, syncState) {
     this.isSyncing = false;
     this.pendingConflicts = [];
+    this.recentlyCompletedRecurringTasks = [];
     this.app = app;
     this.todoistService = todoistService;
     this.settings = settings;
@@ -1962,6 +1973,7 @@ var SyncEngine = class {
       return { created: 0, updated: 0, completed: 0, conflicts: 0, errors: ["Todoist API not configured"] };
     }
     this.isSyncing = true;
+    this.recentlyCompletedRecurringTasks = [];
     const result = { created: 0, updated: 0, completed: 0, conflicts: 0, errors: [] };
     try {
       console.debug("Todoist Sync: Starting sync...");
@@ -2197,6 +2209,8 @@ var SyncEngine = class {
       byId.set(task.id, task);
     for (const task of completedRecurringTasks)
       byId.set(task.id, task);
+    for (const task of this.recentlyCompletedRecurringTasks)
+      byId.set(task.id, task);
     return [...byId.values()];
   }
   getDailyNotePath(date) {
@@ -2368,6 +2382,7 @@ var SyncEngine = class {
           return "unchanged";
         }
         await this.todoistService.completeTask(todoistTask.id);
+        this.recordRecentlyCompletedRecurringTask(todoistTask);
         this.updateCompletionOnlySyncState(todoistTask.id, true, todoistTask);
         return "completed";
       }
@@ -2382,6 +2397,7 @@ var SyncEngine = class {
     if (obsidianCompleted !== todoistCompleted) {
       if (obsidianCompleted && !todoistCompleted) {
         await this.todoistService.completeTask(todoistTask.id);
+        this.recordRecentlyCompletedRecurringTask(todoistTask);
         this.updateSyncStateTask(todoistTask.id, obsidianTask, true, todoistTask);
         return "completed";
       } else if (!obsidianCompleted && todoistCompleted) {
@@ -2513,6 +2529,17 @@ var SyncEngine = class {
       todoistCompleted: completed,
       projectId: (_d = (_c = todoistTask == null ? void 0 : todoistTask.projectId) != null ? _c : obsidianTask.projectId) != null ? _d : null
     };
+  }
+  recordRecentlyCompletedRecurringTask(todoistTask) {
+    const snapshot = buildRecentlyCompletedRecurringTaskSnapshot(todoistTask, (/* @__PURE__ */ new Date()).toISOString());
+    if (!snapshot)
+      return;
+    const existingIndex = this.recentlyCompletedRecurringTasks.findIndex((task) => task.id === snapshot.id);
+    if (existingIndex >= 0) {
+      this.recentlyCompletedRecurringTasks[existingIndex] = snapshot;
+    } else {
+      this.recentlyCompletedRecurringTasks.push(snapshot);
+    }
   }
   updateCompletionOnlySyncState(todoistId, completed, todoistTask) {
     const existing = this.syncState.tasks[todoistId];

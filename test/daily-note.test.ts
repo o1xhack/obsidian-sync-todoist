@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   buildCompletedRecurringTaskSnapshots,
+  buildRecentlyCompletedRecurringTaskSnapshot,
   extractTodoistIdsFromMarkerRegion,
   filterDailyNoteTasks,
   isMarkerRegionValid,
@@ -242,6 +243,22 @@ function runDailyNoteTests(): void {
     datetime: undefined,
     isRecurring: true,
   });
+
+  const immediateSnapshot = buildRecentlyCompletedRecurringTaskSnapshot(
+    recurringActive,
+    '2026-05-13T18:31:00Z'
+  );
+  assert.equal(immediateSnapshot?.id, 'recurring');
+  assert.equal(immediateSnapshot?.isCompleted, true);
+  assert.equal(immediateSnapshot?.completedAt, '2026-05-13T18:31:00Z');
+  assert.deepEqual(immediateSnapshot?.due, { date: '2026-05-20', isRecurring: true });
+  assert.equal(
+    buildRecentlyCompletedRecurringTaskSnapshot(
+      task({ id: 'plain', due: { date: '2026-05-20' } }),
+      '2026-05-13T18:31:00Z'
+    ),
+    null
+  );
 }
 
 runDailyNoteTests();

@@ -192,6 +192,18 @@ export function buildCompletedRecurringTaskSnapshots(
   return snapshots;
 }
 
+export function buildRecentlyCompletedRecurringTaskSnapshot(
+  task: TodoistTask,
+  completedAt: string
+): TodoistTask | null {
+  if (!task.due?.isRecurring) return null;
+  return {
+    ...task,
+    isCompleted: true,
+    completedAt,
+  };
+}
+
 function activityContent(extraData: Record<string, unknown> | null): string | null {
   const content = extraData?.content;
   return typeof content === 'string' && content.trim() ? content : null;
