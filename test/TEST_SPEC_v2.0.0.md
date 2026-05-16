@@ -1,4 +1,4 @@
-# Sync Todoist v0.7.0 - Test Specification
+# Sync Todoist v0.8.0 - Test Specification
 
 ## Prerequisites
 
@@ -477,14 +477,16 @@ Test each of these query blocks (create one block per filter):
 5. **Expected**: urgent appears before medium/normal; tasks with the same priority are ordered by time.
 - [ ] **PASS** / **FAIL**
 
-### G8. Daily Note completed-today inclusion
+### G8. Daily Note completed-task modes
 
-1. Create or choose a Todoist task that is not due today, or has no due date.
-2. Complete it in Todoist.
-3. Disable **Include completed tasks** and sync today's Daily Note.
-4. **Expected**: The completed task is not in the marker block.
-5. Enable **Include completed tasks** and sync again.
-6. **Expected**: The task completed today appears as checked and remains ordered by the configured sort, even though its due date is not today.
+1. Create or choose one Todoist task due today and one Todoist task due yesterday or with no due date.
+2. Complete both tasks in Todoist today.
+3. Set **Completed tasks** to **Do not show completed tasks** and sync today's Daily Note.
+4. **Expected**: Neither completed task is in the marker block.
+5. Set **Completed tasks** to **Only tasks due today** and sync again.
+6. **Expected**: Only the completed task due today appears as checked.
+7. Set **Completed tasks** to **All tasks completed today** and sync again.
+8. **Expected**: Both completed tasks appear as checked and remain ordered by the configured sort.
 - [ ] **PASS** / **FAIL**
 
 ### G9. Daily Note overwrite warning
@@ -498,7 +500,7 @@ Test each of these query blocks (create one block per filter):
 ### G10. Daily Note completed recurring inclusion
 
 1. Create or choose a recurring Todoist task whose current occurrence is due today.
-2. Enable **Include completed tasks** in Daily Note settings.
+2. Set **Completed tasks** to **Only tasks due today** or **All tasks completed today**.
 3. **Expected**: The nested **Include completed recurring tasks** setting appears.
 4. Disable **Include completed recurring tasks**, complete the recurring task in Todoist, then sync today's Daily Note.
 5. **Expected**: The completed recurring occurrence is not kept as a checked row after Todoist moves the task to the next occurrence.
@@ -630,5 +632,5 @@ Test each of these query blocks (create one block per filter):
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.7.0
+**Plugin version**: 0.8.0
 **Obsidian version**: ___________________

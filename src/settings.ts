@@ -1,6 +1,14 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
 import TodoistSyncPlugin from './main';
-import { ConflictResolution, DailyNoteSortMode, TodoistLabel, TodoistPriority, TodoistProject, UiLanguage } from './types';
+import {
+  ConflictResolution,
+  DailyNoteCompletedTaskMode,
+  DailyNoteSortMode,
+  TodoistLabel,
+  TodoistPriority,
+  TodoistProject,
+  UiLanguage,
+} from './types';
 import { I18nKey, t } from './i18n';
 import {
   formatSyncResult,
@@ -55,6 +63,20 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
   }
 
   private renderGeneralSettings(containerEl: HTMLElement): void {
+    const buildInfo = getBuildInfo();
+    new Setting(containerEl)
+      .setName(this.tr('general.version.name'))
+      .setDesc(this.tr('general.version.value', {
+        version: buildInfo.version,
+        date: formatBuildDate(buildInfo.buildDate),
+      }))
+      .addButton((button) =>
+        button
+          .setButtonText(buildInfo.version)
+          .setTooltip(this.tr('general.version.openWhatsNew'))
+          .onClick(() => this.plugin.openWhatsNewModalFromSettings())
+      );
+
     new Setting(containerEl)
       .setName(this.tr('general.language.name'))
       .setDesc(this.tr('general.language.desc'))
@@ -279,14 +301,6 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
     const statusEl = containerEl.createDiv({ cls: 'todoist-sync-status' });
     this.updateStatusDisplay(statusEl);
 
-    const buildInfo = getBuildInfo();
-    new Setting(containerEl)
-      .setName(this.tr('general.buildInfo.name'))
-      .setDesc(this.tr('general.buildInfo.desc', {
-        version: buildInfo.version,
-        build: buildInfo.buildNumber,
-        date: formatBuildDate(buildInfo.buildDate),
-      }));
   }
 
   private renderTabBar(parent: HTMLElement): void {
@@ -376,20 +390,23 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName(this.tr('daily.includeCompleted.name'))
-      .setDesc(this.tr('daily.includeCompleted.desc'))
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.dailyNote.includeCompleted)
+      .setName(this.tr('daily.completedTaskMode.name'))
+      .setDesc(this.tr('daily.completedTaskMode.desc'))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption('off', this.tr('daily.completedTaskMode.off'))
+          .addOption('due-today', this.tr('daily.completedTaskMode.dueToday'))
+          .addOption('completed-today', this.tr('daily.completedTaskMode.completedToday'))
+          .setValue(this.plugin.settings.dailyNote.completedTaskMode)
           .onChange(async (value) => {
-            this.plugin.settings.dailyNote.includeCompleted = value;
-            if (!value) this.plugin.settings.dailyNote.includeCompletedRecurring = false;
+            this.plugin.settings.dailyNote.completedTaskMode = value as DailyNoteCompletedTaskMode;
+            if (value === 'off') this.plugin.settings.dailyNote.includeCompletedRecurring = false;
             await this.plugin.saveSettings();
             this.display();
-          })
-      );
+          });
+      });
 
-    if (this.plugin.settings.dailyNote.includeCompleted) {
+    if (this.plugin.settings.dailyNote.completedTaskMode !== 'off') {
       new Setting(containerEl)
         .setName(this.tr('daily.includeCompletedRecurring.name'))
         .setDesc(this.tr('daily.includeCompletedRecurring.desc'))

@@ -12,19 +12,13 @@
 
 Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
-## What's New in 0.7.0
+## What's New in 0.8.0
 
-- Adds structured due handling for Todoist all-day dates, floating local times, fixed times, and recurring occurrences.
-- Supports Markdown floating-time syntax: `📅 2026-06-01 15:00` and `due:2026-06-01 15:00`.
-- Sends editable floating times to Todoist through `due_datetime` instead of dropping the time.
-- Preserves Todoist fixed-time and recurring due metadata with a hidden `todoist-due` comment when Markdown cannot represent the full rule.
-- Prevents fixed-time and recurring tasks from being downgraded into one-time date-only tasks during bidirectional sync.
-- Shows the same structured due display in imported tasks, query blocks, and Daily Note output.
-- Fixes Daily Note completed recurring recovery by reading Todoist activity logs with the required list parameter and using the completed occurrence date instead of the next due date.
-- Preserves recurring completions made during the current sync cycle while Todoist Activity Log is still delayed.
-- Preserves Obsidian wikilink headings such as `[[note#heading]]` instead of treating the heading anchor as a Todoist label.
-- Shows version and build information at the bottom of General settings so repeated draft builds can be identified.
-- Adds incremental unit/API/display tests for due parsing, formatting, Todoist payloads, sync rules, and Daily Note safeguards.
+- Replaces the Daily Note completed-task toggle with a three-mode selector: hide completed tasks, keep completed tasks due today, or keep all tasks completed today.
+- Preserves existing behavior for upgraded users by migrating the old completed-task toggle to **All tasks completed today**.
+- Keeps completed recurring occurrences behind the existing recurring-task option, now available whenever completed tasks are shown.
+- Improves settings tab highlighting for mobile and adds a clickable version row with bilingual update notes.
+- Adds `CHANGELOG.md` as the ongoing release history.
 
 ## Why Use It?
 
@@ -240,7 +234,7 @@ Daily Note controls:
 - Customize the source-mode start and end markers.
 - Choose task filters by project, label, and priority.
 - Choose primary sorting: time first or priority first.
-- Include tasks completed today.
+- Choose which completed tasks remain visible: none, tasks due today, or all tasks completed today.
 - Include completed recurring occurrences when completed tasks are enabled.
 - Run a manual **Sync today** refresh.
 
@@ -265,8 +259,10 @@ Completed and recurring behavior:
 
 - Active tasks are included when their current Todoist due date falls today.
 - Timed due dates and current recurring occurrences are treated as today when their local date is today.
-- With **Include completed tasks**, regular tasks completed today remain checked in the Daily Note block.
-- With **Include completed recurring tasks**, Sync Todoist also checks today's activity log and keeps recurring tasks completed today as checked rows.
+- **Do not show completed tasks** hides completed Todoist tasks from the Daily Note block.
+- **Only tasks due today** keeps completed tasks whose Todoist due date belongs to today.
+- **All tasks completed today** keeps completed tasks whose Todoist completion time belongs to today, even if their due date was earlier.
+- With **Include completed recurring tasks**, Sync Todoist also checks the activity log and keeps completed recurring occurrences as checked rows when they match the selected completed-task mode.
 - Todoist moves recurring tasks to the next occurrence after completion, so the activity-log fallback is required to preserve today's completed occurrence.
 - Todoist Activity Log can lag behind a just-completed recurring task. When Sync Todoist completes a recurring task during the current sync cycle, it keeps a local checked snapshot until the activity log catches up.
 - Generated Daily Note rows are completion-focused. Checking a generated row can complete the matching Todoist task, but title, project, label, priority, and unsafe due-rule edits inside the generated block are not pushed back to Todoist.
@@ -281,10 +277,11 @@ Completed and recurring behavior:
 | Default project | Inbox | Todoist project for new tasks unless the task has `📁 ProjectName`. |
 | Sync interval | `5` minutes | Auto-sync frequency. Set to `0` to disable automatic sync. |
 | Conflict resolution | `Todoist wins` | Behavior when both Obsidian and Todoist changed the same task. |
+| Version | Current release | Shows the current version and build time. Click the version to view update notes. |
 | Daily Note filters | All | Optional project, label, and priority filters for today's Daily Note block. |
 | Daily Note primary sort | `Time first` | Sort Daily Note tasks by time then priority, or by priority then time. |
-| Include completed tasks | Off | Keep Todoist tasks completed today in the Daily Note block. |
-| Include completed recurring tasks | Off | Sub-option shown only when completed tasks are enabled. Uses activity log fallback. |
+| Completed tasks | `Do not show completed tasks` | Controls whether Daily Note keeps no completed tasks, completed tasks due today, or all tasks completed today. |
+| Include completed recurring tasks | Off | Sub-option shown when completed tasks are visible. Uses activity log fallback. |
 | Manual sync notices | On | Show short `Sync Todoist:` completion notices for manual sync actions. |
 | Automatic sync notices | On | Show scheduled sync notices on desktop and mobile, including zero-change summaries. |
 | Build info | Current build | Shows plugin version, build number, and build date at the bottom of General settings. |
@@ -311,7 +308,7 @@ npm test
 
 Use [test/TEST_SPEC_v2.0.0.md](test/TEST_SPEC_v2.0.0.md) for manual QA against a test vault and Todoist account.
 
-Release tags must exactly match `manifest.json` `version`, and every public release must attach `main.js`, `manifest.json`, and `styles.css`. See [RELEASE.md](RELEASE.md).
+Release tags must exactly match `manifest.json` `version`, and every public release must attach `main.js`, `manifest.json`, and `styles.css`. See [RELEASE.md](RELEASE.md) and [CHANGELOG.md](CHANGELOG.md).
 
 ## FAQ
 

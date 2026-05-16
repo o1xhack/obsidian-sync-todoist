@@ -4,6 +4,8 @@ import { TodoistService } from './todoist-service';
 import { SyncEngine } from './sync-engine';
 import { ImportTaskModal } from './import-modal';
 import { renderQueryBlock } from './query-renderer';
+import { entryForVersion, isVersionNewer, RECENT_UPDATE_HIGHLIGHTS } from './release-log';
+import { WhatsNewModal } from './whats-new-modal';
 import {
   createPersistentSyncNotice,
   formatDailyNoteSummary,
@@ -22,8 +24,10 @@ import {
   SyncResult,
   DailyNoteSyncResult,
 } from './types';
+import { normalizeDailyNoteSettings, PersistedDailyNoteSettings } from './settings-normalization';
 
-type PersistedPluginData = Partial<TodoistSyncSettings> & {
+type PersistedPluginData = Partial<Omit<TodoistSyncSettings, 'dailyNote'>> & {
+  dailyNote?: PersistedDailyNoteSettings;
   syncState?: SyncState;
 };
 
@@ -85,6 +89,8 @@ export default class TodoistSyncPlugin extends Plugin {
 
     // Start sync interval
     this.startSyncInterval();
+
+    this.maybeShowWhatsNewModal();
 
     console.debug('Sync Todoist plugin loaded');
   }
@@ -250,10 +256,7 @@ export default class TodoistSyncPlugin extends Plugin {
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...data,
-      dailyNote: {
-        ...DEFAULT_SETTINGS.dailyNote,
-        ...(data?.dailyNote ?? {}),
-      },
+      dailyNote: normalizeDailyNoteSettings(data?.dailyNote),
       notifications: {
         ...DEFAULT_SETTINGS.notifications,
         ...(data?.notifications ?? {}),
@@ -308,6 +311,42 @@ export default class TodoistSyncPlugin extends Plugin {
    */
   getSyncState(): SyncState {
     return this.syncEngine?.getSyncState() ?? this.syncState;
+  }
+
+  private maybeShowWhatsNewModal(): void {
+    const currentVersion = this.manifest.version;
+    const lastShown = this.settings.lastReleaseNoticeVersion || '';
+    if (!isVersionNewer(currentVersion, lastShown)) return;
+
+    window.setTimeout(() => {
+      this.showWhatsNewModal(currentVersion, true);
+    }, 1500);
+  }
+
+  private showWhatsNewModal(currentVersion: string, markDismissed: boolean): void {
+    const currentEntry = entryForVersion(currentVersion);
+    if (!currentEntry) {
+      this.settings.lastReleaseNoticeVersion = currentVersion;
+      void this.saveSettings();
+      return;
+    }
+
+    new WhatsNewModal(
+      this.app,
+      this.settings.uiLanguage,
+      currentEntry,
+      RECENT_UPDATE_HIGHLIGHTS,
+      async () => {
+        if (markDismissed) {
+          this.settings.lastReleaseNoticeVersion = currentVersion;
+          await this.saveSettings();
+        }
+      }
+    ).open();
+  }
+
+  openWhatsNewModalFromSettings(): void {
+    this.showWhatsNewModal(this.manifest.version, false);
   }
 
   /**

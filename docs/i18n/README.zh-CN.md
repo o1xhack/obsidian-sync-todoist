@@ -12,19 +12,13 @@
 
 Sync Todoist 已可通过 Obsidian Community Plugins 安装。如果你之前通过 BRAT 安装了 beta 版本，可以按下面的迁移步骤停止 BRAT 更新，并继续使用社区插件版本。
 
-## 0.7.0 新功能
+## 0.8.0 新功能
 
-- 增加结构化 due 处理，覆盖 Todoist 的全天日期、浮动本地时间、固定时间和循环任务当前 occurrence。
-- 支持 Markdown 浮动时间语法：`📅 2026-06-01 15:00` 和 `due:2026-06-01 15:00`。
-- 可编辑的浮动时间会通过 Todoist `due_datetime` 同步，不再丢失几点几分。
-- 对 Markdown 无法完整表达的固定时间和循环规则，使用隐藏的 `todoist-due` 注释保留 Todoist 元数据。
-- 防止固定时间和循环任务在双向同步时被降级成一次性的纯日期任务。
-- 导入任务、查询块和 Daily Note 输出使用同一套结构化 due 显示。
-- 修复 Daily Note 已完成循环任务补回逻辑：按 Todoist API 要求用 list 参数读取活动日志，并使用已完成 occurrence 日期，而不是任务推进后的下一次 due date。
-- 当 Todoist Activity Log 延迟返回时，保留本轮同步刚完成的循环任务快照，避免 Daily Note 立刻重写时短暂消失。
-- 保留 Obsidian wikilink heading，例如 `[[note#heading]]`，不会把 heading anchor 误当成 Todoist 标签。
-- 在通用设置底部显示版本和构建信息，方便区分重复构建的 draft 包。
-- 增加 due 解析、格式化、Todoist API payload、同步规则和 Daily Note 保护逻辑的增量测试。
+- 将 Daily Note 的已完成任务开关改为三种模式：不显示已完成任务、仅保留截止日期是今天的已完成任务、显示今天完成的所有任务。
+- 为老用户保留原有行为：旧的已完成任务开关会迁移为 **显示今天完成的所有任务**。
+- 已完成循环任务仍然保留为独立选项，并在显示已完成任务时可用。
+- 改善设置页 tab 高亮在移动端的可见性，并新增可点击版本号与双语更新说明。
+- 新增 `CHANGELOG.md` 作为持续维护的版本变更记录。
 
 ## 为什么用它？
 
@@ -240,8 +234,8 @@ Daily Note 可控制：
 - 自定义 source mode 可见的 start / end marker。
 - 按项目、标签、优先级筛选任务。
 - 选择首要排序：时间优先或重要程度优先。
-- 同步今天完成的任务。
-- 在同步已完成任务开启时，额外包含今天完成的循环任务。
+- 选择哪些已完成任务保留：不显示、截止日期是今天、或今天完成的所有任务。
+- 在显示已完成任务时，额外包含已完成的循环任务 occurrence。
 - 手动运行 **Sync today** 刷新。
 
 默认 marker 区间：
@@ -265,8 +259,10 @@ Daily Note 可控制：
 
 - 未完成任务在当前 Todoist 截止日期落在今天时进入 Daily Note。
 - 带时间的 due date 和当前循环任务 occurrence，只要本地日期是今天，就会算作今天。
-- 开启 **同步已完成任务** 后，今天完成的普通任务会以 checked 状态保留。
-- 开启 **包含已完成的循环任务** 后，Sync Todoist 会额外查询活动日志，把今天完成的循环任务这一轮以 checked 状态保留。
+- **不显示已完成任务** 会从 Daily Note 区块隐藏已完成的 Todoist 任务。
+- **仅显示截止日期是今天的任务** 会保留 Todoist 截止日期属于今天的已完成任务。
+- **显示今天完成的所有任务** 会保留 Todoist 完成时间属于今天的任务，即使它原本的截止日期更早。
+- 开启 **包含已完成的循环任务** 后，Sync Todoist 会额外查询活动日志，并按所选已完成任务模式保留符合条件的循环任务 occurrence。
 - Todoist 在循环任务完成后会把任务移动到下一次出现，因此需要活动日志 fallback 才能保留今天完成的这一轮。
 - Todoist Activity Log 可能不会立刻返回刚完成的循环任务。若 Sync Todoist 在本轮同步中完成了循环任务，会先保留本地 checked 快照，直到活动日志追上。
 - Daily Note 生成行以完成状态同步为主。勾选生成行可以完成匹配的 Todoist 任务，但生成区内的标题、项目、标签、优先级和不安全 due 规则编辑不会反向推送到 Todoist。
@@ -281,10 +277,11 @@ Daily Note 可控制：
 | Default project | Inbox | 新任务默认进入的 Todoist 项目，除非任务写了 `📁 ProjectName`。 |
 | Sync interval | `5` 分钟 | 自动同步频率。设为 `0` 可关闭自动同步。 |
 | Conflict resolution | `Todoist wins` | Obsidian 和 Todoist 同时改动同一任务时的处理策略。 |
+| 版本 | 当前版本 | 显示当前版本号和 Build 时间。点击版本号可查看更新说明。 |
 | Daily Note filters | 全部 | 控制今天 Daily Note 区块的项目、标签和优先级筛选。 |
 | Daily Note 首要排序 | `时间优先` | Daily Note 任务按时间再按优先级排序，或按优先级再按时间排序。 |
-| 同步已完成任务 | 关 | 将今天完成的 Todoist 任务保留在 Daily Note 区块中。 |
-| 包含已完成的循环任务 | 关 | 只在同步已完成任务开启时显示。通过活动日志补回今天完成的循环任务。 |
+| 已完成任务 | `不显示已完成任务` | 控制 Daily Note 不显示已完成任务、显示截止日期是今天的已完成任务，或显示今天完成的所有任务。 |
+| 包含已完成的循环任务 | 关 | 只在显示已完成任务时显示。通过活动日志补回已完成的循环任务 occurrence。 |
 | Manual sync notices | 开 | 手动同步后显示简短的 `Sync Todoist:` 完成通知。 |
 | Automatic sync notices | 开 | 桌面端和移动端的定时同步都会显示通知，包括 0 变化摘要。 |
 | 构建信息 | 当前构建 | 在通用设置底部显示插件版本、构建号和构建时间。 |
@@ -311,7 +308,7 @@ npm test
 
 请使用 [test/TEST_SPEC_v2.0.0.md](../../test/TEST_SPEC_v2.0.0.md) 在测试 vault 和 Todoist 账号中做手动 QA。
 
-Release tag 必须和 `manifest.json` 的 `version` 完全一致，每个公开 release 都必须附带 `main.js`、`manifest.json` 和 `styles.css`。详见 [RELEASE.md](../../RELEASE.md)。
+Release tag 必须和 `manifest.json` 的 `version` 完全一致，每个公开 release 都必须附带 `main.js`、`manifest.json` 和 `styles.css`。详见 [RELEASE.md](../../RELEASE.md) 和 [CHANGELOG.md](../../CHANGELOG.md)。
 
 ## 常见问题
 

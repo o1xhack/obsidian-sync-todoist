@@ -368,7 +368,8 @@ export class SyncEngine {
 
   private async getDailyNoteSourceTasks(): Promise<TodoistTask[]> {
     const activeTasks = await this.todoistService.getTasks();
-    if (!this.settings.dailyNote.includeCompleted) {
+    const completedTaskMode = this.settings.dailyNote.completedTaskMode;
+    if (completedTaskMode === 'off') {
       return activeTasks;
     }
 
@@ -378,7 +379,7 @@ export class SyncEngine {
     until.setDate(since.getDate() + 1);
 
     const completedTasks = await this.todoistService.getCompletedTasks({
-      by: 'completion_date',
+      by: completedTaskMode === 'due-today' ? 'due_date' : 'completion_date',
       since,
       until,
     });

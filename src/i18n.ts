@@ -47,8 +47,9 @@ export type I18nKey =
   | 'general.status.api'
   | 'general.status.connected'
   | 'general.status.disconnected'
-  | 'general.buildInfo.name'
-  | 'general.buildInfo.desc'
+  | 'general.version.name'
+  | 'general.version.value'
+  | 'general.version.openWhatsNew'
   | 'daily.enable.name'
   | 'daily.enable.desc'
   | 'daily.markerStart.name'
@@ -60,8 +61,11 @@ export type I18nKey =
   | 'daily.sort.desc'
   | 'daily.sort.time'
   | 'daily.sort.priority'
-  | 'daily.includeCompleted.name'
-  | 'daily.includeCompleted.desc'
+  | 'daily.completedTaskMode.name'
+  | 'daily.completedTaskMode.desc'
+  | 'daily.completedTaskMode.off'
+  | 'daily.completedTaskMode.dueToday'
+  | 'daily.completedTaskMode.completedToday'
   | 'daily.includeCompletedRecurring.name'
   | 'daily.includeCompletedRecurring.desc'
   | 'daily.syncNow.name'
@@ -82,7 +86,12 @@ export type I18nKey =
   | 'priority.urgent'
   | 'priority.high'
   | 'priority.medium'
-  | 'priority.normal';
+  | 'priority.normal'
+  | 'whatsNew.title'
+  | 'whatsNew.currentVersion'
+  | 'whatsNew.recent'
+  | 'whatsNew.footer'
+  | 'whatsNew.dismiss';
 
 const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
   en: {
@@ -132,8 +141,9 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'general.status.api': 'API status: {{status}}',
     'general.status.connected': 'Connected',
     'general.status.disconnected': 'Not connected',
-    'general.buildInfo.name': 'Build info',
-    'general.buildInfo.desc': 'Version {{version}} · Build {{build}} · Built {{date}}',
+    'general.version.name': 'Version',
+    'general.version.value': '{{version}} (Build {{date}})',
+    'general.version.openWhatsNew': 'View update notes',
     'daily.enable.name': 'Daily Note',
     'daily.enable.desc': 'Write today\'s matching tasks into the managed marker region of today\'s Daily Note.',
     'daily.markerStart.name': 'Marker start',
@@ -145,10 +155,13 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.sort.desc': 'Choose the first Daily Note sort dimension. The secondary sort is the other dimension.',
     'daily.sort.time': 'Time first',
     'daily.sort.priority': 'Priority first',
-    'daily.includeCompleted.name': 'Include completed tasks',
-    'daily.includeCompleted.desc': 'Keep Todoist tasks completed today in the Daily Note block and sorted in place, regardless of due date.',
+    'daily.completedTaskMode.name': 'Completed tasks',
+    'daily.completedTaskMode.desc': 'Choose which completed Todoist tasks stay in today\'s Daily Note block.',
+    'daily.completedTaskMode.off': 'Do not show completed tasks',
+    'daily.completedTaskMode.dueToday': 'Only tasks due today',
+    'daily.completedTaskMode.completedToday': 'All tasks completed today',
     'daily.includeCompletedRecurring.name': 'Include completed recurring tasks',
-    'daily.includeCompletedRecurring.desc': 'Also keep recurring tasks completed today. Todoist moves recurring tasks to their next occurrence, so Sync Todoist uses the activity log to keep today\'s completed occurrence.',
+    'daily.includeCompletedRecurring.desc': 'Also keep completed recurring occurrences. Todoist moves recurring tasks to their next occurrence, so Sync Todoist uses the activity log to recover the completed occurrence.',
     'daily.syncNow.name': 'Sync Daily Note now',
     'daily.syncNow.desc': 'Refresh today\'s Daily Note using the current filter settings.',
     'daily.syncNow.button': 'Sync today',
@@ -168,6 +181,11 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'priority.high': 'High (p2)',
     'priority.medium': 'Medium (p3)',
     'priority.normal': 'Normal (p4)',
+    'whatsNew.title': 'Update notes',
+    'whatsNew.currentVersion': '{{version}} current release',
+    'whatsNew.recent': 'Recent highlights',
+    'whatsNew.footer': 'Only major feature updates are highlighted here. See CHANGELOG.md for the full history.',
+    'whatsNew.dismiss': 'Got it',
   },
   'zh-CN': {
     'tab.general': '通用',
@@ -216,8 +234,9 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'general.status.api': 'API 状态：{{status}}',
     'general.status.connected': '已连接',
     'general.status.disconnected': '未连接',
-    'general.buildInfo.name': '构建信息',
-    'general.buildInfo.desc': '版本 {{version}} · Build {{build}} · 构建时间 {{date}}',
+    'general.version.name': '版本',
+    'general.version.value': '{{version}}（Build {{date}}）',
+    'general.version.openWhatsNew': '查看更新说明',
     'daily.enable.name': '每日 Daily Note',
     'daily.enable.desc': '将今天符合条件的任务写入当天 Daily Note 的受控 Marker 区间。',
     'daily.markerStart.name': '开始 Marker',
@@ -229,10 +248,13 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.sort.desc': '选择 Daily Note 的第一级排序维度，第二级排序会使用另一个维度。',
     'daily.sort.time': '时间优先',
     'daily.sort.priority': '重要程度优先',
-    'daily.includeCompleted.name': '同步已完成任务',
-    'daily.includeCompleted.desc': '将今天标记完成的 Todoist 任务保留在 Daily Note 区间中，并按排序规则放在原位置，不要求截止日期是今天。',
+    'daily.completedTaskMode.name': '已完成任务',
+    'daily.completedTaskMode.desc': '选择哪些已完成的 Todoist 任务保留在今天的 Daily Note 区间中。',
+    'daily.completedTaskMode.off': '不显示已完成任务',
+    'daily.completedTaskMode.dueToday': '仅显示截止日期是今天的任务',
+    'daily.completedTaskMode.completedToday': '显示今天完成的所有任务',
     'daily.includeCompletedRecurring.name': '包含已完成的循环任务',
-    'daily.includeCompletedRecurring.desc': '同时保留今天完成的循环任务。Todoist 会把循环任务移动到下一次出现，因此 Sync Todoist 会用活动日志保留今天完成的这一轮。',
+    'daily.includeCompletedRecurring.desc': '同时保留已完成的循环任务 occurrence。Todoist 会把循环任务移动到下一次出现，因此 Sync Todoist 会用活动日志补回已完成的这一轮。',
     'daily.syncNow.name': '立即同步 Daily Note',
     'daily.syncNow.desc': '使用当前筛选设置刷新今天的 Daily Note。',
     'daily.syncNow.button': '同步今天',
@@ -252,6 +274,11 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'priority.high': '高 (p2)',
     'priority.medium': '中 (p3)',
     'priority.normal': '普通 (p4)',
+    'whatsNew.title': '更新说明',
+    'whatsNew.currentVersion': '{{version}} 当前版本',
+    'whatsNew.recent': '近期重点更新',
+    'whatsNew.footer': '这里仅突出重要功能更新，完整变更历史请查看 CHANGELOG.md。',
+    'whatsNew.dismiss': '知道了',
   },
 };
 

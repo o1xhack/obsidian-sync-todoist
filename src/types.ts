@@ -18,6 +18,8 @@ export interface TodoistSyncSettings {
   dailyNote: DailyNoteSettings;
   /** Notification behavior */
   notifications: NotificationSettings;
+  /** Last plugin version whose update notes were dismissed */
+  lastReleaseNoticeVersion: string;
 }
 
 /**
@@ -26,6 +28,7 @@ export interface TodoistSyncSettings {
 export type ConflictResolution = 'obsidian-wins' | 'todoist-wins' | 'ask-user';
 export type UiLanguage = 'en' | 'zh-CN';
 export type DailyNoteSortMode = 'time' | 'priority';
+export type DailyNoteCompletedTaskMode = 'off' | 'due-today' | 'completed-today';
 export type StructuredDueKind = 'none' | 'date' | 'floating' | 'fixed' | 'recurring';
 export type StructuredDueSource = 'markdown' | 'todoist' | 'metadata';
 
@@ -65,9 +68,9 @@ export interface DailyNoteSettings {
   priorities: TodoistPriority[];
   /** Primary sorting dimension for Daily Note tasks */
   sortMode: DailyNoteSortMode;
-  /** Whether completed tasks due today should remain in the Daily Note block */
-  includeCompleted: boolean;
-  /** Whether completed recurring occurrences should be kept when includeCompleted is enabled */
+  /** Which completed tasks should remain in the Daily Note block */
+  completedTaskMode: DailyNoteCompletedTaskMode;
+  /** Whether completed recurring occurrences should be kept when completed tasks are enabled */
   includeCompletedRecurring: boolean;
 }
 
@@ -99,13 +102,14 @@ export const DEFAULT_SETTINGS: TodoistSyncSettings = {
     labels: [],
     priorities: [],
     sortMode: 'time',
-    includeCompleted: false,
+    completedTaskMode: 'off',
     includeCompletedRecurring: false,
   },
   notifications: {
     manualSync: true,
     automaticSync: true,
   },
+  lastReleaseNoticeVersion: '',
 };
 
 /**

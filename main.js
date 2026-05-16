@@ -27,7 +27,7 @@ __export(main_exports, {
   default: () => TodoistSyncPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/settings.ts
 var import_obsidian2 = require("obsidian");
@@ -50,13 +50,14 @@ var DEFAULT_SETTINGS = {
     labels: [],
     priorities: [],
     sortMode: "time",
-    includeCompleted: false,
+    completedTaskMode: "off",
     includeCompletedRecurring: false
   },
   notifications: {
     manualSync: true,
     automaticSync: true
-  }
+  },
+  lastReleaseNoticeVersion: ""
 };
 function normalizeTask(raw) {
   var _a, _b, _c, _d;
@@ -141,8 +142,9 @@ var STRINGS = {
     "general.status.api": "API status: {{status}}",
     "general.status.connected": "Connected",
     "general.status.disconnected": "Not connected",
-    "general.buildInfo.name": "Build info",
-    "general.buildInfo.desc": "Version {{version}} \xB7 Build {{build}} \xB7 Built {{date}}",
+    "general.version.name": "Version",
+    "general.version.value": "{{version}} (Build {{date}})",
+    "general.version.openWhatsNew": "View update notes",
     "daily.enable.name": "Daily Note",
     "daily.enable.desc": "Write today's matching tasks into the managed marker region of today's Daily Note.",
     "daily.markerStart.name": "Marker start",
@@ -154,10 +156,13 @@ var STRINGS = {
     "daily.sort.desc": "Choose the first Daily Note sort dimension. The secondary sort is the other dimension.",
     "daily.sort.time": "Time first",
     "daily.sort.priority": "Priority first",
-    "daily.includeCompleted.name": "Include completed tasks",
-    "daily.includeCompleted.desc": "Keep Todoist tasks completed today in the Daily Note block and sorted in place, regardless of due date.",
+    "daily.completedTaskMode.name": "Completed tasks",
+    "daily.completedTaskMode.desc": "Choose which completed Todoist tasks stay in today's Daily Note block.",
+    "daily.completedTaskMode.off": "Do not show completed tasks",
+    "daily.completedTaskMode.dueToday": "Only tasks due today",
+    "daily.completedTaskMode.completedToday": "All tasks completed today",
     "daily.includeCompletedRecurring.name": "Include completed recurring tasks",
-    "daily.includeCompletedRecurring.desc": "Also keep recurring tasks completed today. Todoist moves recurring tasks to their next occurrence, so Sync Todoist uses the activity log to keep today's completed occurrence.",
+    "daily.includeCompletedRecurring.desc": "Also keep completed recurring occurrences. Todoist moves recurring tasks to their next occurrence, so Sync Todoist uses the activity log to recover the completed occurrence.",
     "daily.syncNow.name": "Sync Daily Note now",
     "daily.syncNow.desc": "Refresh today's Daily Note using the current filter settings.",
     "daily.syncNow.button": "Sync today",
@@ -176,7 +181,12 @@ var STRINGS = {
     "priority.urgent": "Urgent (p1)",
     "priority.high": "High (p2)",
     "priority.medium": "Medium (p3)",
-    "priority.normal": "Normal (p4)"
+    "priority.normal": "Normal (p4)",
+    "whatsNew.title": "Update notes",
+    "whatsNew.currentVersion": "{{version}} current release",
+    "whatsNew.recent": "Recent highlights",
+    "whatsNew.footer": "Only major feature updates are highlighted here. See CHANGELOG.md for the full history.",
+    "whatsNew.dismiss": "Got it"
   },
   "zh-CN": {
     "tab.general": "\u901A\u7528",
@@ -225,8 +235,9 @@ var STRINGS = {
     "general.status.api": "API \u72B6\u6001\uFF1A{{status}}",
     "general.status.connected": "\u5DF2\u8FDE\u63A5",
     "general.status.disconnected": "\u672A\u8FDE\u63A5",
-    "general.buildInfo.name": "\u6784\u5EFA\u4FE1\u606F",
-    "general.buildInfo.desc": "\u7248\u672C {{version}} \xB7 Build {{build}} \xB7 \u6784\u5EFA\u65F6\u95F4 {{date}}",
+    "general.version.name": "\u7248\u672C",
+    "general.version.value": "{{version}}\uFF08Build {{date}}\uFF09",
+    "general.version.openWhatsNew": "\u67E5\u770B\u66F4\u65B0\u8BF4\u660E",
     "daily.enable.name": "\u6BCF\u65E5 Daily Note",
     "daily.enable.desc": "\u5C06\u4ECA\u5929\u7B26\u5408\u6761\u4EF6\u7684\u4EFB\u52A1\u5199\u5165\u5F53\u5929 Daily Note \u7684\u53D7\u63A7 Marker \u533A\u95F4\u3002",
     "daily.markerStart.name": "\u5F00\u59CB Marker",
@@ -238,10 +249,13 @@ var STRINGS = {
     "daily.sort.desc": "\u9009\u62E9 Daily Note \u7684\u7B2C\u4E00\u7EA7\u6392\u5E8F\u7EF4\u5EA6\uFF0C\u7B2C\u4E8C\u7EA7\u6392\u5E8F\u4F1A\u4F7F\u7528\u53E6\u4E00\u4E2A\u7EF4\u5EA6\u3002",
     "daily.sort.time": "\u65F6\u95F4\u4F18\u5148",
     "daily.sort.priority": "\u91CD\u8981\u7A0B\u5EA6\u4F18\u5148",
-    "daily.includeCompleted.name": "\u540C\u6B65\u5DF2\u5B8C\u6210\u4EFB\u52A1",
-    "daily.includeCompleted.desc": "\u5C06\u4ECA\u5929\u6807\u8BB0\u5B8C\u6210\u7684 Todoist \u4EFB\u52A1\u4FDD\u7559\u5728 Daily Note \u533A\u95F4\u4E2D\uFF0C\u5E76\u6309\u6392\u5E8F\u89C4\u5219\u653E\u5728\u539F\u4F4D\u7F6E\uFF0C\u4E0D\u8981\u6C42\u622A\u6B62\u65E5\u671F\u662F\u4ECA\u5929\u3002",
+    "daily.completedTaskMode.name": "\u5DF2\u5B8C\u6210\u4EFB\u52A1",
+    "daily.completedTaskMode.desc": "\u9009\u62E9\u54EA\u4E9B\u5DF2\u5B8C\u6210\u7684 Todoist \u4EFB\u52A1\u4FDD\u7559\u5728\u4ECA\u5929\u7684 Daily Note \u533A\u95F4\u4E2D\u3002",
+    "daily.completedTaskMode.off": "\u4E0D\u663E\u793A\u5DF2\u5B8C\u6210\u4EFB\u52A1",
+    "daily.completedTaskMode.dueToday": "\u4EC5\u663E\u793A\u622A\u6B62\u65E5\u671F\u662F\u4ECA\u5929\u7684\u4EFB\u52A1",
+    "daily.completedTaskMode.completedToday": "\u663E\u793A\u4ECA\u5929\u5B8C\u6210\u7684\u6240\u6709\u4EFB\u52A1",
     "daily.includeCompletedRecurring.name": "\u5305\u542B\u5DF2\u5B8C\u6210\u7684\u5FAA\u73AF\u4EFB\u52A1",
-    "daily.includeCompletedRecurring.desc": "\u540C\u65F6\u4FDD\u7559\u4ECA\u5929\u5B8C\u6210\u7684\u5FAA\u73AF\u4EFB\u52A1\u3002Todoist \u4F1A\u628A\u5FAA\u73AF\u4EFB\u52A1\u79FB\u52A8\u5230\u4E0B\u4E00\u6B21\u51FA\u73B0\uFF0C\u56E0\u6B64 Sync Todoist \u4F1A\u7528\u6D3B\u52A8\u65E5\u5FD7\u4FDD\u7559\u4ECA\u5929\u5B8C\u6210\u7684\u8FD9\u4E00\u8F6E\u3002",
+    "daily.includeCompletedRecurring.desc": "\u540C\u65F6\u4FDD\u7559\u5DF2\u5B8C\u6210\u7684\u5FAA\u73AF\u4EFB\u52A1 occurrence\u3002Todoist \u4F1A\u628A\u5FAA\u73AF\u4EFB\u52A1\u79FB\u52A8\u5230\u4E0B\u4E00\u6B21\u51FA\u73B0\uFF0C\u56E0\u6B64 Sync Todoist \u4F1A\u7528\u6D3B\u52A8\u65E5\u5FD7\u8865\u56DE\u5DF2\u5B8C\u6210\u7684\u8FD9\u4E00\u8F6E\u3002",
     "daily.syncNow.name": "\u7ACB\u5373\u540C\u6B65 Daily Note",
     "daily.syncNow.desc": "\u4F7F\u7528\u5F53\u524D\u7B5B\u9009\u8BBE\u7F6E\u5237\u65B0\u4ECA\u5929\u7684 Daily Note\u3002",
     "daily.syncNow.button": "\u540C\u6B65\u4ECA\u5929",
@@ -260,7 +274,12 @@ var STRINGS = {
     "priority.urgent": "\u7D27\u6025 (p1)",
     "priority.high": "\u9AD8 (p2)",
     "priority.medium": "\u4E2D (p3)",
-    "priority.normal": "\u666E\u901A (p4)"
+    "priority.normal": "\u666E\u901A (p4)",
+    "whatsNew.title": "\u66F4\u65B0\u8BF4\u660E",
+    "whatsNew.currentVersion": "{{version}} \u5F53\u524D\u7248\u672C",
+    "whatsNew.recent": "\u8FD1\u671F\u91CD\u70B9\u66F4\u65B0",
+    "whatsNew.footer": "\u8FD9\u91CC\u4EC5\u7A81\u51FA\u91CD\u8981\u529F\u80FD\u66F4\u65B0\uFF0C\u5B8C\u6574\u53D8\u66F4\u5386\u53F2\u8BF7\u67E5\u770B CHANGELOG.md\u3002",
+    "whatsNew.dismiss": "\u77E5\u9053\u4E86"
   }
 };
 function t(language, key, values = {}) {
@@ -337,9 +356,9 @@ function noticeDurationForDailyNote(result) {
 // src/build-info.ts
 function getBuildInfo() {
   return {
-    version: "0.7.0",
-    buildDate: "2026-05-14T05:01:56.983Z",
-    buildNumber: "202605140501"
+    version: "0.8.0",
+    buildDate: "2026-05-16T22:17:23.295Z",
+    buildNumber: "202605162217"
   };
 }
 function formatBuildDate(buildDate) {
@@ -383,6 +402,13 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     this.renderGeneralSettings(containerEl);
   }
   renderGeneralSettings(containerEl) {
+    const buildInfo = getBuildInfo();
+    new import_obsidian2.Setting(containerEl).setName(this.tr("general.version.name")).setDesc(this.tr("general.version.value", {
+      version: buildInfo.version,
+      date: formatBuildDate(buildInfo.buildDate)
+    })).addButton(
+      (button) => button.setButtonText(buildInfo.version).setTooltip(this.tr("general.version.openWhatsNew")).onClick(() => this.plugin.openWhatsNewModalFromSettings())
+    );
     new import_obsidian2.Setting(containerEl).setName(this.tr("general.language.name")).setDesc(this.tr("general.language.desc")).addDropdown((dropdown) => {
       dropdown.addOption("en", this.tr("general.language.en")).addOption("zh-CN", this.tr("general.language.zh")).setValue(this.plugin.settings.uiLanguage).onChange(async (value) => {
         this.plugin.settings.uiLanguage = value;
@@ -513,12 +539,6 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     new import_obsidian2.Setting(containerEl).setName(this.tr("general.status")).setHeading();
     const statusEl = containerEl.createDiv({ cls: "todoist-sync-status" });
     this.updateStatusDisplay(statusEl);
-    const buildInfo = getBuildInfo();
-    new import_obsidian2.Setting(containerEl).setName(this.tr("general.buildInfo.name")).setDesc(this.tr("general.buildInfo.desc", {
-      version: buildInfo.version,
-      build: buildInfo.buildNumber,
-      date: formatBuildDate(buildInfo.buildDate)
-    }));
   }
   renderTabBar(parent) {
     const bar = parent.createDiv({ cls: "sync-todoist-tab-bar" });
@@ -574,16 +594,16 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.includeCompleted.name")).setDesc(this.tr("daily.includeCompleted.desc")).addToggle(
-      (toggle) => toggle.setValue(this.plugin.settings.dailyNote.includeCompleted).onChange(async (value) => {
-        this.plugin.settings.dailyNote.includeCompleted = value;
-        if (!value)
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.completedTaskMode.name")).setDesc(this.tr("daily.completedTaskMode.desc")).addDropdown((dropdown) => {
+      dropdown.addOption("off", this.tr("daily.completedTaskMode.off")).addOption("due-today", this.tr("daily.completedTaskMode.dueToday")).addOption("completed-today", this.tr("daily.completedTaskMode.completedToday")).setValue(this.plugin.settings.dailyNote.completedTaskMode).onChange(async (value) => {
+        this.plugin.settings.dailyNote.completedTaskMode = value;
+        if (value === "off")
           this.plugin.settings.dailyNote.includeCompletedRecurring = false;
         await this.plugin.saveSettings();
         this.display();
-      })
-    );
-    if (this.plugin.settings.dailyNote.includeCompleted) {
+      });
+    });
+    if (this.plugin.settings.dailyNote.completedTaskMode !== "off") {
       new import_obsidian2.Setting(containerEl).setName(this.tr("daily.includeCompletedRecurring.name")).setDesc(this.tr("daily.includeCompletedRecurring.desc")).addToggle(
         (toggle) => toggle.setValue(this.plugin.settings.dailyNote.includeCompletedRecurring).onChange(async (value) => {
           this.plugin.settings.dailyNote.includeCompletedRecurring = value;
@@ -1753,10 +1773,14 @@ function extractTodoistIdsFromMarkerRegion(content, markerStart, markerEnd) {
 function taskMatchesDailyNoteFilter(task, filter) {
   var _a;
   if (task.isCompleted) {
-    if (!filter.includeCompleted)
+    if (filter.completedTaskMode === "off")
       return false;
-    if (localDateFromTimestamp(task.completedAt) !== filter.today)
+    if (filter.completedTaskMode === "completed-today" && localDateFromTimestamp(task.completedAt) !== filter.today) {
       return false;
+    }
+    if (filter.completedTaskMode === "due-today" && localDateFromTodoistDue(task.due) !== filter.today) {
+      return false;
+    }
   } else if (localDateFromTodoistDue(task.due) !== filter.today) {
     return false;
   }
@@ -1872,7 +1896,7 @@ function filterDailyNoteTasks(tasks, settings, today) {
     projectIds: settings.projectIds,
     labels: settings.labels,
     priorities: settings.priorities,
-    includeCompleted: settings.includeCompleted
+    completedTaskMode: settings.completedTaskMode
   };
   return tasks.filter((task) => taskMatchesDailyNoteFilter(task, filter));
 }
@@ -2228,7 +2252,8 @@ var SyncEngine = class {
   }
   async getDailyNoteSourceTasks() {
     const activeTasks = await this.todoistService.getTasks();
-    if (!this.settings.dailyNote.includeCompleted) {
+    const completedTaskMode = this.settings.dailyNote.completedTaskMode;
+    if (completedTaskMode === "off") {
       return activeTasks;
     }
     const today = localTodayISODate();
@@ -2236,7 +2261,7 @@ var SyncEngine = class {
     const until = new Date(since);
     until.setDate(since.getDate() + 1);
     const completedTasks = await this.todoistService.getCompletedTasks({
-      by: "completion_date",
+      by: completedTaskMode === "due-today" ? "due_date" : "completion_date",
       since,
       until
     });
@@ -3242,11 +3267,153 @@ function renderQueryBlock(source, el, plugin) {
   void loadTasks();
 }
 
+// src/release-log.ts
+var RELEASE_LOG = [
+  {
+    version: "0.8.0",
+    titleEn: "Daily Note completed-task modes",
+    titleZh: "Daily Note \u5DF2\u5B8C\u6210\u4EFB\u52A1\u6A21\u5F0F",
+    en: "Daily Note completed tasks now have three clear modes: hide completed tasks, keep completed tasks due today, or keep all tasks completed today. Existing users keep the previous behavior after upgrade.",
+    zh: "Daily Note \u7684\u5DF2\u5B8C\u6210\u4EFB\u52A1\u73B0\u5728\u6709\u4E09\u79CD\u660E\u786E\u6A21\u5F0F\uFF1A\u4E0D\u663E\u793A\u5DF2\u5B8C\u6210\u4EFB\u52A1\u3001\u4FDD\u7559\u622A\u6B62\u65E5\u671F\u662F\u4ECA\u5929\u7684\u5DF2\u5B8C\u6210\u4EFB\u52A1\uFF0C\u6216\u663E\u793A\u4ECA\u5929\u5B8C\u6210\u7684\u6240\u6709\u4EFB\u52A1\u3002\u8001\u7528\u6237\u5347\u7EA7\u540E\u4F1A\u4FDD\u7559\u539F\u6709\u884C\u4E3A\u3002"
+  },
+  {
+    version: "0.7.0",
+    titleEn: "Structured due, time, and recurring safety",
+    titleZh: "\u7ED3\u6784\u5316 due\u3001\u65F6\u95F4\u548C\u5FAA\u73AF\u4EFB\u52A1\u4FDD\u62A4",
+    en: "Added structured due handling for all-day dates, floating local times, fixed times, and recurring occurrences, with safeguards that prevent recurring or timed Todoist tasks from being downgraded by Markdown edits.",
+    zh: "\u65B0\u589E\u5168\u5929\u65E5\u671F\u3001\u6D6E\u52A8\u672C\u5730\u65F6\u95F4\u3001\u56FA\u5B9A\u65F6\u95F4\u548C\u5FAA\u73AF\u4EFB\u52A1 occurrence \u7684\u7ED3\u6784\u5316 due \u5904\u7406\uFF0C\u5E76\u9632\u6B62 Markdown \u7F16\u8F91\u628A Todoist \u7684\u5FAA\u73AF\u6216\u5B9A\u65F6\u4EFB\u52A1\u964D\u7EA7\u3002"
+  },
+  {
+    version: "0.6.2",
+    titleEn: "Completed recurring recovery",
+    titleZh: "\u5DF2\u5B8C\u6210\u5FAA\u73AF\u4EFB\u52A1\u8865\u56DE",
+    en: "Daily Note can recover completed recurring occurrences through Todoist activity logs, while generated Daily Note rows remain completion-focused.",
+    zh: "Daily Note \u53EF\u901A\u8FC7 Todoist \u6D3B\u52A8\u65E5\u5FD7\u8865\u56DE\u5DF2\u5B8C\u6210\u7684\u5FAA\u73AF\u4EFB\u52A1 occurrence\uFF0C\u540C\u65F6\u751F\u6210\u884C\u4ECD\u7136\u53EA\u4E13\u6CE8\u540C\u6B65\u5B8C\u6210\u72B6\u6001\u3002"
+  },
+  {
+    version: "0.5.0",
+    titleEn: "Daily Note polish",
+    titleZh: "Daily Note \u4F53\u9A8C\u5B8C\u5584",
+    en: "Added English and Simplified Chinese settings, Daily Note sorting, completed-task inclusion, and marker overwrite warnings.",
+    zh: "\u65B0\u589E\u82F1\u6587\u548C\u7B80\u4F53\u4E2D\u6587\u8BBE\u7F6E\u754C\u9762\u3001Daily Note \u6392\u5E8F\u3001\u5DF2\u5B8C\u6210\u4EFB\u52A1\u4FDD\u7559\uFF0C\u4EE5\u53CA marker \u8986\u76D6\u63D0\u9192\u3002"
+  }
+];
+var RECENT_UPDATE_HIGHLIGHTS = [
+  {
+    en: "Daily Note can distinguish planning mode from completion-log mode.",
+    zh: "Daily Note \u73B0\u5728\u53EF\u4EE5\u533A\u5206\u201C\u4ECA\u65E5\u8BA1\u5212\u201D\u548C\u201C\u4ECA\u65E5\u5B8C\u6210\u65E5\u5FD7\u201D\u4E24\u79CD\u4F7F\u7528\u65B9\u5F0F\u3002"
+  },
+  {
+    en: "Recurring and timed Todoist due rules are preserved instead of being silently downgraded.",
+    zh: "Todoist \u7684\u5FAA\u73AF\u548C\u5B9A\u65F6 due \u89C4\u5219\u4F1A\u88AB\u4FDD\u7559\uFF0C\u4E0D\u4F1A\u88AB\u9759\u9ED8\u964D\u7EA7\u3002"
+  },
+  {
+    en: "Generated Daily Note rows can complete Todoist tasks without pushing title, project, label, or unsafe due edits back to Todoist.",
+    zh: "Daily Note \u751F\u6210\u884C\u53EF\u4EE5\u5B8C\u6210 Todoist \u4EFB\u52A1\uFF0C\u4F46\u4E0D\u4F1A\u628A\u6807\u9898\u3001\u9879\u76EE\u3001\u6807\u7B7E\u6216\u4E0D\u5B89\u5168 due \u7F16\u8F91\u53CD\u5411\u63A8\u56DE Todoist\u3002"
+  }
+];
+function entryForVersion(version) {
+  return RELEASE_LOG.find((entry) => entry.version === version);
+}
+function isVersionNewer(a, b) {
+  if (!a)
+    return false;
+  if (!b)
+    return true;
+  const pa = a.split(".").map((n) => parseInt(n, 10));
+  const pb = b.split(".").map((n) => parseInt(n, 10));
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const av = pa[i] || 0;
+    const bv = pb[i] || 0;
+    if (av > bv)
+      return true;
+    if (av < bv)
+      return false;
+  }
+  return false;
+}
+
+// src/whats-new-modal.ts
+var import_obsidian6 = require("obsidian");
+var WhatsNewModal = class extends import_obsidian6.Modal {
+  constructor(app, language, currentEntry, highlights, onDismiss) {
+    super(app);
+    this.language = language;
+    this.currentEntry = currentEntry;
+    this.highlights = highlights;
+    this.onDismiss = onDismiss;
+  }
+  tr(key, values) {
+    return t(this.language, key, values);
+  }
+  onOpen() {
+    const { contentEl, titleEl } = this;
+    titleEl.setText(this.tr("whatsNew.title"));
+    contentEl.createEl("h3", {
+      text: this.tr("whatsNew.currentVersion", { version: this.currentEntry.version })
+    });
+    contentEl.createEl("p", {
+      cls: "sync-todoist-whatsnew-current-title",
+      text: this.language === "zh-CN" ? this.currentEntry.titleZh : this.currentEntry.titleEn
+    });
+    contentEl.createEl("p", {
+      text: this.language === "zh-CN" ? this.currentEntry.zh : this.currentEntry.en
+    });
+    contentEl.createEl("h3", { text: this.tr("whatsNew.recent") });
+    const list = contentEl.createEl("ul", { cls: "sync-todoist-whatsnew-list" });
+    for (const highlight of this.highlights) {
+      list.createEl("li", {
+        text: this.language === "zh-CN" ? highlight.zh : highlight.en
+      });
+    }
+    contentEl.createEl("p", {
+      cls: "sync-todoist-whatsnew-footer",
+      text: this.tr("whatsNew.footer")
+    });
+    const buttons = contentEl.createDiv({ cls: "sync-todoist-modal-buttons" });
+    const dismissButton = buttons.createEl("button", {
+      text: this.tr("whatsNew.dismiss"),
+      cls: "mod-cta"
+    });
+    dismissButton.onclick = async () => {
+      this.close();
+      await this.onDismiss();
+    };
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+};
+
+// src/settings-normalization.ts
+function isDailyNoteCompletedTaskMode(value) {
+  return value === "off" || value === "due-today" || value === "completed-today";
+}
+function normalizeDailyNoteSettings(settings) {
+  const merged = {
+    ...DEFAULT_SETTINGS.dailyNote,
+    ...settings != null ? settings : {}
+  };
+  const completedTaskMode = isDailyNoteCompletedTaskMode(settings == null ? void 0 : settings.completedTaskMode) ? settings.completedTaskMode : (settings == null ? void 0 : settings.includeCompleted) === true ? "completed-today" : DEFAULT_SETTINGS.dailyNote.completedTaskMode;
+  return {
+    enabled: merged.enabled,
+    markerStart: merged.markerStart,
+    markerEnd: merged.markerEnd,
+    projectIds: merged.projectIds,
+    labels: merged.labels,
+    priorities: merged.priorities,
+    sortMode: merged.sortMode,
+    completedTaskMode,
+    includeCompletedRecurring: completedTaskMode === "off" ? false : merged.includeCompletedRecurring
+  };
+}
+
 // src/main.ts
 function isRecord(value) {
   return typeof value === "object" && value !== null;
 }
-var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
+var TodoistSyncPlugin = class extends import_obsidian7.Plugin {
   constructor() {
     super(...arguments);
     this.syncIntervalId = null;
@@ -3277,6 +3444,7 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
       renderQueryBlock(source, el, this);
     });
     this.startSyncInterval();
+    this.maybeShowWhatsNewModal();
     console.debug("Sync Todoist plugin loaded");
   }
   onunload() {
@@ -3408,18 +3576,15 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
    * Load plugin settings
    */
   async loadSettings() {
-    var _a, _b;
+    var _a;
     const data = await this.loadPluginData();
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...data,
-      dailyNote: {
-        ...DEFAULT_SETTINGS.dailyNote,
-        ...(_a = data == null ? void 0 : data.dailyNote) != null ? _a : {}
-      },
+      dailyNote: normalizeDailyNoteSettings(data == null ? void 0 : data.dailyNote),
       notifications: {
         ...DEFAULT_SETTINGS.notifications,
-        ...(_b = data == null ? void 0 : data.notifications) != null ? _b : {}
+        ...(_a = data == null ? void 0 : data.notifications) != null ? _a : {}
       }
     };
   }
@@ -3466,6 +3631,38 @@ var TodoistSyncPlugin = class extends import_obsidian6.Plugin {
   getSyncState() {
     var _a, _b;
     return (_b = (_a = this.syncEngine) == null ? void 0 : _a.getSyncState()) != null ? _b : this.syncState;
+  }
+  maybeShowWhatsNewModal() {
+    const currentVersion = this.manifest.version;
+    const lastShown = this.settings.lastReleaseNoticeVersion || "";
+    if (!isVersionNewer(currentVersion, lastShown))
+      return;
+    window.setTimeout(() => {
+      this.showWhatsNewModal(currentVersion, true);
+    }, 1500);
+  }
+  showWhatsNewModal(currentVersion, markDismissed) {
+    const currentEntry = entryForVersion(currentVersion);
+    if (!currentEntry) {
+      this.settings.lastReleaseNoticeVersion = currentVersion;
+      void this.saveSettings();
+      return;
+    }
+    new WhatsNewModal(
+      this.app,
+      this.settings.uiLanguage,
+      currentEntry,
+      RECENT_UPDATE_HIGHLIGHTS,
+      async () => {
+        if (markDismissed) {
+          this.settings.lastReleaseNoticeVersion = currentVersion;
+          await this.saveSettings();
+        }
+      }
+    ).open();
+  }
+  openWhatsNewModalFromSettings() {
+    this.showWhatsNewModal(this.manifest.version, false);
   }
   /**
    * Perform a sync operation

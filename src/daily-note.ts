@@ -5,6 +5,7 @@ import {
   ParsedObsidianTask,
   TodoistPriority,
   TodoistTask,
+  DailyNoteCompletedTaskMode,
 } from './types';
 import { buildTaskLine } from './task-parser';
 import { normalizeTodoistDue } from './due';
@@ -22,7 +23,7 @@ export interface DailyNoteTaskFilter {
   projectIds: string[];
   labels: string[];
   priorities: TodoistPriority[];
-  includeCompleted: boolean;
+  completedTaskMode: DailyNoteCompletedTaskMode;
 }
 
 export interface DailyNoteCompletionActivity {
@@ -115,8 +116,13 @@ export function extractTodoistIdsFromMarkerRegion(
 
 export function taskMatchesDailyNoteFilter(task: TodoistTask, filter: DailyNoteTaskFilter): boolean {
   if (task.isCompleted) {
-    if (!filter.includeCompleted) return false;
-    if (localDateFromTimestamp(task.completedAt) !== filter.today) return false;
+    if (filter.completedTaskMode === 'off') return false;
+    if (filter.completedTaskMode === 'completed-today' && localDateFromTimestamp(task.completedAt) !== filter.today) {
+      return false;
+    }
+    if (filter.completedTaskMode === 'due-today' && localDateFromTodoistDue(task.due) !== filter.today) {
+      return false;
+    }
   } else if (localDateFromTodoistDue(task.due) !== filter.today) {
     return false;
   }
@@ -240,7 +246,7 @@ export function filterDailyNoteTasks(tasks: TodoistTask[], settings: DailyNoteSe
     projectIds: settings.projectIds,
     labels: settings.labels,
     priorities: settings.priorities,
-    includeCompleted: settings.includeCompleted,
+    completedTaskMode: settings.completedTaskMode,
   };
   return tasks.filter(task => taskMatchesDailyNoteFilter(task, filter));
 }

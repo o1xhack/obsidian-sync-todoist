@@ -143,7 +143,30 @@ function runDailyNoteTests(): void {
         dueTodayWithDatetime,
         matching,
       ],
-      { ...settings, includeCompleted: true },
+      { ...settings, completedTaskMode: 'due-today' },
+      '2026-05-13'
+    ).map(t => t.id),
+    [
+      'done-yesterday-due-today',
+      'due-today-with-time-in-date',
+      'due-today-with-datetime',
+      'match',
+    ]
+  );
+
+  assert.deepEqual(
+    filterDailyNoteTasks(
+      [
+        wrongDate,
+        wrongProject,
+        completedTodayNoDue,
+        completedTodayWrongDue,
+        completedYesterdayDueToday,
+        dueTodayWithTimeInDate,
+        dueTodayWithDatetime,
+        matching,
+      ],
+      { ...settings, completedTaskMode: 'completed-today' },
       '2026-05-13'
     ).map(t => t.id),
     [
