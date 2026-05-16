@@ -14,6 +14,7 @@ import {
 } from './daily-note';
 import {
   applyDailyNoteCleanupToContent,
+  completedTaskCleanupRanges,
   createEmptyCleanupContentStats,
   DailyNoteCleanupContentStats,
   DailyNoteCleanupOptions,
@@ -562,18 +563,21 @@ export class SyncEngine {
     const completedIds = new Set<string>();
     if (!needsCompleted) return completedIds;
 
-    const since = new Date(`${earliestDate}T00:00:00`);
-    const until = new Date(`${today}T00:00:00`);
-    until.setDate(until.getDate() + 1);
-
     for (const by of ['completion_date', 'due_date'] as const) {
-      try {
-        const completedTasks = await this.todoistService.getCompletedTasks({ by, since, until });
-        for (const task of completedTasks) {
-          completedIds.add(task.id);
+      for (const range of completedTaskCleanupRanges(earliestDate, today)) {
+        try {
+          const completedTasks = await this.todoistService.getCompletedTasks({
+            by,
+            since: range.since,
+            until: range.until,
+          });
+          for (const task of completedTasks) {
+            completedIds.add(task.id);
+          }
+        } catch (error) {
+          errors.push(`Failed to fetch completed tasks by ${by}: ${error}`);
+          break;
         }
-      } catch (error) {
-        errors.push(`Failed to fetch completed tasks by ${by}: ${error}`);
       }
     }
 

@@ -421,8 +421,8 @@ function noticeDurationForDailyNote(result) {
 function getBuildInfo() {
   return {
     version: "0.9.0",
-    buildDate: "2026-05-16T22:58:16.544Z",
-    buildNumber: "202605162258"
+    buildDate: "2026-05-16T23:04:53.599Z",
+    buildNumber: "202605162304"
   };
 }
 function formatBuildDate(buildDate) {
@@ -2189,6 +2189,22 @@ function mergeCleanupContentStats(target, source) {
   target.skippedCompleted += source.skippedCompleted;
   target.skippedUnchanged += source.skippedUnchanged;
 }
+function completedTaskCleanupRanges(earliestDate, today) {
+  const ranges = [];
+  const finalUntil = /* @__PURE__ */ new Date(`${today}T00:00:00`);
+  finalUntil.setDate(finalUntil.getDate() + 1);
+  let cursor = /* @__PURE__ */ new Date(`${earliestDate}T00:00:00`);
+  while (cursor < finalUntil) {
+    const since = new Date(cursor);
+    const until = new Date(cursor);
+    until.setDate(until.getDate() + 41);
+    if (until > finalUntil)
+      until.setTime(finalUntil.getTime());
+    ranges.push({ since, until: new Date(until) });
+    cursor = until;
+  }
+  return ranges;
+}
 function applyDailyNoteCleanupToContent(content, markerStart, markerEnd, dailyNoteDate, options, lookupTaskState) {
   const lines = content.split("\n");
   const startLine = lines.findIndex((line) => line.includes(markerStart));
@@ -2693,17 +2709,21 @@ var SyncEngine = class {
     const completedIds = /* @__PURE__ */ new Set();
     if (!needsCompleted)
       return completedIds;
-    const since = /* @__PURE__ */ new Date(`${earliestDate}T00:00:00`);
-    const until = /* @__PURE__ */ new Date(`${today}T00:00:00`);
-    until.setDate(until.getDate() + 1);
     for (const by of ["completion_date", "due_date"]) {
-      try {
-        const completedTasks = await this.todoistService.getCompletedTasks({ by, since, until });
-        for (const task of completedTasks) {
-          completedIds.add(task.id);
+      for (const range of completedTaskCleanupRanges(earliestDate, today)) {
+        try {
+          const completedTasks = await this.todoistService.getCompletedTasks({
+            by,
+            since: range.since,
+            until: range.until
+          });
+          for (const task of completedTasks) {
+            completedIds.add(task.id);
+          }
+        } catch (error) {
+          errors.push(`Failed to fetch completed tasks by ${by}: ${error}`);
+          break;
         }
-      } catch (error) {
-        errors.push(`Failed to fetch completed tasks by ${by}: ${error}`);
       }
     }
     return completedIds;

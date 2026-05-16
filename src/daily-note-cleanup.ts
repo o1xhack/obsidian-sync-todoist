@@ -33,6 +33,11 @@ export interface DailyNoteCleanupContentResult {
   removedIds: string[];
 }
 
+export interface CompletedTaskCleanupRange {
+  since: Date;
+  until: Date;
+}
+
 const EMPTY_CONTENT_STATS: DailyNoteCleanupContentStats = {
   scannedTaskRows: 0,
   removedStaleUnfinished: 0,
@@ -58,6 +63,28 @@ export function mergeCleanupContentStats(
   target.skippedUnknown += source.skippedUnknown;
   target.skippedCompleted += source.skippedCompleted;
   target.skippedUnchanged += source.skippedUnchanged;
+}
+
+export function completedTaskCleanupRanges(
+  earliestDate: string,
+  today: string
+): CompletedTaskCleanupRange[] {
+  const ranges: CompletedTaskCleanupRange[] = [];
+  const finalUntil = new Date(`${today}T00:00:00`);
+  finalUntil.setDate(finalUntil.getDate() + 1);
+
+  let cursor = new Date(`${earliestDate}T00:00:00`);
+  while (cursor < finalUntil) {
+    const since = new Date(cursor);
+    const until = new Date(cursor);
+    // Todoist completed-task endpoints reject ranges over 6 weeks.
+    until.setDate(until.getDate() + 41);
+    if (until > finalUntil) until.setTime(finalUntil.getTime());
+    ranges.push({ since, until: new Date(until) });
+    cursor = until;
+  }
+
+  return ranges;
 }
 
 export function applyDailyNoteCleanupToContent(

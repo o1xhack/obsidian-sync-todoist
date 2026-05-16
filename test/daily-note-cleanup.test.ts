@@ -1,5 +1,9 @@
 import assert from 'node:assert/strict';
-import { applyDailyNoteCleanupToContent, DailyNoteCleanupTaskState } from '../src/daily-note-cleanup';
+import {
+  applyDailyNoteCleanupToContent,
+  completedTaskCleanupRanges,
+  DailyNoteCleanupTaskState,
+} from '../src/daily-note-cleanup';
 
 const START = '%% sync-todoist:daily:start %%';
 const END = '%% sync-todoist:daily:end %%';
@@ -80,5 +84,14 @@ assert.equal(removeCompleted.stats.removedCompleted, 2);
 assert.doesNotMatch(removeCompleted.content, /Done task/);
 assert.doesNotMatch(removeCompleted.content, /Already done/);
 assert.match(removeCompleted.content, /Moved task/);
+
+const longCompletedRanges = completedTaskCleanupRanges('2026-01-01', '2026-05-16');
+assert.ok(longCompletedRanges.length > 1);
+assert.equal(longCompletedRanges[0].since.toISOString().slice(0, 10), '2026-01-01');
+assert.equal(longCompletedRanges.at(-1)?.until.toISOString().slice(0, 10), '2026-05-17');
+for (const range of longCompletedRanges) {
+  const days = (range.until.getTime() - range.since.getTime()) / 86400000;
+  assert.ok(days <= 41, `range is too large: ${days} days`);
+}
 
 console.log('daily-note cleanup tests passed');

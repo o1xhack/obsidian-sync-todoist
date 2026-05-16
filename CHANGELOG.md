@@ -9,6 +9,8 @@ All notable Sync Todoist changes are tracked here.
 - Supports removing unfinished generated rows whose Todoist task is no longer due on that
   Daily Note date, marking historical rows completed when Todoist confirms completion, and
   optionally removing completed historical rows.
+- Splits completed-task archive lookups into Todoist-safe date ranges so cleanup can scan
+  Daily Notes older than six weeks.
 
 ## 0.8.0 - 2026-05-16
 
