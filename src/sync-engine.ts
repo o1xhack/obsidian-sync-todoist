@@ -6,11 +6,20 @@ import {
   buildRecentlyCompletedRecurringTaskSnapshot,
   extractTodoistIdsFromMarkerRegion,
   filterDailyNoteTasks,
+  isMarkerRegionValid,
   localTodayISODate,
   renderDailyNoteTaskBlock,
   sortDailyNoteTasks,
   updateDailyNoteContent,
 } from './daily-note';
+import {
+  applyDailyNoteCleanupToContent,
+  createEmptyCleanupContentStats,
+  DailyNoteCleanupContentStats,
+  DailyNoteCleanupOptions,
+  DailyNoteCleanupTaskState,
+  mergeCleanupContentStats,
+} from './daily-note-cleanup';
 import {
   parseTasksFromContent,
   buildTaskLine,
@@ -42,6 +51,35 @@ interface DailyNotesCorePlugin {
       format?: string;
     };
   };
+}
+
+interface DailyNoteConfig {
+  folder: string;
+  format: string;
+}
+
+export interface DailyNoteCleanupFileResult {
+  filePath: string;
+  date: string;
+  scannedTaskRows: number;
+  removedStaleUnfinished: number;
+  markedCompleted: number;
+  removedCompleted: number;
+}
+
+export interface DailyNoteCleanupResult {
+  mode: DailyNoteCleanupOptions['mode'];
+  dryRun: boolean;
+  scannedFiles: number;
+  eligibleFiles: number;
+  changedFiles: number;
+  invalidMarkerFiles: number;
+  skippedUndatedFiles: number;
+  earliestDate: string | null;
+  latestDate: string | null;
+  stats: DailyNoteCleanupContentStats;
+  files: DailyNoteCleanupFileResult[];
+  errors: string[];
 }
 
 /**
@@ -364,6 +402,207 @@ export class SyncEngine {
     await this.todoistService.ensureProjectCache();
     const tasks = await this.getDailyNoteSourceTasks();
     return this.syncTasksIntoDailyNote(tasks);
+  }
+
+  async previewPastDailyNoteCleanup(options: DailyNoteCleanupOptions): Promise<DailyNoteCleanupResult> {
+    return this.cleanupPastDailyNotes(options, true);
+  }
+
+  async applyPastDailyNoteCleanup(options: DailyNoteCleanupOptions): Promise<DailyNoteCleanupResult> {
+    return this.cleanupPastDailyNotes(options, false);
+  }
+
+  private async cleanupPastDailyNotes(
+    options: DailyNoteCleanupOptions,
+    dryRun: boolean
+  ): Promise<DailyNoteCleanupResult> {
+    const result: DailyNoteCleanupResult = {
+      mode: options.mode,
+      dryRun,
+      scannedFiles: 0,
+      eligibleFiles: 0,
+      changedFiles: 0,
+      invalidMarkerFiles: 0,
+      skippedUndatedFiles: 0,
+      earliestDate: null,
+      latestDate: null,
+      stats: createEmptyCleanupContentStats(),
+      files: [],
+      errors: [],
+    };
+
+    if (!this.todoistService.isInitialized()) {
+      result.errors.push('Todoist API not configured');
+      return result;
+    }
+
+    const config = this.getDailyNoteConfig();
+    if (!config) {
+      result.errors.push('Enable Obsidian core Daily notes plugin first.');
+      return result;
+    }
+
+    const today = localTodayISODate();
+    const markerStart = this.settings.dailyNote.markerStart;
+    const markerEnd = this.settings.dailyNote.markerEnd;
+    const candidates: Array<{ file: TFile; content: string; date: string }> = [];
+
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      result.scannedFiles++;
+      try {
+        const content = await this.app.vault.cachedRead(file);
+        if (!content.includes(markerStart) && !content.includes(markerEnd)) continue;
+        if (!isMarkerRegionValid(content, markerStart, markerEnd)) {
+          result.invalidMarkerFiles++;
+          continue;
+        }
+
+        const date = this.dailyNoteDateFromPath(file.path, config);
+        if (!date) {
+          result.skippedUndatedFiles++;
+          continue;
+        }
+        if (date >= today) continue;
+
+        result.eligibleFiles++;
+        result.earliestDate = result.earliestDate ? minIsoDate(result.earliestDate, date) : date;
+        result.latestDate = result.latestDate ? maxIsoDate(result.latestDate, date) : date;
+        candidates.push({ file, content, date });
+      } catch (error) {
+        result.errors.push(`Failed to read ${file.path}: ${error}`);
+      }
+    }
+
+    if (candidates.length === 0 || !result.earliestDate) {
+      return result;
+    }
+
+    const activeTasks = await this.todoistService.getTasks();
+    const activeById = new Map(activeTasks.map(task => [task.id, task]));
+    const completedIds = await this.getCompletedTodoistIdsForDailyNoteCleanup(
+      result.earliestDate,
+      today,
+      options,
+      result.errors
+    );
+
+    for (const candidate of candidates) {
+      const cleanup = applyDailyNoteCleanupToContent(
+        candidate.content,
+        markerStart,
+        markerEnd,
+        candidate.date,
+        options,
+        (todoistId) => this.resolveCleanupTaskState(todoistId, activeById, completedIds)
+      );
+
+      mergeCleanupContentStats(result.stats, cleanup.stats);
+      if (!cleanup.changed) continue;
+
+      result.changedFiles++;
+      result.files.push({
+        filePath: candidate.file.path,
+        date: candidate.date,
+        scannedTaskRows: cleanup.stats.scannedTaskRows,
+        removedStaleUnfinished: cleanup.stats.removedStaleUnfinished,
+        markedCompleted: cleanup.stats.markedCompleted,
+        removedCompleted: cleanup.stats.removedCompleted,
+      });
+
+      if (!dryRun) {
+        await this.app.vault.modify(candidate.file, cleanup.content);
+        for (const id of cleanup.removedIds) {
+          if (this.syncState.tasks[id]?.filePath === candidate.file.path) {
+            delete this.syncState.tasks[id];
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  private getDailyNoteConfig(): DailyNoteConfig | null {
+    const appWithInternal = this.app as App & {
+      internalPlugins?: {
+        plugins?: Record<string, DailyNotesCorePlugin>;
+      };
+    };
+    const dailyNotesPlugin = appWithInternal.internalPlugins?.plugins?.['daily-notes'];
+    if (!dailyNotesPlugin?.enabled) return null;
+    const options = dailyNotesPlugin.instance?.options ?? {};
+    return {
+      format: options.format?.trim() || 'YYYY-MM-DD',
+      folder: (options.folder ?? '').trim().replace(/^\/+|\/+$/g, ''),
+    };
+  }
+
+  private dailyNoteDateFromPath(path: string, config: DailyNoteConfig): string | null {
+    const normalizedPath = normalizePath(path);
+    const prefix = config.folder ? `${normalizePath(config.folder)}/` : '';
+    if (prefix && !normalizedPath.startsWith(prefix)) return null;
+    if (!normalizedPath.endsWith('.md')) return null;
+
+    const relative = normalizedPath.slice(prefix.length, -3);
+    const parsed = moment(relative, config.format, true);
+    if (!parsed.isValid()) return null;
+    return parsed.format('YYYY-MM-DD');
+  }
+
+  private async getCompletedTodoistIdsForDailyNoteCleanup(
+    earliestDate: string,
+    today: string,
+    options: DailyNoteCleanupOptions,
+    errors: string[]
+  ): Promise<Set<string>> {
+    const needsCompleted =
+      options.mode === 'mark-completed' ||
+      options.mode === 'remove-completed' ||
+      options.markCompletedAlso;
+    const completedIds = new Set<string>();
+    if (!needsCompleted) return completedIds;
+
+    const since = new Date(`${earliestDate}T00:00:00`);
+    const until = new Date(`${today}T00:00:00`);
+    until.setDate(until.getDate() + 1);
+
+    for (const by of ['completion_date', 'due_date'] as const) {
+      try {
+        const completedTasks = await this.todoistService.getCompletedTasks({ by, since, until });
+        for (const task of completedTasks) {
+          completedIds.add(task.id);
+        }
+      } catch (error) {
+        errors.push(`Failed to fetch completed tasks by ${by}: ${error}`);
+      }
+    }
+
+    return completedIds;
+  }
+
+  private resolveCleanupTaskState(
+    todoistId: string,
+    activeById: Map<string, TodoistTask>,
+    completedIds: Set<string>
+  ): DailyNoteCleanupTaskState | null {
+    const activeTask = activeById.get(todoistId);
+    if (activeTask) {
+      return {
+        isActive: true,
+        isCompleted: false,
+        currentDueDate: normalizeTodoistDue(activeTask.due).date,
+      };
+    }
+
+    if (completedIds.has(todoistId)) {
+      return {
+        isActive: false,
+        isCompleted: true,
+        currentDueDate: null,
+      };
+    }
+
+    return null;
   }
 
   private async getDailyNoteSourceTasks(): Promise<TodoistTask[]> {
@@ -1108,4 +1347,12 @@ export class SyncEngine {
   clearPendingConflicts(): void {
     this.pendingConflicts = [];
   }
+}
+
+function minIsoDate(a: string, b: string): string {
+  return a <= b ? a : b;
+}
+
+function maxIsoDate(a: string, b: string): string {
+  return a >= b ? a : b;
 }

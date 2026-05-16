@@ -1,4 +1,4 @@
-# Sync Todoist v0.8.0 - Test Specification
+# Sync Todoist v0.9.0 - Test Specification
 
 ## Prerequisites
 
@@ -531,6 +531,19 @@ Test each of these query blocks (create one block per filter):
 7. **Expected**: The task does not become a one-time date-only task.
 - [ ] **PASS** / **FAIL**
 
+### G13. Past Daily Note cleanup
+
+1. Create a Todoist task due on a past Daily Note date and sync that past Daily Note marker block in a test vault.
+2. Move the Todoist task due date to today without completing it.
+3. Open **Settings -> Sync Todoist -> Daily Note -> Clean up past Daily Notes**.
+4. Preview **Remove unfinished tasks no longer due on that day**.
+5. **Expected**: The preview reports one stale unfinished row to remove and does not modify the file yet.
+6. Apply the cleanup.
+7. **Expected**: The stale row is removed from the past Daily Note marker block, and the Todoist task still exists.
+8. Repeat with a completed Todoist task and **Mark completed historical tasks**.
+9. **Expected**: The past Daily Note row changes from `[ ]` to `[x]`.
+- [ ] **PASS** / **FAIL**
+
 ---
 
 ## Part H: Structured Due, Time, and Recurring Safety
@@ -632,5 +645,5 @@ Test each of these query blocks (create one block per filter):
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.8.0
+**Plugin version**: 0.9.0
 **Obsidian version**: ___________________

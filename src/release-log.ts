@@ -13,6 +13,13 @@ export interface ReleaseHighlight {
 
 export const RELEASE_LOG: ReleaseLogEntry[] = [
   {
+    version: '0.9.0',
+    titleEn: 'Past Daily Note cleanup',
+    titleZh: '清理过去的 Daily Note',
+    en: 'Adds a manual cleanup tool for past Daily Notes. Preview stale generated rows, remove unfinished tasks that moved to another date, mark historical rows completed, or remove completed historical rows without deleting Todoist tasks.',
+    zh: '新增过去 Daily Note 的手动清理工具。你可以先预览过期生成行，再移除已移动到其他日期的未完成任务、标记已完成历史行，或移除已完成历史行；不会删除 Todoist 任务。',
+  },
+  {
     version: '0.8.0',
     titleEn: 'Daily Note completed-task modes',
     titleZh: 'Daily Note 已完成任务模式',
@@ -43,6 +50,10 @@ export const RELEASE_LOG: ReleaseLogEntry[] = [
 ];
 
 export const RECENT_UPDATE_HIGHLIGHTS: ReleaseHighlight[] = [
+  {
+    en: 'Past Daily Note cleanup can remove stale generated rows while leaving Todoist tasks untouched.',
+    zh: '过去 Daily Note 清理工具可以移除过期生成行，同时不删除 Todoist 任务。',
+  },
   {
     en: 'Daily Note can distinguish planning mode from completion-log mode.',
     zh: 'Daily Note 现在可以区分“今日计划”和“今日完成日志”两种使用方式。',

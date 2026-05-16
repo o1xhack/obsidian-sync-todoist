@@ -1,5 +1,7 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, Modal, PluginSettingTab, Setting } from 'obsidian';
 import TodoistSyncPlugin from './main';
+import { DailyNoteCleanupMode, DailyNoteCleanupOptions } from './daily-note-cleanup';
+import { DailyNoteCleanupResult } from './sync-engine';
 import {
   ConflictResolution,
   DailyNoteCompletedTaskMode,
@@ -432,6 +434,17 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(containerEl)
+      .setName(this.tr('daily.cleanup.name'))
+      .setDesc(this.tr('daily.cleanup.desc'))
+      .addButton((button) =>
+        button
+          .setButtonText(this.tr('daily.cleanup.button'))
+          .onClick(() => {
+            new DailyNoteCleanupModal(this.app, this.plugin).open();
+          })
+      );
+
     new Setting(containerEl).setName(this.tr('daily.filters')).setHeading();
     new Setting(containerEl).setDesc(this.tr('daily.filters.desc'));
 
@@ -610,6 +623,170 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
         ? this.tr('general.status.connected')
         : this.tr('general.status.disconnected'),
     });
+  }
+}
+
+class DailyNoteCleanupModal extends Modal {
+  private mode: DailyNoteCleanupMode = 'remove-stale-unfinished';
+  private markCompletedAlso = false;
+  private previewResult: DailyNoteCleanupResult | null = null;
+  private resultEl: HTMLElement | null = null;
+
+  constructor(app: App, private plugin: TodoistSyncPlugin) {
+    super(app);
+  }
+
+  private tr(key: I18nKey, values?: Record<string, string | number>): string {
+    return t(this.plugin.settings.uiLanguage, key, values);
+  }
+
+  onOpen(): void {
+    const { contentEl, titleEl } = this;
+    titleEl.setText(this.tr('cleanup.title'));
+    contentEl.empty();
+    contentEl.createEl('p', {
+      cls: 'sync-todoist-cleanup-intro',
+      text: this.tr('cleanup.intro'),
+    });
+
+    new Setting(contentEl)
+      .setName(this.tr('cleanup.mode.name'))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption('remove-stale-unfinished', this.tr('cleanup.mode.removeStale'))
+          .addOption('mark-completed', this.tr('cleanup.mode.markCompleted'))
+          .addOption('remove-completed', this.tr('cleanup.mode.removeCompleted'))
+          .setValue(this.mode)
+          .onChange((value) => {
+            this.mode = value as DailyNoteCleanupMode;
+            this.previewResult = null;
+            this.render();
+          });
+      });
+
+    if (this.mode === 'remove-stale-unfinished') {
+      new Setting(contentEl)
+        .setName(this.tr('cleanup.markCompletedAlso'))
+        .addToggle((toggle) =>
+          toggle
+            .setValue(this.markCompletedAlso)
+            .onChange((value) => {
+              this.markCompletedAlso = value;
+              this.previewResult = null;
+              this.render();
+            })
+        );
+    }
+
+    this.resultEl = contentEl.createDiv({ cls: 'sync-todoist-cleanup-result' });
+    if (this.previewResult) {
+      this.renderResult(this.previewResult);
+    }
+
+    const buttons = contentEl.createDiv({ cls: 'sync-todoist-modal-buttons' });
+    const previewButton = buttons.createEl('button', { text: this.tr('cleanup.preview') });
+    previewButton.onclick = async () => {
+      await this.preview(previewButton);
+    };
+
+    const applyButton = buttons.createEl('button', {
+      text: this.tr('cleanup.apply'),
+      cls: 'mod-cta',
+    });
+    applyButton.disabled = !this.previewResult || this.previewResult.changedFiles === 0 || this.previewResult.errors.length > 0;
+    applyButton.onclick = async () => {
+      await this.apply(applyButton);
+    };
+
+    const closeButton = buttons.createEl('button', { text: this.tr('cleanup.close') });
+    closeButton.onclick = () => this.close();
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+
+  private render(): void {
+    this.onOpen();
+  }
+
+  private options(): DailyNoteCleanupOptions {
+    return {
+      mode: this.mode,
+      markCompletedAlso: this.mode === 'remove-stale-unfinished' && this.markCompletedAlso,
+    };
+  }
+
+  private async preview(button: HTMLButtonElement): Promise<void> {
+    if (!this.plugin.settings.apiToken) {
+      showSyncTodoistNotice(this.tr('cleanup.noToken'));
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = this.tr('cleanup.previewing');
+    try {
+      this.previewResult = await this.plugin.previewPastDailyNoteCleanup(this.options());
+      this.render();
+    } catch (error) {
+      showSyncTodoistNotice(`Sync Todoist: ${error}`, 10000);
+    }
+  }
+
+  private async apply(button: HTMLButtonElement): Promise<void> {
+    if (!this.previewResult || this.previewResult.changedFiles === 0 || this.previewResult.errors.length > 0) return;
+
+    button.disabled = true;
+    button.textContent = this.tr('cleanup.applying');
+    try {
+      const result = await this.plugin.applyPastDailyNoteCleanup(this.options());
+      this.previewResult = result;
+      this.render();
+      showSyncTodoistNotice(this.tr('cleanup.applied', { count: result.changedFiles }));
+    } catch (error) {
+      showSyncTodoistNotice(`Sync Todoist: ${error}`, 10000);
+    }
+  }
+
+  private renderResult(result: DailyNoteCleanupResult): void {
+    if (!this.resultEl) return;
+    this.resultEl.empty();
+    this.resultEl.createEl('h3', { text: this.tr('cleanup.summary') });
+
+    const lines = [
+      this.tr('cleanup.scannedFiles', { count: result.scannedFiles }),
+      this.tr('cleanup.eligibleFiles', { count: result.eligibleFiles }),
+      this.tr('cleanup.changedFiles', { count: result.changedFiles }),
+      this.tr('cleanup.scannedRows', { count: result.stats.scannedTaskRows }),
+      this.tr('cleanup.removedStale', { count: result.stats.removedStaleUnfinished }),
+      this.tr('cleanup.markedCompleted', { count: result.stats.markedCompleted }),
+      this.tr('cleanup.removedCompleted', { count: result.stats.removedCompleted }),
+      this.tr('cleanup.skippedUnknown', { count: result.stats.skippedUnknown }),
+      this.tr('cleanup.skippedCompleted', { count: result.stats.skippedCompleted }),
+      this.tr('cleanup.skippedUnchanged', { count: result.stats.skippedUnchanged }),
+      this.tr('cleanup.invalidMarkers', { count: result.invalidMarkerFiles }),
+      this.tr('cleanup.skippedUndated', { count: result.skippedUndatedFiles }),
+    ];
+
+    const list = this.resultEl.createEl('ul', { cls: 'sync-todoist-cleanup-summary' });
+    for (const line of lines) {
+      list.createEl('li', { text: line });
+    }
+
+    if (result.changedFiles === 0 && result.errors.length === 0) {
+      this.resultEl.createEl('p', { text: this.tr('cleanup.noChanges') });
+    }
+
+    if (result.errors.length > 0) {
+      this.resultEl.createEl('p', {
+        cls: 'sync-todoist-cleanup-errors',
+        text: this.tr('cleanup.errors', { count: result.errors.length }),
+      });
+      const errors = this.resultEl.createEl('ul', { cls: 'sync-todoist-cleanup-summary' });
+      for (const error of result.errors.slice(0, 5)) {
+        errors.createEl('li', { text: error });
+      }
+    }
   }
 }
 

@@ -12,13 +12,13 @@
 
 Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
-## What's New in 0.8.0
+## What's New in 0.9.0
 
-- Replaces the Daily Note completed-task toggle with a three-mode selector: hide completed tasks, keep completed tasks due today, or keep all tasks completed today.
-- Preserves existing behavior for upgraded users by migrating the old completed-task toggle to **All tasks completed today**.
-- Keeps completed recurring occurrences behind the existing recurring-task option, now available whenever completed tasks are shown.
-- Improves settings tab highlighting for mobile and adds a clickable version row with bilingual update notes.
-- Adds `CHANGELOG.md` as the ongoing release history.
+- Adds **Clean up past Daily Notes**, a manual preview-and-apply tool for stale generated rows.
+- Removes unfinished historical rows when the Todoist task is still active but no longer due on that Daily Note date.
+- Marks historical rows completed when Todoist confirms the task is already complete.
+- Optionally removes completed historical rows for users who prefer cleaner past Daily Notes.
+- Keeps normal sync behavior unchanged: past Daily Notes remain historical snapshots unless the user runs this cleanup tool.
 
 ## Why Use It?
 
@@ -237,6 +237,7 @@ Daily Note controls:
 - Choose which completed tasks remain visible: none, tasks due today, or all tasks completed today.
 - Include completed recurring occurrences when completed tasks are enabled.
 - Run a manual **Sync today** refresh.
+- Run **Clean up past Daily Notes** to preview and remove or update stale generated rows from previous days.
 
 Default marker block:
 
@@ -266,6 +267,7 @@ Completed and recurring behavior:
 - Todoist moves recurring tasks to the next occurrence after completion, so the activity-log fallback is required to preserve today's completed occurrence.
 - Todoist Activity Log can lag behind a just-completed recurring task. When Sync Todoist completes a recurring task during the current sync cycle, it keeps a local checked snapshot until the activity log catches up.
 - Generated Daily Note rows are completion-focused. Checking a generated row can complete the matching Todoist task, but title, project, label, priority, and unsafe due-rule edits inside the generated block are not pushed back to Todoist.
+- Past Daily Notes are treated as historical snapshots during normal sync. Use **Clean up past Daily Notes** when you want to remove unfinished rows that were moved to another date or update historical rows whose Todoist task is already completed.
 
 ## Settings
 
@@ -294,6 +296,7 @@ Completed and recurring behavior:
 | **Import task from todoist** | Searches open Todoist tasks and inserts the selected task, including subtasks, at the cursor. |
 | **Sync now** | Runs a manual sync. |
 | **Sync today's daily note** | Refreshes today's managed Daily Note task block. |
+| **Clean up past Daily Notes** | Preview and apply cleanup for stale generated rows in past Daily Notes. |
 | **Open settings** | Opens the Sync Todoist settings tab. |
 
 ## Development

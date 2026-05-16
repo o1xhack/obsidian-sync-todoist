@@ -25,6 +25,8 @@ import {
   DailyNoteSyncResult,
 } from './types';
 import { normalizeDailyNoteSettings, PersistedDailyNoteSettings } from './settings-normalization';
+import { DailyNoteCleanupOptions } from './daily-note-cleanup';
+import { DailyNoteCleanupResult } from './sync-engine';
 
 type PersistedPluginData = Partial<Omit<TodoistSyncSettings, 'dailyNote'>> & {
   dailyNote?: PersistedDailyNoteSettings;
@@ -368,6 +370,17 @@ export default class TodoistSyncPlugin extends Plugin {
 
   async syncDailyNoteNow(): Promise<DailyNoteSyncResult> {
     const result = await this.syncEngine.syncDailyNoteNow();
+    await this.saveSyncState();
+    this.updateStatusBar();
+    return result;
+  }
+
+  async previewPastDailyNoteCleanup(options: DailyNoteCleanupOptions): Promise<DailyNoteCleanupResult> {
+    return this.syncEngine.previewPastDailyNoteCleanup(options);
+  }
+
+  async applyPastDailyNoteCleanup(options: DailyNoteCleanupOptions): Promise<DailyNoteCleanupResult> {
+    const result = await this.syncEngine.applyPastDailyNoteCleanup(options);
     await this.saveSyncState();
     this.updateStatusBar();
     return result;

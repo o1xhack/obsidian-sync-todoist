@@ -2,6 +2,14 @@
 
 All notable Sync Todoist changes are tracked here.
 
+## 0.9.0 - 2026-05-16
+
+- Added a manual **Clean up past Daily Notes** tool that previews and applies cleanup inside
+  Sync Todoist marker regions only.
+- Supports removing unfinished generated rows whose Todoist task is no longer due on that
+  Daily Note date, marking historical rows completed when Todoist confirms completion, and
+  optionally removing completed historical rows.
+
 ## 0.8.0 - 2026-05-16
 
 - Changed Daily Note completed-task handling from one toggle to a three-mode selector:

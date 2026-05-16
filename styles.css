@@ -82,6 +82,30 @@
   justify-content: flex-end;
   gap: 0.5em;
   margin-top: 1.5em;
+  flex-wrap: wrap;
+}
+
+.sync-todoist-cleanup-intro {
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.sync-todoist-cleanup-result {
+  margin-top: 1em;
+}
+
+.sync-todoist-cleanup-summary {
+  margin: 0.5em 0 1em 1.5em;
+  padding: 0;
+}
+
+.sync-todoist-cleanup-summary li {
+  margin: 0.3em 0;
+  line-height: 1.4;
+}
+
+.sync-todoist-cleanup-errors {
+  color: var(--text-error);
 }
 
 /* ─── Import Modal ─── */

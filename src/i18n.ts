@@ -72,6 +72,38 @@ export type I18nKey =
   | 'daily.syncNow.desc'
   | 'daily.syncNow.button'
   | 'daily.syncNow.result'
+  | 'daily.cleanup.name'
+  | 'daily.cleanup.desc'
+  | 'daily.cleanup.button'
+  | 'cleanup.title'
+  | 'cleanup.intro'
+  | 'cleanup.mode.name'
+  | 'cleanup.mode.removeStale'
+  | 'cleanup.mode.markCompleted'
+  | 'cleanup.mode.removeCompleted'
+  | 'cleanup.markCompletedAlso'
+  | 'cleanup.preview'
+  | 'cleanup.apply'
+  | 'cleanup.close'
+  | 'cleanup.noToken'
+  | 'cleanup.previewing'
+  | 'cleanup.applying'
+  | 'cleanup.summary'
+  | 'cleanup.scannedFiles'
+  | 'cleanup.eligibleFiles'
+  | 'cleanup.changedFiles'
+  | 'cleanup.scannedRows'
+  | 'cleanup.removedStale'
+  | 'cleanup.markedCompleted'
+  | 'cleanup.removedCompleted'
+  | 'cleanup.skippedUnknown'
+  | 'cleanup.skippedCompleted'
+  | 'cleanup.skippedUnchanged'
+  | 'cleanup.invalidMarkers'
+  | 'cleanup.skippedUndated'
+  | 'cleanup.errors'
+  | 'cleanup.noChanges'
+  | 'cleanup.applied'
   | 'daily.filters'
   | 'daily.filters.desc'
   | 'daily.filters.verifyFirst'
@@ -166,6 +198,38 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.syncNow.desc': 'Refresh today\'s Daily Note using the current filter settings.',
     'daily.syncNow.button': 'Sync today',
     'daily.syncNow.result': 'Daily Note result: {{status}}',
+    'daily.cleanup.name': 'Clean up past Daily Notes',
+    'daily.cleanup.desc': 'Preview and remove or update stale generated rows from past Daily Notes.',
+    'daily.cleanup.button': 'Open cleanup',
+    'cleanup.title': 'Clean up past Daily Notes',
+    'cleanup.intro': 'Only Sync Todoist marker regions in past Daily Notes are changed. Todoist tasks are never deleted. Preview first, then apply the selected cleanup.',
+    'cleanup.mode.name': 'Cleanup mode',
+    'cleanup.mode.removeStale': 'Remove unfinished tasks no longer due on that day',
+    'cleanup.mode.markCompleted': 'Mark completed historical tasks',
+    'cleanup.mode.removeCompleted': 'Remove completed historical tasks',
+    'cleanup.markCompletedAlso': 'Also mark completed historical tasks',
+    'cleanup.preview': 'Preview',
+    'cleanup.apply': 'Apply cleanup',
+    'cleanup.close': 'Close',
+    'cleanup.noToken': 'Configure your Todoist API token first.',
+    'cleanup.previewing': 'Previewing cleanup...',
+    'cleanup.applying': 'Applying cleanup...',
+    'cleanup.summary': 'Preview summary',
+    'cleanup.scannedFiles': 'Markdown files scanned: {{count}}',
+    'cleanup.eligibleFiles': 'Past Daily Notes found: {{count}}',
+    'cleanup.changedFiles': 'Files that would change: {{count}}',
+    'cleanup.scannedRows': 'Generated task rows scanned: {{count}}',
+    'cleanup.removedStale': 'Stale unfinished rows removed: {{count}}',
+    'cleanup.markedCompleted': 'Rows marked completed: {{count}}',
+    'cleanup.removedCompleted': 'Completed rows removed: {{count}}',
+    'cleanup.skippedUnknown': 'Unknown or missing Todoist tasks skipped: {{count}}',
+    'cleanup.skippedCompleted': 'Completed tasks left unchanged: {{count}}',
+    'cleanup.skippedUnchanged': 'Rows already current: {{count}}',
+    'cleanup.invalidMarkers': 'Files with invalid markers skipped: {{count}}',
+    'cleanup.skippedUndated': 'Marker files whose Daily Note date could not be parsed: {{count}}',
+    'cleanup.errors': 'Errors: {{count}}',
+    'cleanup.noChanges': 'No past Daily Note rows need cleanup.',
+    'cleanup.applied': 'Cleanup applied: {{count}} file(s) updated.',
     'daily.filters': 'Task filters',
     'daily.filters.desc': 'Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.',
     'daily.filters.verifyFirst': 'Verify your Todoist API token in General settings first to load projects and labels.',
@@ -259,6 +323,38 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.syncNow.desc': '使用当前筛选设置刷新今天的 Daily Note。',
     'daily.syncNow.button': '同步今天',
     'daily.syncNow.result': 'Daily Note 结果：{{status}}',
+    'daily.cleanup.name': '清理过去的 Daily Note',
+    'daily.cleanup.desc': '预览并移除或更新过去 Daily Note 中过期的生成行。',
+    'daily.cleanup.button': '打开清理',
+    'cleanup.title': '清理过去的 Daily Note',
+    'cleanup.intro': '只会修改过去 Daily Note 里的 Sync Todoist marker 区间，不会删除 Todoist 任务。先预览，再确认应用所选清理方式。',
+    'cleanup.mode.name': '清理方式',
+    'cleanup.mode.removeStale': '移除不再属于该日的未完成任务',
+    'cleanup.mode.markCompleted': '标记已完成的历史任务',
+    'cleanup.mode.removeCompleted': '移除已完成的历史任务',
+    'cleanup.markCompletedAlso': '同时标记已完成的历史任务',
+    'cleanup.preview': '预览',
+    'cleanup.apply': '应用清理',
+    'cleanup.close': '关闭',
+    'cleanup.noToken': '请先配置 Todoist API Token。',
+    'cleanup.previewing': '正在预览清理结果...',
+    'cleanup.applying': '正在应用清理...',
+    'cleanup.summary': '预览摘要',
+    'cleanup.scannedFiles': '已扫描 Markdown 文件：{{count}}',
+    'cleanup.eligibleFiles': '找到过去 Daily Note：{{count}}',
+    'cleanup.changedFiles': '将被修改的文件：{{count}}',
+    'cleanup.scannedRows': '已扫描生成任务行：{{count}}',
+    'cleanup.removedStale': '移除过期未完成行：{{count}}',
+    'cleanup.markedCompleted': '标记完成行：{{count}}',
+    'cleanup.removedCompleted': '移除已完成行：{{count}}',
+    'cleanup.skippedUnknown': '跳过无法确认或缺失的 Todoist 任务：{{count}}',
+    'cleanup.skippedCompleted': '保持不变的已完成任务：{{count}}',
+    'cleanup.skippedUnchanged': '已经是最新状态的行：{{count}}',
+    'cleanup.invalidMarkers': '跳过 marker 无效文件：{{count}}',
+    'cleanup.skippedUndated': '跳过无法解析 Daily Note 日期的 marker 文件：{{count}}',
+    'cleanup.errors': '错误：{{count}}',
+    'cleanup.noChanges': '没有需要清理的过去 Daily Note 行。',
+    'cleanup.applied': '清理已完成：更新 {{count}} 个文件。',
     'daily.filters': '任务筛选',
     'daily.filters.desc': '每个维度默认都是全部。多个维度同时选择时，任务必须同时满足每个已选择的维度。',
     'daily.filters.verifyFirst': '请先在通用设置中验证 Todoist API Token，以加载项目和标签。',

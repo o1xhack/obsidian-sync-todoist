@@ -167,6 +167,38 @@ var STRINGS = {
     "daily.syncNow.desc": "Refresh today's Daily Note using the current filter settings.",
     "daily.syncNow.button": "Sync today",
     "daily.syncNow.result": "Daily Note result: {{status}}",
+    "daily.cleanup.name": "Clean up past Daily Notes",
+    "daily.cleanup.desc": "Preview and remove or update stale generated rows from past Daily Notes.",
+    "daily.cleanup.button": "Open cleanup",
+    "cleanup.title": "Clean up past Daily Notes",
+    "cleanup.intro": "Only Sync Todoist marker regions in past Daily Notes are changed. Todoist tasks are never deleted. Preview first, then apply the selected cleanup.",
+    "cleanup.mode.name": "Cleanup mode",
+    "cleanup.mode.removeStale": "Remove unfinished tasks no longer due on that day",
+    "cleanup.mode.markCompleted": "Mark completed historical tasks",
+    "cleanup.mode.removeCompleted": "Remove completed historical tasks",
+    "cleanup.markCompletedAlso": "Also mark completed historical tasks",
+    "cleanup.preview": "Preview",
+    "cleanup.apply": "Apply cleanup",
+    "cleanup.close": "Close",
+    "cleanup.noToken": "Configure your Todoist API token first.",
+    "cleanup.previewing": "Previewing cleanup...",
+    "cleanup.applying": "Applying cleanup...",
+    "cleanup.summary": "Preview summary",
+    "cleanup.scannedFiles": "Markdown files scanned: {{count}}",
+    "cleanup.eligibleFiles": "Past Daily Notes found: {{count}}",
+    "cleanup.changedFiles": "Files that would change: {{count}}",
+    "cleanup.scannedRows": "Generated task rows scanned: {{count}}",
+    "cleanup.removedStale": "Stale unfinished rows removed: {{count}}",
+    "cleanup.markedCompleted": "Rows marked completed: {{count}}",
+    "cleanup.removedCompleted": "Completed rows removed: {{count}}",
+    "cleanup.skippedUnknown": "Unknown or missing Todoist tasks skipped: {{count}}",
+    "cleanup.skippedCompleted": "Completed tasks left unchanged: {{count}}",
+    "cleanup.skippedUnchanged": "Rows already current: {{count}}",
+    "cleanup.invalidMarkers": "Files with invalid markers skipped: {{count}}",
+    "cleanup.skippedUndated": "Marker files whose Daily Note date could not be parsed: {{count}}",
+    "cleanup.errors": "Errors: {{count}}",
+    "cleanup.noChanges": "No past Daily Note rows need cleanup.",
+    "cleanup.applied": "Cleanup applied: {{count}} file(s) updated.",
     "daily.filters": "Task filters",
     "daily.filters.desc": "Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.",
     "daily.filters.verifyFirst": "Verify your Todoist API token in General settings first to load projects and labels.",
@@ -260,6 +292,38 @@ var STRINGS = {
     "daily.syncNow.desc": "\u4F7F\u7528\u5F53\u524D\u7B5B\u9009\u8BBE\u7F6E\u5237\u65B0\u4ECA\u5929\u7684 Daily Note\u3002",
     "daily.syncNow.button": "\u540C\u6B65\u4ECA\u5929",
     "daily.syncNow.result": "Daily Note \u7ED3\u679C\uFF1A{{status}}",
+    "daily.cleanup.name": "\u6E05\u7406\u8FC7\u53BB\u7684 Daily Note",
+    "daily.cleanup.desc": "\u9884\u89C8\u5E76\u79FB\u9664\u6216\u66F4\u65B0\u8FC7\u53BB Daily Note \u4E2D\u8FC7\u671F\u7684\u751F\u6210\u884C\u3002",
+    "daily.cleanup.button": "\u6253\u5F00\u6E05\u7406",
+    "cleanup.title": "\u6E05\u7406\u8FC7\u53BB\u7684 Daily Note",
+    "cleanup.intro": "\u53EA\u4F1A\u4FEE\u6539\u8FC7\u53BB Daily Note \u91CC\u7684 Sync Todoist marker \u533A\u95F4\uFF0C\u4E0D\u4F1A\u5220\u9664 Todoist \u4EFB\u52A1\u3002\u5148\u9884\u89C8\uFF0C\u518D\u786E\u8BA4\u5E94\u7528\u6240\u9009\u6E05\u7406\u65B9\u5F0F\u3002",
+    "cleanup.mode.name": "\u6E05\u7406\u65B9\u5F0F",
+    "cleanup.mode.removeStale": "\u79FB\u9664\u4E0D\u518D\u5C5E\u4E8E\u8BE5\u65E5\u7684\u672A\u5B8C\u6210\u4EFB\u52A1",
+    "cleanup.mode.markCompleted": "\u6807\u8BB0\u5DF2\u5B8C\u6210\u7684\u5386\u53F2\u4EFB\u52A1",
+    "cleanup.mode.removeCompleted": "\u79FB\u9664\u5DF2\u5B8C\u6210\u7684\u5386\u53F2\u4EFB\u52A1",
+    "cleanup.markCompletedAlso": "\u540C\u65F6\u6807\u8BB0\u5DF2\u5B8C\u6210\u7684\u5386\u53F2\u4EFB\u52A1",
+    "cleanup.preview": "\u9884\u89C8",
+    "cleanup.apply": "\u5E94\u7528\u6E05\u7406",
+    "cleanup.close": "\u5173\u95ED",
+    "cleanup.noToken": "\u8BF7\u5148\u914D\u7F6E Todoist API Token\u3002",
+    "cleanup.previewing": "\u6B63\u5728\u9884\u89C8\u6E05\u7406\u7ED3\u679C...",
+    "cleanup.applying": "\u6B63\u5728\u5E94\u7528\u6E05\u7406...",
+    "cleanup.summary": "\u9884\u89C8\u6458\u8981",
+    "cleanup.scannedFiles": "\u5DF2\u626B\u63CF Markdown \u6587\u4EF6\uFF1A{{count}}",
+    "cleanup.eligibleFiles": "\u627E\u5230\u8FC7\u53BB Daily Note\uFF1A{{count}}",
+    "cleanup.changedFiles": "\u5C06\u88AB\u4FEE\u6539\u7684\u6587\u4EF6\uFF1A{{count}}",
+    "cleanup.scannedRows": "\u5DF2\u626B\u63CF\u751F\u6210\u4EFB\u52A1\u884C\uFF1A{{count}}",
+    "cleanup.removedStale": "\u79FB\u9664\u8FC7\u671F\u672A\u5B8C\u6210\u884C\uFF1A{{count}}",
+    "cleanup.markedCompleted": "\u6807\u8BB0\u5B8C\u6210\u884C\uFF1A{{count}}",
+    "cleanup.removedCompleted": "\u79FB\u9664\u5DF2\u5B8C\u6210\u884C\uFF1A{{count}}",
+    "cleanup.skippedUnknown": "\u8DF3\u8FC7\u65E0\u6CD5\u786E\u8BA4\u6216\u7F3A\u5931\u7684 Todoist \u4EFB\u52A1\uFF1A{{count}}",
+    "cleanup.skippedCompleted": "\u4FDD\u6301\u4E0D\u53D8\u7684\u5DF2\u5B8C\u6210\u4EFB\u52A1\uFF1A{{count}}",
+    "cleanup.skippedUnchanged": "\u5DF2\u7ECF\u662F\u6700\u65B0\u72B6\u6001\u7684\u884C\uFF1A{{count}}",
+    "cleanup.invalidMarkers": "\u8DF3\u8FC7 marker \u65E0\u6548\u6587\u4EF6\uFF1A{{count}}",
+    "cleanup.skippedUndated": "\u8DF3\u8FC7\u65E0\u6CD5\u89E3\u6790 Daily Note \u65E5\u671F\u7684 marker \u6587\u4EF6\uFF1A{{count}}",
+    "cleanup.errors": "\u9519\u8BEF\uFF1A{{count}}",
+    "cleanup.noChanges": "\u6CA1\u6709\u9700\u8981\u6E05\u7406\u7684\u8FC7\u53BB Daily Note \u884C\u3002",
+    "cleanup.applied": "\u6E05\u7406\u5DF2\u5B8C\u6210\uFF1A\u66F4\u65B0 {{count}} \u4E2A\u6587\u4EF6\u3002",
     "daily.filters": "\u4EFB\u52A1\u7B5B\u9009",
     "daily.filters.desc": "\u6BCF\u4E2A\u7EF4\u5EA6\u9ED8\u8BA4\u90FD\u662F\u5168\u90E8\u3002\u591A\u4E2A\u7EF4\u5EA6\u540C\u65F6\u9009\u62E9\u65F6\uFF0C\u4EFB\u52A1\u5FC5\u987B\u540C\u65F6\u6EE1\u8DB3\u6BCF\u4E2A\u5DF2\u9009\u62E9\u7684\u7EF4\u5EA6\u3002",
     "daily.filters.verifyFirst": "\u8BF7\u5148\u5728\u901A\u7528\u8BBE\u7F6E\u4E2D\u9A8C\u8BC1 Todoist API Token\uFF0C\u4EE5\u52A0\u8F7D\u9879\u76EE\u548C\u6807\u7B7E\u3002",
@@ -356,9 +420,9 @@ function noticeDurationForDailyNote(result) {
 // src/build-info.ts
 function getBuildInfo() {
   return {
-    version: "0.8.0",
-    buildDate: "2026-05-16T22:17:23.295Z",
-    buildNumber: "202605162217"
+    version: "0.9.0",
+    buildDate: "2026-05-16T22:58:16.544Z",
+    buildNumber: "202605162258"
   };
 }
 function formatBuildDate(buildDate) {
@@ -618,6 +682,11 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
         showSyncTodoistNotice((_a = result.message) != null ? _a : this.tr("daily.syncNow.result", { status: result.status }));
       })
     );
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.cleanup.name")).setDesc(this.tr("daily.cleanup.desc")).addButton(
+      (button) => button.setButtonText(this.tr("daily.cleanup.button")).onClick(() => {
+        new DailyNoteCleanupModal(this.app, this.plugin).open();
+      })
+    );
     new import_obsidian2.Setting(containerEl).setName(this.tr("daily.filters")).setHeading();
     new import_obsidian2.Setting(containerEl).setDesc(this.tr("daily.filters.desc"));
     if (this.plugin.settings.apiToken && (!this.projectsLoaded || !this.labelsLoaded)) {
@@ -774,6 +843,140 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     apiStatus.textContent = this.tr("general.status.api", {
       status: this.plugin.todoistService.isInitialized() ? this.tr("general.status.connected") : this.tr("general.status.disconnected")
     });
+  }
+};
+var DailyNoteCleanupModal = class extends import_obsidian2.Modal {
+  constructor(app, plugin) {
+    super(app);
+    this.plugin = plugin;
+    this.mode = "remove-stale-unfinished";
+    this.markCompletedAlso = false;
+    this.previewResult = null;
+    this.resultEl = null;
+  }
+  tr(key, values) {
+    return t(this.plugin.settings.uiLanguage, key, values);
+  }
+  onOpen() {
+    const { contentEl, titleEl } = this;
+    titleEl.setText(this.tr("cleanup.title"));
+    contentEl.empty();
+    contentEl.createEl("p", {
+      cls: "sync-todoist-cleanup-intro",
+      text: this.tr("cleanup.intro")
+    });
+    new import_obsidian2.Setting(contentEl).setName(this.tr("cleanup.mode.name")).addDropdown((dropdown) => {
+      dropdown.addOption("remove-stale-unfinished", this.tr("cleanup.mode.removeStale")).addOption("mark-completed", this.tr("cleanup.mode.markCompleted")).addOption("remove-completed", this.tr("cleanup.mode.removeCompleted")).setValue(this.mode).onChange((value) => {
+        this.mode = value;
+        this.previewResult = null;
+        this.render();
+      });
+    });
+    if (this.mode === "remove-stale-unfinished") {
+      new import_obsidian2.Setting(contentEl).setName(this.tr("cleanup.markCompletedAlso")).addToggle(
+        (toggle) => toggle.setValue(this.markCompletedAlso).onChange((value) => {
+          this.markCompletedAlso = value;
+          this.previewResult = null;
+          this.render();
+        })
+      );
+    }
+    this.resultEl = contentEl.createDiv({ cls: "sync-todoist-cleanup-result" });
+    if (this.previewResult) {
+      this.renderResult(this.previewResult);
+    }
+    const buttons = contentEl.createDiv({ cls: "sync-todoist-modal-buttons" });
+    const previewButton = buttons.createEl("button", { text: this.tr("cleanup.preview") });
+    previewButton.onclick = async () => {
+      await this.preview(previewButton);
+    };
+    const applyButton = buttons.createEl("button", {
+      text: this.tr("cleanup.apply"),
+      cls: "mod-cta"
+    });
+    applyButton.disabled = !this.previewResult || this.previewResult.changedFiles === 0 || this.previewResult.errors.length > 0;
+    applyButton.onclick = async () => {
+      await this.apply(applyButton);
+    };
+    const closeButton = buttons.createEl("button", { text: this.tr("cleanup.close") });
+    closeButton.onclick = () => this.close();
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+  render() {
+    this.onOpen();
+  }
+  options() {
+    return {
+      mode: this.mode,
+      markCompletedAlso: this.mode === "remove-stale-unfinished" && this.markCompletedAlso
+    };
+  }
+  async preview(button) {
+    if (!this.plugin.settings.apiToken) {
+      showSyncTodoistNotice(this.tr("cleanup.noToken"));
+      return;
+    }
+    button.disabled = true;
+    button.textContent = this.tr("cleanup.previewing");
+    try {
+      this.previewResult = await this.plugin.previewPastDailyNoteCleanup(this.options());
+      this.render();
+    } catch (error) {
+      showSyncTodoistNotice(`Sync Todoist: ${error}`, 1e4);
+    }
+  }
+  async apply(button) {
+    if (!this.previewResult || this.previewResult.changedFiles === 0 || this.previewResult.errors.length > 0)
+      return;
+    button.disabled = true;
+    button.textContent = this.tr("cleanup.applying");
+    try {
+      const result = await this.plugin.applyPastDailyNoteCleanup(this.options());
+      this.previewResult = result;
+      this.render();
+      showSyncTodoistNotice(this.tr("cleanup.applied", { count: result.changedFiles }));
+    } catch (error) {
+      showSyncTodoistNotice(`Sync Todoist: ${error}`, 1e4);
+    }
+  }
+  renderResult(result) {
+    if (!this.resultEl)
+      return;
+    this.resultEl.empty();
+    this.resultEl.createEl("h3", { text: this.tr("cleanup.summary") });
+    const lines = [
+      this.tr("cleanup.scannedFiles", { count: result.scannedFiles }),
+      this.tr("cleanup.eligibleFiles", { count: result.eligibleFiles }),
+      this.tr("cleanup.changedFiles", { count: result.changedFiles }),
+      this.tr("cleanup.scannedRows", { count: result.stats.scannedTaskRows }),
+      this.tr("cleanup.removedStale", { count: result.stats.removedStaleUnfinished }),
+      this.tr("cleanup.markedCompleted", { count: result.stats.markedCompleted }),
+      this.tr("cleanup.removedCompleted", { count: result.stats.removedCompleted }),
+      this.tr("cleanup.skippedUnknown", { count: result.stats.skippedUnknown }),
+      this.tr("cleanup.skippedCompleted", { count: result.stats.skippedCompleted }),
+      this.tr("cleanup.skippedUnchanged", { count: result.stats.skippedUnchanged }),
+      this.tr("cleanup.invalidMarkers", { count: result.invalidMarkerFiles }),
+      this.tr("cleanup.skippedUndated", { count: result.skippedUndatedFiles })
+    ];
+    const list = this.resultEl.createEl("ul", { cls: "sync-todoist-cleanup-summary" });
+    for (const line of lines) {
+      list.createEl("li", { text: line });
+    }
+    if (result.changedFiles === 0 && result.errors.length === 0) {
+      this.resultEl.createEl("p", { text: this.tr("cleanup.noChanges") });
+    }
+    if (result.errors.length > 0) {
+      this.resultEl.createEl("p", {
+        cls: "sync-todoist-cleanup-errors",
+        text: this.tr("cleanup.errors", { count: result.errors.length })
+      });
+      const errors = this.resultEl.createEl("ul", { cls: "sync-todoist-cleanup-summary" });
+      for (const error of result.errors.slice(0, 5)) {
+        errors.createEl("li", { text: error });
+      }
+    }
   }
 };
 function updateSelection(values, value, checked) {
@@ -1964,6 +2167,113 @@ function buildDailyNoteParsedTask(task, filePath, lineNumber, resolveProjectName
   };
 }
 
+// src/daily-note-cleanup.ts
+var EMPTY_CONTENT_STATS = {
+  scannedTaskRows: 0,
+  removedStaleUnfinished: 0,
+  markedCompleted: 0,
+  removedCompleted: 0,
+  skippedUnknown: 0,
+  skippedCompleted: 0,
+  skippedUnchanged: 0
+};
+function createEmptyCleanupContentStats() {
+  return { ...EMPTY_CONTENT_STATS };
+}
+function mergeCleanupContentStats(target, source) {
+  target.scannedTaskRows += source.scannedTaskRows;
+  target.removedStaleUnfinished += source.removedStaleUnfinished;
+  target.markedCompleted += source.markedCompleted;
+  target.removedCompleted += source.removedCompleted;
+  target.skippedUnknown += source.skippedUnknown;
+  target.skippedCompleted += source.skippedCompleted;
+  target.skippedUnchanged += source.skippedUnchanged;
+}
+function applyDailyNoteCleanupToContent(content, markerStart, markerEnd, dailyNoteDate, options, lookupTaskState) {
+  const lines = content.split("\n");
+  const startLine = lines.findIndex((line) => line.includes(markerStart));
+  if (startLine < 0) {
+    return { content, changed: false, stats: createEmptyCleanupContentStats(), removedIds: [] };
+  }
+  const endLine = lines.findIndex((line, index) => index > startLine && line.includes(markerEnd));
+  if (endLine < 0) {
+    return { content, changed: false, stats: createEmptyCleanupContentStats(), removedIds: [] };
+  }
+  const stats = createEmptyCleanupContentStats();
+  const nextLines = [];
+  const removedIds = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (i <= startLine || i >= endLine) {
+      nextLines.push(line);
+      continue;
+    }
+    const parsed = parseCleanupTaskLine(line);
+    if (!parsed) {
+      nextLines.push(line);
+      continue;
+    }
+    stats.scannedTaskRows++;
+    const taskState = lookupTaskState(parsed.todoistId);
+    if (!taskState) {
+      stats.skippedUnknown++;
+      nextLines.push(line);
+      continue;
+    }
+    if (parsed.isCompleted) {
+      if (options.mode === "remove-completed" && taskState.isCompleted) {
+        stats.removedCompleted++;
+        removedIds.push(parsed.todoistId);
+        continue;
+      }
+      stats.skippedUnchanged++;
+      nextLines.push(line);
+      continue;
+    }
+    if (taskState.isCompleted) {
+      if (options.mode === "remove-completed") {
+        stats.removedCompleted++;
+        removedIds.push(parsed.todoistId);
+        continue;
+      }
+      if (options.mode === "mark-completed" || options.mode === "remove-stale-unfinished" && options.markCompletedAlso) {
+        stats.markedCompleted++;
+        nextLines.push(updateTaskCompletion(line, true));
+        continue;
+      }
+      stats.skippedCompleted++;
+      nextLines.push(line);
+      continue;
+    }
+    if (options.mode === "remove-stale-unfinished" && taskState.isActive && taskState.currentDueDate !== dailyNoteDate) {
+      stats.removedStaleUnfinished++;
+      removedIds.push(parsed.todoistId);
+      continue;
+    }
+    stats.skippedUnchanged++;
+    nextLines.push(line);
+  }
+  const nextContent = nextLines.join("\n");
+  return {
+    content: nextContent,
+    changed: nextContent !== content,
+    stats,
+    removedIds
+  };
+}
+function parseCleanupTaskLine(line) {
+  const taskMatch = line.match(/^(\s*)[-*]\s+\[([ xX])\]\s+/);
+  if (!taskMatch)
+    return null;
+  const idMatch = line.match(/<!--\s*todoist-id:\s*([\w]+)\s*-->/);
+  if (!idMatch)
+    return null;
+  return {
+    todoistId: idMatch[1],
+    isCompleted: taskMatch[2].toLowerCase() === "x"
+  };
+}
+
 // src/sync-rules.ts
 function selectTaskForTodoistSync(tasks, todoistTask) {
   var _a;
@@ -2249,6 +2559,172 @@ var SyncEngine = class {
     await this.todoistService.ensureProjectCache();
     const tasks = await this.getDailyNoteSourceTasks();
     return this.syncTasksIntoDailyNote(tasks);
+  }
+  async previewPastDailyNoteCleanup(options) {
+    return this.cleanupPastDailyNotes(options, true);
+  }
+  async applyPastDailyNoteCleanup(options) {
+    return this.cleanupPastDailyNotes(options, false);
+  }
+  async cleanupPastDailyNotes(options, dryRun) {
+    var _a;
+    const result = {
+      mode: options.mode,
+      dryRun,
+      scannedFiles: 0,
+      eligibleFiles: 0,
+      changedFiles: 0,
+      invalidMarkerFiles: 0,
+      skippedUndatedFiles: 0,
+      earliestDate: null,
+      latestDate: null,
+      stats: createEmptyCleanupContentStats(),
+      files: [],
+      errors: []
+    };
+    if (!this.todoistService.isInitialized()) {
+      result.errors.push("Todoist API not configured");
+      return result;
+    }
+    const config = this.getDailyNoteConfig();
+    if (!config) {
+      result.errors.push("Enable Obsidian core Daily notes plugin first.");
+      return result;
+    }
+    const today = localTodayISODate();
+    const markerStart = this.settings.dailyNote.markerStart;
+    const markerEnd = this.settings.dailyNote.markerEnd;
+    const candidates = [];
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      result.scannedFiles++;
+      try {
+        const content = await this.app.vault.cachedRead(file);
+        if (!content.includes(markerStart) && !content.includes(markerEnd))
+          continue;
+        if (!isMarkerRegionValid(content, markerStart, markerEnd)) {
+          result.invalidMarkerFiles++;
+          continue;
+        }
+        const date = this.dailyNoteDateFromPath(file.path, config);
+        if (!date) {
+          result.skippedUndatedFiles++;
+          continue;
+        }
+        if (date >= today)
+          continue;
+        result.eligibleFiles++;
+        result.earliestDate = result.earliestDate ? minIsoDate(result.earliestDate, date) : date;
+        result.latestDate = result.latestDate ? maxIsoDate(result.latestDate, date) : date;
+        candidates.push({ file, content, date });
+      } catch (error) {
+        result.errors.push(`Failed to read ${file.path}: ${error}`);
+      }
+    }
+    if (candidates.length === 0 || !result.earliestDate) {
+      return result;
+    }
+    const activeTasks = await this.todoistService.getTasks();
+    const activeById = new Map(activeTasks.map((task) => [task.id, task]));
+    const completedIds = await this.getCompletedTodoistIdsForDailyNoteCleanup(
+      result.earliestDate,
+      today,
+      options,
+      result.errors
+    );
+    for (const candidate of candidates) {
+      const cleanup = applyDailyNoteCleanupToContent(
+        candidate.content,
+        markerStart,
+        markerEnd,
+        candidate.date,
+        options,
+        (todoistId) => this.resolveCleanupTaskState(todoistId, activeById, completedIds)
+      );
+      mergeCleanupContentStats(result.stats, cleanup.stats);
+      if (!cleanup.changed)
+        continue;
+      result.changedFiles++;
+      result.files.push({
+        filePath: candidate.file.path,
+        date: candidate.date,
+        scannedTaskRows: cleanup.stats.scannedTaskRows,
+        removedStaleUnfinished: cleanup.stats.removedStaleUnfinished,
+        markedCompleted: cleanup.stats.markedCompleted,
+        removedCompleted: cleanup.stats.removedCompleted
+      });
+      if (!dryRun) {
+        await this.app.vault.modify(candidate.file, cleanup.content);
+        for (const id of cleanup.removedIds) {
+          if (((_a = this.syncState.tasks[id]) == null ? void 0 : _a.filePath) === candidate.file.path) {
+            delete this.syncState.tasks[id];
+          }
+        }
+      }
+    }
+    return result;
+  }
+  getDailyNoteConfig() {
+    var _a, _b, _c, _d, _e, _f;
+    const appWithInternal = this.app;
+    const dailyNotesPlugin = (_b = (_a = appWithInternal.internalPlugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b["daily-notes"];
+    if (!(dailyNotesPlugin == null ? void 0 : dailyNotesPlugin.enabled))
+      return null;
+    const options = (_d = (_c = dailyNotesPlugin.instance) == null ? void 0 : _c.options) != null ? _d : {};
+    return {
+      format: ((_e = options.format) == null ? void 0 : _e.trim()) || "YYYY-MM-DD",
+      folder: ((_f = options.folder) != null ? _f : "").trim().replace(/^\/+|\/+$/g, "")
+    };
+  }
+  dailyNoteDateFromPath(path, config) {
+    const normalizedPath = (0, import_obsidian4.normalizePath)(path);
+    const prefix = config.folder ? `${(0, import_obsidian4.normalizePath)(config.folder)}/` : "";
+    if (prefix && !normalizedPath.startsWith(prefix))
+      return null;
+    if (!normalizedPath.endsWith(".md"))
+      return null;
+    const relative = normalizedPath.slice(prefix.length, -3);
+    const parsed = (0, import_obsidian4.moment)(relative, config.format, true);
+    if (!parsed.isValid())
+      return null;
+    return parsed.format("YYYY-MM-DD");
+  }
+  async getCompletedTodoistIdsForDailyNoteCleanup(earliestDate, today, options, errors) {
+    const needsCompleted = options.mode === "mark-completed" || options.mode === "remove-completed" || options.markCompletedAlso;
+    const completedIds = /* @__PURE__ */ new Set();
+    if (!needsCompleted)
+      return completedIds;
+    const since = /* @__PURE__ */ new Date(`${earliestDate}T00:00:00`);
+    const until = /* @__PURE__ */ new Date(`${today}T00:00:00`);
+    until.setDate(until.getDate() + 1);
+    for (const by of ["completion_date", "due_date"]) {
+      try {
+        const completedTasks = await this.todoistService.getCompletedTasks({ by, since, until });
+        for (const task of completedTasks) {
+          completedIds.add(task.id);
+        }
+      } catch (error) {
+        errors.push(`Failed to fetch completed tasks by ${by}: ${error}`);
+      }
+    }
+    return completedIds;
+  }
+  resolveCleanupTaskState(todoistId, activeById, completedIds) {
+    const activeTask = activeById.get(todoistId);
+    if (activeTask) {
+      return {
+        isActive: true,
+        isCompleted: false,
+        currentDueDate: normalizeTodoistDue(activeTask.due).date
+      };
+    }
+    if (completedIds.has(todoistId)) {
+      return {
+        isActive: false,
+        isCompleted: true,
+        currentDueDate: null
+      };
+    }
+    return null;
   }
   async getDailyNoteSourceTasks() {
     const activeTasks = await this.todoistService.getTasks();
@@ -2861,6 +3337,12 @@ var SyncEngine = class {
     this.pendingConflicts = [];
   }
 };
+function minIsoDate(a, b) {
+  return a <= b ? a : b;
+}
+function maxIsoDate(a, b) {
+  return a >= b ? a : b;
+}
 
 // src/import-modal.ts
 var import_obsidian5 = require("obsidian");
@@ -3270,6 +3752,13 @@ function renderQueryBlock(source, el, plugin) {
 // src/release-log.ts
 var RELEASE_LOG = [
   {
+    version: "0.9.0",
+    titleEn: "Past Daily Note cleanup",
+    titleZh: "\u6E05\u7406\u8FC7\u53BB\u7684 Daily Note",
+    en: "Adds a manual cleanup tool for past Daily Notes. Preview stale generated rows, remove unfinished tasks that moved to another date, mark historical rows completed, or remove completed historical rows without deleting Todoist tasks.",
+    zh: "\u65B0\u589E\u8FC7\u53BB Daily Note \u7684\u624B\u52A8\u6E05\u7406\u5DE5\u5177\u3002\u4F60\u53EF\u4EE5\u5148\u9884\u89C8\u8FC7\u671F\u751F\u6210\u884C\uFF0C\u518D\u79FB\u9664\u5DF2\u79FB\u52A8\u5230\u5176\u4ED6\u65E5\u671F\u7684\u672A\u5B8C\u6210\u4EFB\u52A1\u3001\u6807\u8BB0\u5DF2\u5B8C\u6210\u5386\u53F2\u884C\uFF0C\u6216\u79FB\u9664\u5DF2\u5B8C\u6210\u5386\u53F2\u884C\uFF1B\u4E0D\u4F1A\u5220\u9664 Todoist \u4EFB\u52A1\u3002"
+  },
+  {
     version: "0.8.0",
     titleEn: "Daily Note completed-task modes",
     titleZh: "Daily Note \u5DF2\u5B8C\u6210\u4EFB\u52A1\u6A21\u5F0F",
@@ -3299,6 +3788,10 @@ var RELEASE_LOG = [
   }
 ];
 var RECENT_UPDATE_HIGHLIGHTS = [
+  {
+    en: "Past Daily Note cleanup can remove stale generated rows while leaving Todoist tasks untouched.",
+    zh: "\u8FC7\u53BB Daily Note \u6E05\u7406\u5DE5\u5177\u53EF\u4EE5\u79FB\u9664\u8FC7\u671F\u751F\u6210\u884C\uFF0C\u540C\u65F6\u4E0D\u5220\u9664 Todoist \u4EFB\u52A1\u3002"
+  },
   {
     en: "Daily Note can distinguish planning mode from completion-log mode.",
     zh: "Daily Note \u73B0\u5728\u53EF\u4EE5\u533A\u5206\u201C\u4ECA\u65E5\u8BA1\u5212\u201D\u548C\u201C\u4ECA\u65E5\u5B8C\u6210\u65E5\u5FD7\u201D\u4E24\u79CD\u4F7F\u7528\u65B9\u5F0F\u3002"
@@ -3681,6 +4174,15 @@ var TodoistSyncPlugin = class extends import_obsidian7.Plugin {
   }
   async syncDailyNoteNow() {
     const result = await this.syncEngine.syncDailyNoteNow();
+    await this.saveSyncState();
+    this.updateStatusBar();
+    return result;
+  }
+  async previewPastDailyNoteCleanup(options) {
+    return this.syncEngine.previewPastDailyNoteCleanup(options);
+  }
+  async applyPastDailyNoteCleanup(options) {
+    const result = await this.syncEngine.applyPastDailyNoteCleanup(options);
     await this.saveSyncState();
     this.updateStatusBar();
     return result;
