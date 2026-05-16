@@ -50,6 +50,7 @@ var DEFAULT_SETTINGS = {
     labels: [],
     priorities: [],
     sortMode: "time",
+    includeIncompleteRecurring: true,
     completedTaskMode: "off",
     includeCompletedRecurring: false
   },
@@ -156,6 +157,8 @@ var STRINGS = {
     "daily.sort.desc": "Choose the first Daily Note sort dimension. The secondary sort is the other dimension.",
     "daily.sort.time": "Time first",
     "daily.sort.priority": "Priority first",
+    "daily.includeIncompleteRecurring.name": "Include incomplete recurring tasks",
+    "daily.includeIncompleteRecurring.desc": "Also include active recurring Todoist tasks whose current occurrence is due today.",
     "daily.completedTaskMode.name": "Completed tasks",
     "daily.completedTaskMode.desc": "Choose which completed Todoist tasks stay in today's Daily Note block.",
     "daily.completedTaskMode.off": "Do not show completed tasks",
@@ -281,6 +284,8 @@ var STRINGS = {
     "daily.sort.desc": "\u9009\u62E9 Daily Note \u7684\u7B2C\u4E00\u7EA7\u6392\u5E8F\u7EF4\u5EA6\uFF0C\u7B2C\u4E8C\u7EA7\u6392\u5E8F\u4F1A\u4F7F\u7528\u53E6\u4E00\u4E2A\u7EF4\u5EA6\u3002",
     "daily.sort.time": "\u65F6\u95F4\u4F18\u5148",
     "daily.sort.priority": "\u91CD\u8981\u7A0B\u5EA6\u4F18\u5148",
+    "daily.includeIncompleteRecurring.name": "\u5305\u542B\u672A\u5B8C\u6210\u7684\u5FAA\u73AF\u4EFB\u52A1",
+    "daily.includeIncompleteRecurring.desc": "\u540C\u65F6\u540C\u6B65\u5F53\u524D occurrence \u622A\u6B62\u65E5\u671F\u662F\u4ECA\u5929\u7684\u672A\u5B8C\u6210\u5FAA\u73AF\u4EFB\u52A1\u3002",
     "daily.completedTaskMode.name": "\u5DF2\u5B8C\u6210\u4EFB\u52A1",
     "daily.completedTaskMode.desc": "\u9009\u62E9\u54EA\u4E9B\u5DF2\u5B8C\u6210\u7684 Todoist \u4EFB\u52A1\u4FDD\u7559\u5728\u4ECA\u5929\u7684 Daily Note \u533A\u95F4\u4E2D\u3002",
     "daily.completedTaskMode.off": "\u4E0D\u663E\u793A\u5DF2\u5B8C\u6210\u4EFB\u52A1",
@@ -420,9 +425,9 @@ function noticeDurationForDailyNote(result) {
 // src/build-info.ts
 function getBuildInfo() {
   return {
-    version: "0.9.0",
-    buildDate: "2026-05-16T23:04:53.599Z",
-    buildNumber: "202605162304"
+    version: "1.0.0",
+    buildDate: "2026-05-16T23:45:32.557Z",
+    buildNumber: "202605162345"
   };
 }
 function formatBuildDate(buildDate) {
@@ -658,6 +663,12 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.includeIncompleteRecurring.name")).setDesc(this.tr("daily.includeIncompleteRecurring.desc")).addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.dailyNote.includeIncompleteRecurring).onChange(async (value) => {
+        this.plugin.settings.dailyNote.includeIncompleteRecurring = value;
+        await this.plugin.saveSettings();
+      })
+    );
     new import_obsidian2.Setting(containerEl).setName(this.tr("daily.completedTaskMode.name")).setDesc(this.tr("daily.completedTaskMode.desc")).addDropdown((dropdown) => {
       dropdown.addOption("off", this.tr("daily.completedTaskMode.off")).addOption("due-today", this.tr("daily.completedTaskMode.dueToday")).addOption("completed-today", this.tr("daily.completedTaskMode.completedToday")).setValue(this.plugin.settings.dailyNote.completedTaskMode).onChange(async (value) => {
         this.plugin.settings.dailyNote.completedTaskMode = value;
@@ -1974,9 +1985,11 @@ function extractTodoistIdsFromMarkerRegion(content, markerStart, markerEnd) {
   return ids;
 }
 function taskMatchesDailyNoteFilter(task, filter) {
-  var _a;
+  var _a, _b, _c;
   if (task.isCompleted) {
     if (filter.completedTaskMode === "off")
+      return false;
+    if (!filter.includeCompletedRecurring && ((_a = task.due) == null ? void 0 : _a.isRecurring))
       return false;
     if (filter.completedTaskMode === "completed-today" && localDateFromTimestamp(task.completedAt) !== filter.today) {
       return false;
@@ -1986,12 +1999,14 @@ function taskMatchesDailyNoteFilter(task, filter) {
     }
   } else if (localDateFromTodoistDue(task.due) !== filter.today) {
     return false;
+  } else if (!filter.includeIncompleteRecurring && ((_b = task.due) == null ? void 0 : _b.isRecurring)) {
+    return false;
   }
   if (filter.projectIds.length > 0 && !filter.projectIds.includes(task.projectId)) {
     return false;
   }
   if (filter.labels.length > 0) {
-    const taskLabels = new Set(((_a = task.labels) != null ? _a : []).map((label) => label.toLowerCase()));
+    const taskLabels = new Set(((_c = task.labels) != null ? _c : []).map((label) => label.toLowerCase()));
     const hasSelectedLabel = filter.labels.some((label) => taskLabels.has(label.toLowerCase()));
     if (!hasSelectedLabel)
       return false;
@@ -2099,7 +2114,9 @@ function filterDailyNoteTasks(tasks, settings, today) {
     projectIds: settings.projectIds,
     labels: settings.labels,
     priorities: settings.priorities,
-    completedTaskMode: settings.completedTaskMode
+    includeIncompleteRecurring: settings.includeIncompleteRecurring,
+    completedTaskMode: settings.completedTaskMode,
+    includeCompletedRecurring: settings.includeCompletedRecurring
   };
   return tasks.filter((task) => taskMatchesDailyNoteFilter(task, filter));
 }
@@ -2756,10 +2773,13 @@ var SyncEngine = class {
     const since = /* @__PURE__ */ new Date(`${today}T00:00:00`);
     const until = new Date(since);
     until.setDate(since.getDate() + 1);
-    const completedTasks = await this.todoistService.getCompletedTasks({
+    const completedTasks = (await this.todoistService.getCompletedTasks({
       by: completedTaskMode === "due-today" ? "due_date" : "completion_date",
       since,
       until
+    })).filter((task) => {
+      var _a;
+      return this.settings.dailyNote.includeCompletedRecurring || !((_a = task.due) == null ? void 0 : _a.isRecurring);
     });
     let completedRecurringTasks = [];
     if (this.settings.dailyNote.includeCompletedRecurring) {
@@ -2777,8 +2797,10 @@ var SyncEngine = class {
       byId.set(task.id, task);
     for (const task of completedRecurringTasks)
       byId.set(task.id, task);
-    for (const task of this.recentlyCompletedRecurringTasks)
-      byId.set(task.id, task);
+    if (this.settings.dailyNote.includeCompletedRecurring) {
+      for (const task of this.recentlyCompletedRecurringTasks)
+        byId.set(task.id, task);
+    }
     return [...byId.values()];
   }
   getDailyNotePath(date) {
@@ -3772,6 +3794,13 @@ function renderQueryBlock(source, el, plugin) {
 // src/release-log.ts
 var RELEASE_LOG = [
   {
+    version: "1.0.0",
+    titleEn: "Recurring controls for Daily Notes",
+    titleZh: "Daily Note \u5FAA\u73AF\u4EFB\u52A1\u63A7\u5236",
+    en: "Adds a Daily Note option to include or hide incomplete recurring tasks due today, while keeping completed recurring occurrence recovery as a separate option.",
+    zh: "\u65B0\u589E Daily Note \u9009\u9879\uFF0C\u53EF\u9009\u62E9\u662F\u5426\u5305\u542B\u4ECA\u5929\u622A\u6B62\u7684\u672A\u5B8C\u6210\u5FAA\u73AF\u4EFB\u52A1\uFF1B\u5DF2\u5B8C\u6210\u5FAA\u73AF\u4EFB\u52A1 occurrence \u4ECD\u4FDD\u6301\u72EC\u7ACB\u63A7\u5236\u3002"
+  },
+  {
     version: "0.9.0",
     titleEn: "Past Daily Note cleanup",
     titleZh: "\u6E05\u7406\u8FC7\u53BB\u7684 Daily Note",
@@ -3808,6 +3837,10 @@ var RELEASE_LOG = [
   }
 ];
 var RECENT_UPDATE_HIGHLIGHTS = [
+  {
+    en: "Daily Note recurring tasks now have separate controls for incomplete tasks and completed occurrences.",
+    zh: "Daily Note \u5FAA\u73AF\u4EFB\u52A1\u73B0\u5728\u53EF\u5206\u522B\u63A7\u5236\u672A\u5B8C\u6210\u4EFB\u52A1\u548C\u5DF2\u5B8C\u6210 occurrence\u3002"
+  },
   {
     en: "Past Daily Note cleanup can remove stale generated rows while leaving Todoist tasks untouched.",
     zh: "\u8FC7\u53BB Daily Note \u6E05\u7406\u5DE5\u5177\u53EF\u4EE5\u79FB\u9664\u8FC7\u671F\u751F\u6210\u884C\uFF0C\u540C\u65F6\u4E0D\u5220\u9664 Todoist \u4EFB\u52A1\u3002"
@@ -3917,6 +3950,7 @@ function normalizeDailyNoteSettings(settings) {
     labels: merged.labels,
     priorities: merged.priorities,
     sortMode: merged.sortMode,
+    includeIncompleteRecurring: typeof merged.includeIncompleteRecurring === "boolean" ? merged.includeIncompleteRecurring : DEFAULT_SETTINGS.dailyNote.includeIncompleteRecurring,
     completedTaskMode,
     includeCompletedRecurring: completedTaskMode === "off" ? false : merged.includeCompletedRecurring
   };

@@ -621,11 +621,11 @@ export class SyncEngine {
     const until = new Date(since);
     until.setDate(since.getDate() + 1);
 
-    const completedTasks = await this.todoistService.getCompletedTasks({
+    const completedTasks = (await this.todoistService.getCompletedTasks({
       by: completedTaskMode === 'due-today' ? 'due_date' : 'completion_date',
       since,
       until,
-    });
+    })).filter(task => this.settings.dailyNote.includeCompletedRecurring || !task.due?.isRecurring);
 
     let completedRecurringTasks: TodoistTask[] = [];
     if (this.settings.dailyNote.includeCompletedRecurring) {
@@ -641,7 +641,9 @@ export class SyncEngine {
     for (const task of activeTasks) byId.set(task.id, task);
     for (const task of completedTasks) byId.set(task.id, task);
     for (const task of completedRecurringTasks) byId.set(task.id, task);
-    for (const task of this.recentlyCompletedRecurringTasks) byId.set(task.id, task);
+    if (this.settings.dailyNote.includeCompletedRecurring) {
+      for (const task of this.recentlyCompletedRecurringTasks) byId.set(task.id, task);
+    }
     return [...byId.values()];
   }
 

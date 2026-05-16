@@ -1,4 +1,4 @@
-# Sync Todoist v0.9.0 - Test Specification
+# Sync Todoist v1.0.0 - Test Specification
 
 ## Prerequisites
 
@@ -544,6 +544,15 @@ Test each of these query blocks (create one block per filter):
 9. **Expected**: The past Daily Note row changes from `[ ]` to `[x]`.
 - [ ] **PASS** / **FAIL**
 
+### G14. Daily Note incomplete recurring inclusion
+
+1. Create or choose a recurring Todoist task whose current occurrence is due today and a normal Todoist task due today.
+2. Enable **Include incomplete recurring tasks** and sync today's Daily Note.
+3. **Expected**: Both the recurring task and the normal task appear as unchecked rows.
+4. Disable **Include incomplete recurring tasks** and sync again.
+5. **Expected**: The recurring task is removed from the marker block, while the normal task remains.
+- [ ] **PASS** / **FAIL**
+
 ---
 
 ## Part H: Structured Due, Time, and Recurring Safety
@@ -639,11 +648,11 @@ Test each of these query blocks (create one block per filter):
 | D. Projects & Labels | 6 | | |
 | E. Query Blocks | 10 | | |
 | F. Edge Cases | 6 | | |
-| G. Daily Notes & Notices | 12 | | |
+| G. Daily Notes & Notices | 14 | | |
 | H. Structured Due Safety | 8 | | |
-| **Total** | **61** | | |
+| **Total** | **63** | | |
 
 **Tested by**: ___________________
 **Date**: ___________________
-**Plugin version**: 0.9.0
+**Plugin version**: 1.0.0
 **Obsidian version**: ___________________

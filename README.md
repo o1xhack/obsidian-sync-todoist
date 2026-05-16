@@ -12,13 +12,12 @@
 
 Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
-## What's New in 0.9.0
+## What's New in 1.0.0
 
-- Adds **Clean up past Daily Notes**, a manual preview-and-apply tool for stale generated rows.
-- Removes unfinished historical rows when the Todoist task is still active but no longer due on that Daily Note date.
-- Marks historical rows completed when Todoist confirms the task is already complete.
-- Optionally removes completed historical rows for users who prefer cleaner past Daily Notes.
-- Keeps normal sync behavior unchanged: past Daily Notes remain historical snapshots unless the user runs this cleanup tool.
+- Adds **Include incomplete recurring tasks** for Daily Note sync.
+- Lets users hide active recurring tasks whose current occurrence is due today while keeping ordinary active tasks.
+- Keeps completed recurring occurrences controlled by the existing **Include completed recurring tasks** option.
+- Preserves existing behavior after upgrade by leaving incomplete recurring task inclusion on by default.
 
 ## Why Use It?
 
@@ -234,6 +233,7 @@ Daily Note controls:
 - Customize the source-mode start and end markers.
 - Choose task filters by project, label, and priority.
 - Choose primary sorting: time first or priority first.
+- Choose whether active recurring tasks due today are included.
 - Choose which completed tasks remain visible: none, tasks due today, or all tasks completed today.
 - Include completed recurring occurrences when completed tasks are enabled.
 - Run a manual **Sync today** refresh.
@@ -260,6 +260,7 @@ Completed and recurring behavior:
 
 - Active tasks are included when their current Todoist due date falls today.
 - Timed due dates and current recurring occurrences are treated as today when their local date is today.
+- Turn off **Include incomplete recurring tasks** to hide active recurring tasks from the Daily Note block while keeping ordinary active tasks.
 - **Do not show completed tasks** hides completed Todoist tasks from the Daily Note block.
 - **Only tasks due today** keeps completed tasks whose Todoist due date belongs to today.
 - **All tasks completed today** keeps completed tasks whose Todoist completion time belongs to today, even if their due date was earlier.
@@ -282,6 +283,7 @@ Completed and recurring behavior:
 | Version | Current release | Shows the current version and build time. Click the version to view update notes. |
 | Daily Note filters | All | Optional project, label, and priority filters for today's Daily Note block. |
 | Daily Note primary sort | `Time first` | Sort Daily Note tasks by time then priority, or by priority then time. |
+| Include incomplete recurring tasks | On | Controls whether active recurring tasks due today appear in the Daily Note block. |
 | Completed tasks | `Do not show completed tasks` | Controls whether Daily Note keeps no completed tasks, completed tasks due today, or all tasks completed today. |
 | Include completed recurring tasks | Off | Sub-option shown when completed tasks are visible. Uses activity log fallback. |
 | Manual sync notices | On | Show short `Sync Todoist:` completion notices for manual sync actions. |

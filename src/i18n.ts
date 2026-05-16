@@ -61,6 +61,8 @@ export type I18nKey =
   | 'daily.sort.desc'
   | 'daily.sort.time'
   | 'daily.sort.priority'
+  | 'daily.includeIncompleteRecurring.name'
+  | 'daily.includeIncompleteRecurring.desc'
   | 'daily.completedTaskMode.name'
   | 'daily.completedTaskMode.desc'
   | 'daily.completedTaskMode.off'
@@ -187,6 +189,8 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.sort.desc': 'Choose the first Daily Note sort dimension. The secondary sort is the other dimension.',
     'daily.sort.time': 'Time first',
     'daily.sort.priority': 'Priority first',
+    'daily.includeIncompleteRecurring.name': 'Include incomplete recurring tasks',
+    'daily.includeIncompleteRecurring.desc': 'Also include active recurring Todoist tasks whose current occurrence is due today.',
     'daily.completedTaskMode.name': 'Completed tasks',
     'daily.completedTaskMode.desc': 'Choose which completed Todoist tasks stay in today\'s Daily Note block.',
     'daily.completedTaskMode.off': 'Do not show completed tasks',
@@ -312,6 +316,8 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.sort.desc': '选择 Daily Note 的第一级排序维度，第二级排序会使用另一个维度。',
     'daily.sort.time': '时间优先',
     'daily.sort.priority': '重要程度优先',
+    'daily.includeIncompleteRecurring.name': '包含未完成的循环任务',
+    'daily.includeIncompleteRecurring.desc': '同时同步当前 occurrence 截止日期是今天的未完成循环任务。',
     'daily.completedTaskMode.name': '已完成任务',
     'daily.completedTaskMode.desc': '选择哪些已完成的 Todoist 任务保留在今天的 Daily Note 区间中。',
     'daily.completedTaskMode.off': '不显示已完成任务',

@@ -13,6 +13,13 @@ export interface ReleaseHighlight {
 
 export const RELEASE_LOG: ReleaseLogEntry[] = [
   {
+    version: '1.0.0',
+    titleEn: 'Recurring controls for Daily Notes',
+    titleZh: 'Daily Note 循环任务控制',
+    en: 'Adds a Daily Note option to include or hide incomplete recurring tasks due today, while keeping completed recurring occurrence recovery as a separate option.',
+    zh: '新增 Daily Note 选项，可选择是否包含今天截止的未完成循环任务；已完成循环任务 occurrence 仍保持独立控制。',
+  },
+  {
     version: '0.9.0',
     titleEn: 'Past Daily Note cleanup',
     titleZh: '清理过去的 Daily Note',
@@ -50,6 +57,10 @@ export const RELEASE_LOG: ReleaseLogEntry[] = [
 ];
 
 export const RECENT_UPDATE_HIGHLIGHTS: ReleaseHighlight[] = [
+  {
+    en: 'Daily Note recurring tasks now have separate controls for incomplete tasks and completed occurrences.',
+    zh: 'Daily Note 循环任务现在可分别控制未完成任务和已完成 occurrence。',
+  },
   {
     en: 'Past Daily Note cleanup can remove stale generated rows while leaving Todoist tasks untouched.',
     zh: '过去 Daily Note 清理工具可以移除过期生成行，同时不删除 Todoist 任务。',

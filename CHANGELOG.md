@@ -2,6 +2,15 @@
 
 All notable Sync Todoist changes are tracked here.
 
+## 1.0.0 - 2026-05-16
+
+- Added a Daily Note option to include or hide incomplete recurring tasks whose current
+  occurrence is due today.
+- Kept the new option enabled by default so existing Daily Note behavior is preserved after
+  upgrade.
+- Tightened completed recurring filtering so the completed recurring option also excludes
+  recurring tasks returned by Todoist completed-task archive queries when disabled.
+
 ## 0.9.0 - 2026-05-16
 
 - Added a manual **Clean up past Daily Notes** tool that previews and applies cleanup inside

@@ -392,6 +392,18 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
+      .setName(this.tr('daily.includeIncompleteRecurring.name'))
+      .setDesc(this.tr('daily.includeIncompleteRecurring.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.dailyNote.includeIncompleteRecurring)
+          .onChange(async (value) => {
+            this.plugin.settings.dailyNote.includeIncompleteRecurring = value;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
       .setName(this.tr('daily.completedTaskMode.name'))
       .setDesc(this.tr('daily.completedTaskMode.desc'))
       .addDropdown((dropdown) => {

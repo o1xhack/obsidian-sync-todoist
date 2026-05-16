@@ -178,6 +178,52 @@ function runDailyNoteTests(): void {
     ]
   );
 
+  const activeRecurringToday = task({
+    id: 'active-recurring-today',
+    projectId: 'work',
+    priority: TodoistPriority.HIGH,
+    labels: ['writing'],
+    due: { date: '2026-05-13', isRecurring: true },
+  });
+  assert.deepEqual(
+    filterDailyNoteTasks([activeRecurringToday, matching], settings, '2026-05-13').map(t => t.id),
+    ['active-recurring-today', 'match']
+  );
+  assert.deepEqual(
+    filterDailyNoteTasks(
+      [activeRecurringToday, matching],
+      { ...settings, includeIncompleteRecurring: false },
+      '2026-05-13'
+    ).map(t => t.id),
+    ['match']
+  );
+
+  const completedRecurringToday = task({
+    id: 'done-recurring-today',
+    projectId: 'work',
+    priority: TodoistPriority.HIGH,
+    labels: ['writing'],
+    due: { date: '2026-05-13', isRecurring: true },
+    isCompleted: true,
+    completedAt: '2026-05-13T10:00:00Z',
+  });
+  assert.deepEqual(
+    filterDailyNoteTasks(
+      [completedRecurringToday],
+      { ...settings, completedTaskMode: 'due-today', includeCompletedRecurring: false },
+      '2026-05-13'
+    ).map(t => t.id),
+    []
+  );
+  assert.deepEqual(
+    filterDailyNoteTasks(
+      [completedRecurringToday],
+      { ...settings, completedTaskMode: 'due-today', includeCompletedRecurring: true },
+      '2026-05-13'
+    ).map(t => t.id),
+    ['done-recurring-today']
+  );
+
   const projectNames: Record<string, string> = {
     alpha: 'Alpha',
     beta: 'Beta',

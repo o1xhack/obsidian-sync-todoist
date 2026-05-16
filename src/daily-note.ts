@@ -23,7 +23,9 @@ export interface DailyNoteTaskFilter {
   projectIds: string[];
   labels: string[];
   priorities: TodoistPriority[];
+  includeIncompleteRecurring: boolean;
   completedTaskMode: DailyNoteCompletedTaskMode;
+  includeCompletedRecurring: boolean;
 }
 
 export interface DailyNoteCompletionActivity {
@@ -117,6 +119,7 @@ export function extractTodoistIdsFromMarkerRegion(
 export function taskMatchesDailyNoteFilter(task: TodoistTask, filter: DailyNoteTaskFilter): boolean {
   if (task.isCompleted) {
     if (filter.completedTaskMode === 'off') return false;
+    if (!filter.includeCompletedRecurring && task.due?.isRecurring) return false;
     if (filter.completedTaskMode === 'completed-today' && localDateFromTimestamp(task.completedAt) !== filter.today) {
       return false;
     }
@@ -124,6 +127,8 @@ export function taskMatchesDailyNoteFilter(task: TodoistTask, filter: DailyNoteT
       return false;
     }
   } else if (localDateFromTodoistDue(task.due) !== filter.today) {
+    return false;
+  } else if (!filter.includeIncompleteRecurring && task.due?.isRecurring) {
     return false;
   }
 
@@ -246,7 +251,9 @@ export function filterDailyNoteTasks(tasks: TodoistTask[], settings: DailyNoteSe
     projectIds: settings.projectIds,
     labels: settings.labels,
     priorities: settings.priorities,
+    includeIncompleteRecurring: settings.includeIncompleteRecurring,
     completedTaskMode: settings.completedTaskMode,
+    includeCompletedRecurring: settings.includeCompletedRecurring,
   };
   return tasks.filter(task => taskMatchesDailyNoteFilter(task, filter));
 }

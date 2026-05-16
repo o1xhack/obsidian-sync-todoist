@@ -32,6 +32,9 @@ export function normalizeDailyNoteSettings(settings: PersistedDailyNoteSettings 
     labels: merged.labels,
     priorities: merged.priorities,
     sortMode: merged.sortMode,
+    includeIncompleteRecurring: typeof merged.includeIncompleteRecurring === 'boolean'
+      ? merged.includeIncompleteRecurring
+      : DEFAULT_SETTINGS.dailyNote.includeIncompleteRecurring,
     completedTaskMode,
     includeCompletedRecurring: completedTaskMode === 'off' ? false : merged.includeCompletedRecurring,
   };

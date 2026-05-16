@@ -68,6 +68,8 @@ export interface DailyNoteSettings {
   priorities: TodoistPriority[];
   /** Primary sorting dimension for Daily Note tasks */
   sortMode: DailyNoteSortMode;
+  /** Whether incomplete recurring tasks should be included in the Daily Note block */
+  includeIncompleteRecurring: boolean;
   /** Which completed tasks should remain in the Daily Note block */
   completedTaskMode: DailyNoteCompletedTaskMode;
   /** Whether completed recurring occurrences should be kept when completed tasks are enabled */
@@ -102,6 +104,7 @@ export const DEFAULT_SETTINGS: TodoistSyncSettings = {
     labels: [],
     priorities: [],
     sortMode: 'time',
+    includeIncompleteRecurring: true,
     completedTaskMode: 'off',
     includeCompletedRecurring: false,
   },
