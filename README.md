@@ -2,10 +2,11 @@
 
 [![Version](https://img.shields.io/github/v/release/o1xhack/obsidian-sync-todoist?label=version&color=7c3aed)](https://github.com/o1xhack/obsidian-sync-todoist/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/o1xhack/obsidian-sync-todoist/total?label=downloads&color=7c3aed)](https://github.com/o1xhack/obsidian-sync-todoist/releases)
-[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsor-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/o1xhack)
 [![License](https://img.shields.io/github/license/o1xhack/obsidian-sync-todoist?color=7c3aed)](LICENSE)
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)](https://obsidian.md)
 [![Plugin ID](https://img.shields.io/badge/plugin%20id-sync--todoist-7c3aed)](manifest.json)
+
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsor-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/o1xhack)
 
 **Sync Todoist keeps Obsidian Markdown tasks and Todoist tasks in sync, while preserving local notes, nested outlines, project metadata, labels, query blocks, and Daily Note planning.**
 
