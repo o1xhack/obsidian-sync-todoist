@@ -6,5 +6,6 @@
   "description": "Bidirectional task sync with Todoist. Subtasks, import, projects, labels, inline query blocks, and completed-task queries.",
   "author": "o1xhack",
   "authorUrl": "https://github.com/o1xhack",
+  "fundingUrl": "https://github.com/sponsors/o1xhack",
   "isDesktopOnly": false
 }
