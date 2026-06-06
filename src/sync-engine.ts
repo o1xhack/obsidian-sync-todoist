@@ -315,8 +315,9 @@ export class SyncEngine {
 
       if (this.settings.dailyNote.enabled) {
         try {
-          const freshTasks = await this.getDailyNoteSourceTasks();
-          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks);
+          const today = localTodayISODate();
+          const freshTasks = await this.getDailyNoteSourceTasks(today);
+          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks, today);
           if (result.dailyNote.status === 'error' || result.dailyNote.status === 'invalid_markers') {
             result.errors.push(result.dailyNote.message ?? 'Daily Note sync failed');
           }

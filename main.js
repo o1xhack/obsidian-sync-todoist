@@ -54,7 +54,10 @@ function createDailyNoteBackfillResult(options, dryRun) {
   };
 }
 function isISODate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN((/* @__PURE__ */ new Date(`${value}T00:00:00`)).getTime());
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return false;
+  const parsed = /* @__PURE__ */ new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
 }
 function compareISODate(a, b) {
   return a.localeCompare(b);
@@ -594,8 +597,8 @@ function noticeDurationForDailyNote(result) {
 function getBuildInfo() {
   return {
     version: "1.0.0",
-    buildDate: "2026-06-06T07:07:22.950Z",
-    buildNumber: "202606060707"
+    buildDate: "2026-06-06T21:00:47.859Z",
+    buildNumber: "202606062100"
   };
 }
 function formatBuildDate(buildDate) {
@@ -2835,8 +2838,9 @@ var SyncEngine = class {
       this.syncState.lastFullSync = Date.now();
       if (this.settings.dailyNote.enabled) {
         try {
-          const freshTasks = await this.getDailyNoteSourceTasks();
-          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks);
+          const today = localTodayISODate();
+          const freshTasks = await this.getDailyNoteSourceTasks(today);
+          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks, today);
           if (result.dailyNote.status === "error" || result.dailyNote.status === "invalid_markers") {
             result.errors.push((_b = result.dailyNote.message) != null ? _b : "Daily Note sync failed");
           }

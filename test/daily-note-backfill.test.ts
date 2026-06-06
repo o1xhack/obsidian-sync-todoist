@@ -3,12 +3,16 @@ import { TFile } from 'obsidian';
 import {
   enumerateDailyNoteBackfillDates,
 } from '../src/daily-note-backfill';
+import { localTodayISODate } from '../src/daily-note';
 import { SyncEngine } from '../src/sync-engine';
 import { DEFAULT_SETTINGS, DEFAULT_SYNC_STATE, TodoistPriority, TodoistTask } from '../src/types';
 import { TodoistService } from '../src/todoist-service';
 
 const START = '%% sync-todoist:daily:start %%';
 const END = '%% sync-todoist:daily:end %%';
+
+const testGlobal = globalThis as typeof globalThis & { window?: { setTimeout: typeof setTimeout } };
+testGlobal.window ??= { setTimeout };
 
 function task(overrides: Partial<TodoistTask>): TodoistTask {
   return {
@@ -129,6 +133,8 @@ assert.deepEqual(dateList.dates, ['2026-05-10', '2026-05-11']);
 assert.equal(dateList.scannedDates, 3);
 assert.equal(dateList.skippedNonPastDates, 1);
 assert.equal(enumerateDailyNoteBackfillDates('2026-05-12', '2026-05-10', '2026-05-20').error, 'Backfill start date must be on or before end date.');
+assert.equal(enumerateDailyNoteBackfillDates('2026-02-30', '2026-03-01', '2026-03-10').error, 'Backfill dates must use YYYY-MM-DD.');
+assert.deepEqual(enumerateDailyNoteBackfillDates('2024-02-29', '2024-02-29', '2024-03-01').dates, ['2024-02-29']);
 
 async function runEngineBackfillTests(): Promise<void> {
   const vault = new FakeVault();
@@ -212,4 +218,42 @@ async function runEngineBackfillTests(): Promise<void> {
 }
 
 await runEngineBackfillTests();
+
+async function runFullSyncDailyNoteDateRegression(): Promise<void> {
+  const today = localTodayISODate();
+  const vault = new FakeVault();
+  vault.addFile(`Daily/${today}.md`, `# ${today}\n${START}\n${END}\n`);
+  const app = {
+    vault,
+    internalPlugins: {
+      plugins: {
+        'daily-notes': {
+          enabled: true,
+          instance: { options: { folder: 'Daily', format: 'YYYY-MM-DD' } },
+        },
+      },
+    },
+  };
+  const service = new FakeTodoistService([
+    task({ id: 'today-active', content: 'Today Active', due: { date: today } }),
+  ]);
+  const engine = new SyncEngine(
+    app as never,
+    service as unknown as TodoistService,
+    {
+      ...DEFAULT_SETTINGS,
+      dailyNote: {
+        ...DEFAULT_SETTINGS.dailyNote,
+        enabled: true,
+      },
+    },
+    { ...DEFAULT_SYNC_STATE, tasks: {} }
+  );
+
+  const result = await engine.performSync();
+  assert.equal(result.dailyNote?.status, 'updated');
+  assert.match(vault.files.get(`Daily/${today}.md`)?.content ?? '', /Today Active/);
+}
+
+await runFullSyncDailyNoteDateRegression();
 console.log('daily-note backfill tests passed');
