@@ -240,6 +240,7 @@ Daily Note 可控制：
 - 在显示已完成任务时，额外包含已完成的循环任务 occurrence。
 - 手动运行 **Sync today** 刷新。
 - 运行 **清理过去的 Daily Note**，预览并移除或更新过去日期里过期的生成行。
+- 运行 **回填过去的 Daily Note**，预览并向过去日期范围写入受控 marker 区块。
 
 默认 marker 区间：
 
@@ -271,6 +272,9 @@ Daily Note 可控制：
 - Todoist Activity Log 可能不会立刻返回刚完成的循环任务。若 Sync Todoist 在本轮同步中完成了循环任务，会先保留本地 checked 快照，直到活动日志追上。
 - Daily Note 生成行以完成状态同步为主。勾选生成行可以完成匹配的 Todoist 任务，但生成区内的标题、项目、标签、优先级和不安全 due 规则编辑不会反向推送到 Todoist。
 - 普通同步会把过去 Daily Note 当作历史快照保留。若你想移除已迁移到其他日期的未完成行，或更新已在 Todoist 完成的历史行，可使用 **清理过去的 Daily Note**。
+- 历史回填不会修改 Todoist 任务。它只会写入过去 Daily Note 中受控的 marker 区间。
+- 回填可以选择创建缺失的 Daily Note，但该选项默认关闭。关闭时，缺失文件只会报告，不会创建。
+- 回填只能使用 Todoist 仍可提供的证据：当前 active 任务、已完成任务归档查询，以及已完成循环任务 occurrence 的活动日志快照。它无法重建 Todoist 已不能证明的历史迁移或未完成任务行。
 
 ## 设置
 
@@ -301,6 +305,7 @@ Daily Note 可控制：
 | **Sync now** | 手动运行同步。 |
 | **Sync today's daily note** | 刷新今天 Daily Note 中受控的任务区块。 |
 | **清理过去的 Daily Note** | 预览并清理过去 Daily Note 中过期的生成行。 |
+| **回填过去的 Daily Note** | 预览并向过去 Daily Note 写入受控 marker 区块，不修改 Todoist 任务。 |
 | **Open settings** | 打开 Sync Todoist 设置页。 |
 
 ## 开发

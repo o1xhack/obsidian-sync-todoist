@@ -2,6 +2,15 @@
 
 All notable Sync Todoist changes are tracked here.
 
+## Unreleased
+
+- Added a manual **Backfill past Daily Notes** tool with preview/apply safety.
+- Backfill writes only Sync Todoist marker regions, can optionally create missing
+  Daily Notes, and never mutates Todoist tasks.
+- Documented historical-data limits: backfill can use active tasks, completed-task
+  archive results, and available activity-log snapshots, but cannot reconstruct
+  moved or unfinished rows that Todoist no longer proves.
+
 ## 1.0.0 - 2026-05-16
 
 - Added a Daily Note option to include or hide incomplete recurring tasks whose current

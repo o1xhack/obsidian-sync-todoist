@@ -240,6 +240,7 @@ Daily Note controls:
 - Include completed recurring occurrences when completed tasks are enabled.
 - Run a manual **Sync today** refresh.
 - Run **Clean up past Daily Notes** to preview and remove or update stale generated rows from previous days.
+- Run **Backfill past Daily Notes** to preview and write managed marker blocks for a past date range.
 
 Default marker block:
 
@@ -271,6 +272,9 @@ Completed and recurring behavior:
 - Todoist Activity Log can lag behind a just-completed recurring task. When Sync Todoist completes a recurring task during the current sync cycle, it keeps a local checked snapshot until the activity log catches up.
 - Generated Daily Note rows are completion-focused. Checking a generated row can complete the matching Todoist task, but title, project, label, priority, and unsafe due-rule edits inside the generated block are not pushed back to Todoist.
 - Past Daily Notes are treated as historical snapshots during normal sync. Use **Clean up past Daily Notes** when you want to remove unfinished rows that were moved to another date or update historical rows whose Todoist task is already completed.
+- Historical backfill never changes Todoist tasks. It only writes the managed marker region in past Daily Notes.
+- Backfill can optionally create missing Daily Notes, but that option is off by default. When it is off, missing files are reported and left untouched.
+- Backfill can only use Todoist evidence that is still available: active tasks, completed-task archive results, and activity-log snapshots for completed recurring occurrences. It cannot reconstruct moved or unfinished historical rows that Todoist no longer proves.
 
 ## Settings
 
@@ -301,6 +305,7 @@ Completed and recurring behavior:
 | **Sync now** | Runs a manual sync. |
 | **Sync today's daily note** | Refreshes today's managed Daily Note task block. |
 | **Clean up past Daily Notes** | Preview and apply cleanup for stale generated rows in past Daily Notes. |
+| **Backfill past Daily Notes** | Preview and write managed marker blocks for past Daily Notes without changing Todoist tasks. |
 | **Open settings** | Opens the Sync Todoist settings tab. |
 
 ## Development

@@ -13,6 +13,13 @@ export interface ReleaseHighlight {
 
 export const RELEASE_LOG: ReleaseLogEntry[] = [
   {
+    version: '1.1.0',
+    titleEn: 'Historical Daily Note backfill',
+    titleZh: '历史 Daily Note 回填',
+    en: 'Adds a preview-and-apply backfill tool for past Daily Notes, with optional missing-file creation and explicit Todoist historical-data limits.',
+    zh: '新增过去 Daily Note 的预览/应用回填工具，支持可选创建缺失文件，并明确 Todoist 历史数据限制。',
+  },
+  {
     version: '1.0.0',
     titleEn: 'Recurring controls for Daily Notes',
     titleZh: 'Daily Note 循环任务控制',
@@ -57,6 +64,10 @@ export const RELEASE_LOG: ReleaseLogEntry[] = [
 ];
 
 export const RECENT_UPDATE_HIGHLIGHTS: ReleaseHighlight[] = [
+  {
+    en: 'Past Daily Notes can be backfilled safely from available Todoist history without changing Todoist tasks.',
+    zh: '过去 Daily Note 现在可以基于可用 Todoist 历史安全回填，且不会修改 Todoist 任务。',
+  },
   {
     en: 'Daily Note recurring tasks now have separate controls for incomplete tasks and completed occurrences.',
     zh: 'Daily Note 循环任务现在可分别控制未完成任务和已完成 occurrence。',

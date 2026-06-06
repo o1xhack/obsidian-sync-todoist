@@ -77,6 +77,9 @@ export type I18nKey =
   | 'daily.cleanup.name'
   | 'daily.cleanup.desc'
   | 'daily.cleanup.button'
+  | 'daily.backfill.name'
+  | 'daily.backfill.desc'
+  | 'daily.backfill.button'
   | 'cleanup.title'
   | 'cleanup.intro'
   | 'cleanup.mode.name'
@@ -106,6 +109,45 @@ export type I18nKey =
   | 'cleanup.errors'
   | 'cleanup.noChanges'
   | 'cleanup.applied'
+  | 'backfill.title'
+  | 'backfill.intro'
+  | 'backfill.limitations'
+  | 'backfill.startDate.name'
+  | 'backfill.endDate.name'
+  | 'backfill.date.desc'
+  | 'backfill.createMissing.name'
+  | 'backfill.createMissing.desc'
+  | 'backfill.preview'
+  | 'backfill.apply'
+  | 'backfill.close'
+  | 'backfill.noToken'
+  | 'backfill.previewing'
+  | 'backfill.applying'
+  | 'backfill.summary'
+  | 'backfill.range'
+  | 'backfill.scannedDates'
+  | 'backfill.eligibleDates'
+  | 'backfill.changedFiles'
+  | 'backfill.createdFiles'
+  | 'backfill.missingFiles'
+  | 'backfill.unchangedFiles'
+  | 'backfill.invalidMarkers'
+  | 'backfill.skippedNonPast'
+  | 'backfill.taskRows'
+  | 'backfill.errors'
+  | 'backfill.warnings'
+  | 'backfill.noChanges'
+  | 'backfill.applied'
+  | 'backfill.fileDetails'
+  | 'backfill.status.would_update'
+  | 'backfill.status.updated'
+  | 'backfill.status.would_create'
+  | 'backfill.status.created'
+  | 'backfill.status.unchanged'
+  | 'backfill.status.missing'
+  | 'backfill.status.invalid_markers'
+  | 'backfill.status.skipped_not_past'
+  | 'backfill.status.error'
   | 'daily.filters'
   | 'daily.filters.desc'
   | 'daily.filters.verifyFirst'
@@ -205,6 +247,9 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.cleanup.name': 'Clean up past Daily Notes',
     'daily.cleanup.desc': 'Preview and remove or update stale generated rows from past Daily Notes.',
     'daily.cleanup.button': 'Open cleanup',
+    'daily.backfill.name': 'Backfill past Daily Notes',
+    'daily.backfill.desc': 'Preview and write managed Sync Todoist blocks into a past Daily Note date range.',
+    'daily.backfill.button': 'Open backfill',
     'cleanup.title': 'Clean up past Daily Notes',
     'cleanup.intro': 'Only Sync Todoist marker regions in past Daily Notes are changed. Todoist tasks are never deleted. Preview first, then apply the selected cleanup.',
     'cleanup.mode.name': 'Cleanup mode',
@@ -234,6 +279,45 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'cleanup.errors': 'Errors: {{count}}',
     'cleanup.noChanges': 'No past Daily Note rows need cleanup.',
     'cleanup.applied': 'Cleanup applied: {{count}} file(s) updated.',
+    'backfill.title': 'Backfill past Daily Notes',
+    'backfill.intro': 'Preview first, then apply. Backfill writes only the managed Sync Todoist marker region for past Daily Notes and never changes Todoist tasks.',
+    'backfill.limitations': 'Historical backfill can only use active Todoist tasks, completed-task archive results, and available activity-log snapshots. It cannot reconstruct moved or unfinished historical rows that Todoist no longer proves.',
+    'backfill.startDate.name': 'Start date',
+    'backfill.endDate.name': 'End date',
+    'backfill.date.desc': 'Use YYYY-MM-DD. Today and future dates are skipped.',
+    'backfill.createMissing.name': 'Create missing Daily Notes',
+    'backfill.createMissing.desc': 'Off by default. When off, missing Daily Note files are reported but not created.',
+    'backfill.preview': 'Preview',
+    'backfill.apply': 'Apply backfill',
+    'backfill.close': 'Close',
+    'backfill.noToken': 'Configure your Todoist API token first.',
+    'backfill.previewing': 'Previewing backfill...',
+    'backfill.applying': 'Applying backfill...',
+    'backfill.summary': 'Preview summary',
+    'backfill.range': 'Range: {{start}} to {{end}}',
+    'backfill.scannedDates': 'Dates scanned: {{count}}',
+    'backfill.eligibleDates': 'Past dates eligible: {{count}}',
+    'backfill.changedFiles': 'Files that would be updated: {{count}}',
+    'backfill.createdFiles': 'Files that would be created: {{count}}',
+    'backfill.missingFiles': 'Missing files reported: {{count}}',
+    'backfill.unchangedFiles': 'Files already current: {{count}}',
+    'backfill.invalidMarkers': 'Files with invalid markers skipped: {{count}}',
+    'backfill.skippedNonPast': 'Today/future dates skipped: {{count}}',
+    'backfill.taskRows': 'Generated task rows: {{count}}',
+    'backfill.errors': 'Errors: {{count}}',
+    'backfill.warnings': 'Warnings: {{count}}',
+    'backfill.noChanges': 'No past Daily Notes need backfill.',
+    'backfill.applied': 'Backfill applied: {{updated}} updated, {{created}} created.',
+    'backfill.fileDetails': 'File details',
+    'backfill.status.would_update': 'would update',
+    'backfill.status.updated': 'updated',
+    'backfill.status.would_create': 'would create',
+    'backfill.status.created': 'created',
+    'backfill.status.unchanged': 'unchanged',
+    'backfill.status.missing': 'missing',
+    'backfill.status.invalid_markers': 'invalid markers',
+    'backfill.status.skipped_not_past': 'not a past date',
+    'backfill.status.error': 'error',
     'daily.filters': 'Task filters',
     'daily.filters.desc': 'Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.',
     'daily.filters.verifyFirst': 'Verify your Todoist API token in General settings first to load projects and labels.',
@@ -332,6 +416,9 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'daily.cleanup.name': '清理过去的 Daily Note',
     'daily.cleanup.desc': '预览并移除或更新过去 Daily Note 中过期的生成行。',
     'daily.cleanup.button': '打开清理',
+    'daily.backfill.name': '回填过去的 Daily Note',
+    'daily.backfill.desc': '预览并向过去日期范围内的 Daily Note 写入受控的 Sync Todoist 区块。',
+    'daily.backfill.button': '打开回填',
     'cleanup.title': '清理过去的 Daily Note',
     'cleanup.intro': '只会修改过去 Daily Note 里的 Sync Todoist marker 区间，不会删除 Todoist 任务。先预览，再确认应用所选清理方式。',
     'cleanup.mode.name': '清理方式',
@@ -361,6 +448,45 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'cleanup.errors': '错误：{{count}}',
     'cleanup.noChanges': '没有需要清理的过去 Daily Note 行。',
     'cleanup.applied': '清理已完成：更新 {{count}} 个文件。',
+    'backfill.title': '回填过去的 Daily Note',
+    'backfill.intro': '先预览，再应用。回填只会写入过去 Daily Note 里的 Sync Todoist 受控 marker 区间，不会修改 Todoist 任务。',
+    'backfill.limitations': '历史回填只能使用当前 active Todoist 任务、已完成任务归档查询，以及可用的活动日志快照；无法重建 Todoist 已不能证明的历史迁移或未完成任务行。',
+    'backfill.startDate.name': '开始日期',
+    'backfill.endDate.name': '结束日期',
+    'backfill.date.desc': '使用 YYYY-MM-DD。今天和未来日期会被跳过。',
+    'backfill.createMissing.name': '创建缺失的 Daily Note',
+    'backfill.createMissing.desc': '默认关闭。关闭时，缺失的 Daily Note 文件只会报告，不会创建。',
+    'backfill.preview': '预览',
+    'backfill.apply': '应用回填',
+    'backfill.close': '关闭',
+    'backfill.noToken': '请先配置 Todoist API Token。',
+    'backfill.previewing': '正在预览回填...',
+    'backfill.applying': '正在应用回填...',
+    'backfill.summary': '预览摘要',
+    'backfill.range': '范围：{{start}} 到 {{end}}',
+    'backfill.scannedDates': '已扫描日期：{{count}}',
+    'backfill.eligibleDates': '可回填的过去日期：{{count}}',
+    'backfill.changedFiles': '将更新的文件：{{count}}',
+    'backfill.createdFiles': '将创建的文件：{{count}}',
+    'backfill.missingFiles': '报告缺失文件：{{count}}',
+    'backfill.unchangedFiles': '已是最新的文件：{{count}}',
+    'backfill.invalidMarkers': '跳过 marker 无效文件：{{count}}',
+    'backfill.skippedNonPast': '跳过今天/未来日期：{{count}}',
+    'backfill.taskRows': '生成任务行：{{count}}',
+    'backfill.errors': '错误：{{count}}',
+    'backfill.warnings': '警告：{{count}}',
+    'backfill.noChanges': '没有需要回填的过去 Daily Note。',
+    'backfill.applied': '回填已完成：更新 {{updated}} 个，创建 {{created}} 个。',
+    'backfill.fileDetails': '文件明细',
+    'backfill.status.would_update': '将更新',
+    'backfill.status.updated': '已更新',
+    'backfill.status.would_create': '将创建',
+    'backfill.status.created': '已创建',
+    'backfill.status.unchanged': '未变化',
+    'backfill.status.missing': '缺失',
+    'backfill.status.invalid_markers': 'marker 无效',
+    'backfill.status.skipped_not_past': '不是过去日期',
+    'backfill.status.error': '错误',
     'daily.filters': '任务筛选',
     'daily.filters.desc': '每个维度默认都是全部。多个维度同时选择时，任务必须同时满足每个已选择的维度。',
     'daily.filters.verifyFirst': '请先在通用设置中验证 Todoist API Token，以加载项目和标签。',
