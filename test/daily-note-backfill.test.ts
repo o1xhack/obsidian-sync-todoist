@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { TFile } from 'obsidian';
 import {
+  addDaysISO,
   enumerateDailyNoteBackfillDates,
 } from '../src/daily-note-backfill';
 import { localTodayISODate } from '../src/daily-note';
@@ -135,6 +136,19 @@ assert.equal(dateList.skippedNonPastDates, 1);
 assert.equal(enumerateDailyNoteBackfillDates('2026-05-12', '2026-05-10', '2026-05-20').error, 'Backfill start date must be on or before end date.');
 assert.equal(enumerateDailyNoteBackfillDates('2026-02-30', '2026-03-01', '2026-03-10').error, 'Backfill dates must use YYYY-MM-DD.');
 assert.deepEqual(enumerateDailyNoteBackfillDates('2024-02-29', '2024-02-29', '2024-03-01').dates, ['2024-02-29']);
+
+const originalTimeZone = process.env.TZ;
+process.env.TZ = 'Asia/Shanghai';
+try {
+  assert.equal(addDaysISO('2026-05-10', 1), '2026-05-11');
+  assert.deepEqual(enumerateDailyNoteBackfillDates('2026-05-10', '2026-05-11', '2026-05-12').dates, ['2026-05-10', '2026-05-11']);
+} finally {
+  if (originalTimeZone === undefined) {
+    delete process.env.TZ;
+  } else {
+    process.env.TZ = originalTimeZone;
+  }
+}
 
 async function runEngineBackfillTests(): Promise<void> {
   const vault = new FakeVault();

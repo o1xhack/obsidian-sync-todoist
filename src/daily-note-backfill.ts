@@ -78,8 +78,8 @@ export function compareISODate(a: string, b: string): number {
 }
 
 export function addDaysISO(date: string, days: number): string {
-  const value = new Date(`${date}T00:00:00`);
-  value.setDate(value.getDate() + days);
+  const value = new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 }
 

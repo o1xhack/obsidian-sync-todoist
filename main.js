@@ -63,8 +63,8 @@ function compareISODate(a, b) {
   return a.localeCompare(b);
 }
 function addDaysISO(date, days) {
-  const value = /* @__PURE__ */ new Date(`${date}T00:00:00`);
-  value.setDate(value.getDate() + days);
+  const value = /* @__PURE__ */ new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 }
 function enumerateDailyNoteBackfillDates(startDate, endDate, today) {
@@ -597,8 +597,8 @@ function noticeDurationForDailyNote(result) {
 function getBuildInfo() {
   return {
     version: "1.0.0",
-    buildDate: "2026-06-06T21:00:47.859Z",
-    buildNumber: "202606062100"
+    buildDate: "2026-06-06T21:13:36.363Z",
+    buildNumber: "202606062113"
   };
 }
 function formatBuildDate(buildDate) {
