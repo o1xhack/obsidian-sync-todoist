@@ -26,6 +26,7 @@ Sync Todoist has an independent release line. Upstream Syncist tags and releases
 - `0.8.0`: Daily Note completed-task mode and update-notes release. Replaces the single completed-task toggle with a three-mode selector for hiding completed tasks, keeping completed tasks due today, or keeping all tasks completed today; migrates the old enabled toggle to the previous completed-today behavior; keeps completed recurring occurrence recovery as a separate option; improves settings tab highlighting on mobile; adds a clickable version row with bilingual update notes that opens after an update; and starts `CHANGELOG.md` as the ongoing release history.
 - `0.9.0`: past Daily Note cleanup release. Adds a manual preview-and-apply cleanup tool for Sync Todoist marker regions in past Daily Notes; removes unfinished historical rows whose active Todoist task no longer belongs to that date; marks historical rows completed when Todoist confirms completion; optionally removes completed historical rows; and keeps normal sync behavior unchanged unless the user runs cleanup.
 - `1.0.0`: first community-submission candidate after the test release line is stable.
+- `1.1.0`: historical Daily Note backfill test release. Adds a preview-and-apply backfill tool for past Daily Notes, optional missing-note creation, and explicit Todoist historical-data limits while keeping Todoist tasks untouched.
 
 ## 0.1.0 Scope
 

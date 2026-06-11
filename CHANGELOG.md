@@ -2,7 +2,7 @@
 
 All notable Sync Todoist changes are tracked here.
 
-## Unreleased
+## 1.1.0 - 2026-06-11
 
 - Added a manual **Backfill past Daily Notes** tool with preview/apply safety.
 - Backfill writes only Sync Todoist marker regions, can optionally create missing

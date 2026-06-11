@@ -596,9 +596,9 @@ function noticeDurationForDailyNote(result) {
 // src/build-info.ts
 function getBuildInfo() {
   return {
-    version: "1.0.0",
-    buildDate: "2026-06-06T21:13:36.363Z",
-    buildNumber: "202606062113"
+    version: "1.1.0",
+    buildDate: "2026-06-11T08:09:33.371Z",
+    buildNumber: "202606110809"
   };
 }
 function formatBuildDate(buildDate) {

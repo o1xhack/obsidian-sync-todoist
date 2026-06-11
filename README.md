@@ -14,12 +14,12 @@
 
 Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
-## What's New in 1.0.0
+## What's New in 1.1.0
 
-- Adds **Include incomplete recurring tasks** for Daily Note sync.
-- Lets users hide active recurring tasks whose current occurrence is due today while keeping ordinary active tasks.
-- Keeps completed recurring occurrences controlled by the existing **Include completed recurring tasks** option.
-- Preserves existing behavior after upgrade by leaving incomplete recurring task inclusion on by default.
+- Adds **Backfill past Daily Notes** with preview/apply safety.
+- Writes only Sync Todoist marker regions and never mutates Todoist tasks.
+- Optionally creates missing Daily Notes when explicitly enabled.
+- Documents Todoist historical-data limits for active tasks, completed-task archive results, and activity-log snapshots.
 
 ## Why Use It?
 
