@@ -13,6 +13,13 @@ export interface ReleaseHighlight {
 
 export const RELEASE_LOG: ReleaseLogEntry[] = [
   {
+    version: '1.1.1',
+    titleEn: 'Backfill date presets',
+    titleZh: '回填日期快速选择',
+    en: 'Adds quick date presets and date picker inputs to the historical Daily Note backfill modal.',
+    zh: '为历史 Daily Note 回填窗口新增快速日期选择和 date picker 输入。',
+  },
+  {
     version: '1.1.0',
     titleEn: 'Historical Daily Note backfill',
     titleZh: '历史 Daily Note 回填',
@@ -64,6 +71,10 @@ export const RELEASE_LOG: ReleaseLogEntry[] = [
 ];
 
 export const RECENT_UPDATE_HIGHLIGHTS: ReleaseHighlight[] = [
+  {
+    en: 'Backfill past Daily Notes now offers quick date presets and date picker inputs.',
+    zh: '回填过去 Daily Note 现在支持快速日期选择和 date picker 输入。',
+  },
   {
     en: 'Past Daily Notes can be backfilled safely from available Todoist history without changing Todoist tasks.',
     zh: '过去 Daily Note 现在可以基于可用 Todoist 历史安全回填，且不会修改 Todoist 任务。',

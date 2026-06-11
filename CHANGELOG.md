@@ -2,6 +2,12 @@
 
 All notable Sync Todoist changes are tracked here.
 
+## 1.1.1 - 2026-06-11
+
+- Added quick date presets to the **Backfill past Daily Notes** modal: recent 7 days,
+  recent 30 days, this month, and last month.
+- Switched the backfill date fields to date picker inputs to reduce manual typing errors.
+
 ## 1.1.0 - 2026-06-11
 
 - Added a manual **Backfill past Daily Notes** tool with preview/apply safety.

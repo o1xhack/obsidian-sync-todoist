@@ -295,6 +295,11 @@ var STRINGS = {
     "backfill.title": "Backfill past Daily Notes",
     "backfill.intro": "Preview first, then apply. Backfill writes only the managed Sync Todoist marker region for past Daily Notes and never changes Todoist tasks.",
     "backfill.limitations": "Historical backfill can only use active Todoist tasks, completed-task archive results, and available activity-log snapshots. It cannot reconstruct moved or unfinished historical rows that Todoist no longer proves.",
+    "backfill.quickPresets.name": "Quick presets",
+    "backfill.quickPresets.recent7": "Recent 7 days",
+    "backfill.quickPresets.recent30": "Recent 30 days",
+    "backfill.quickPresets.thisMonth": "This month",
+    "backfill.quickPresets.lastMonth": "Last month",
     "backfill.startDate.name": "Start date",
     "backfill.endDate.name": "End date",
     "backfill.date.desc": "Use YYYY-MM-DD. Today and future dates are skipped.",
@@ -464,6 +469,11 @@ var STRINGS = {
     "backfill.title": "\u56DE\u586B\u8FC7\u53BB\u7684 Daily Note",
     "backfill.intro": "\u5148\u9884\u89C8\uFF0C\u518D\u5E94\u7528\u3002\u56DE\u586B\u53EA\u4F1A\u5199\u5165\u8FC7\u53BB Daily Note \u91CC\u7684 Sync Todoist \u53D7\u63A7 marker \u533A\u95F4\uFF0C\u4E0D\u4F1A\u4FEE\u6539 Todoist \u4EFB\u52A1\u3002",
     "backfill.limitations": "\u5386\u53F2\u56DE\u586B\u53EA\u80FD\u4F7F\u7528\u5F53\u524D active Todoist \u4EFB\u52A1\u3001\u5DF2\u5B8C\u6210\u4EFB\u52A1\u5F52\u6863\u67E5\u8BE2\uFF0C\u4EE5\u53CA\u53EF\u7528\u7684\u6D3B\u52A8\u65E5\u5FD7\u5FEB\u7167\uFF1B\u65E0\u6CD5\u91CD\u5EFA Todoist \u5DF2\u4E0D\u80FD\u8BC1\u660E\u7684\u5386\u53F2\u8FC1\u79FB\u6216\u672A\u5B8C\u6210\u4EFB\u52A1\u884C\u3002",
+    "backfill.quickPresets.name": "\u5FEB\u901F\u9009\u62E9",
+    "backfill.quickPresets.recent7": "\u6700\u8FD1 7 \u5929",
+    "backfill.quickPresets.recent30": "\u6700\u8FD1 30 \u5929",
+    "backfill.quickPresets.thisMonth": "\u672C\u6708",
+    "backfill.quickPresets.lastMonth": "\u4E0A\u6708",
     "backfill.startDate.name": "\u5F00\u59CB\u65E5\u671F",
     "backfill.endDate.name": "\u7ED3\u675F\u65E5\u671F",
     "backfill.date.desc": "\u4F7F\u7528 YYYY-MM-DD\u3002\u4ECA\u5929\u548C\u672A\u6765\u65E5\u671F\u4F1A\u88AB\u8DF3\u8FC7\u3002",
@@ -596,9 +606,9 @@ function noticeDurationForDailyNote(result) {
 // src/build-info.ts
 function getBuildInfo() {
   return {
-    version: "1.1.0",
-    buildDate: "2026-06-11T08:09:33.371Z",
-    buildNumber: "202606110809"
+    version: "1.1.1",
+    buildDate: "2026-06-11T21:25:09.442Z",
+    buildNumber: "202606112125"
   };
 }
 function formatBuildDate(buildDate) {
@@ -1192,18 +1202,21 @@ var DailyNoteBackfillModal = class extends import_obsidian2.Modal {
       cls: "sync-todoist-cleanup-intro",
       text: this.tr("backfill.limitations")
     });
-    new import_obsidian2.Setting(contentEl).setName(this.tr("backfill.startDate.name")).setDesc(this.tr("backfill.date.desc")).addText(
-      (text) => text.setPlaceholder(ISO_DATE_PLACEHOLDER).setValue(this.startDate).onChange((value) => {
+    this.renderQuickPresets(contentEl);
+    new import_obsidian2.Setting(contentEl).setName(this.tr("backfill.startDate.name")).setDesc(this.tr("backfill.date.desc")).addText((text) => {
+      text.inputEl.type = "date";
+      text.setPlaceholder(ISO_DATE_PLACEHOLDER).setValue(this.startDate).onChange((value) => {
         this.startDate = value.trim();
         this.previewResult = null;
-      })
-    );
-    new import_obsidian2.Setting(contentEl).setName(this.tr("backfill.endDate.name")).setDesc(this.tr("backfill.date.desc")).addText(
-      (text) => text.setPlaceholder(ISO_DATE_PLACEHOLDER).setValue(this.endDate).onChange((value) => {
+      });
+    });
+    new import_obsidian2.Setting(contentEl).setName(this.tr("backfill.endDate.name")).setDesc(this.tr("backfill.date.desc")).addText((text) => {
+      text.inputEl.type = "date";
+      text.setPlaceholder(ISO_DATE_PLACEHOLDER).setValue(this.endDate).onChange((value) => {
         this.endDate = value.trim();
         this.previewResult = null;
-      })
-    );
+      });
+    });
     new import_obsidian2.Setting(contentEl).setName(this.tr("backfill.createMissing.name")).setDesc(this.tr("backfill.createMissing.desc")).addToggle(
       (toggle) => toggle.setValue(this.createMissing).onChange((value) => {
         this.createMissing = value;
@@ -1236,6 +1249,29 @@ var DailyNoteBackfillModal = class extends import_obsidian2.Modal {
   }
   render() {
     this.onOpen();
+  }
+  renderQuickPresets(contentEl) {
+    const row = contentEl.createDiv({ cls: "sync-todoist-backfill-presets" });
+    row.createSpan({
+      cls: "sync-todoist-backfill-presets-label",
+      text: `${this.tr("backfill.quickPresets.name")}:`
+    });
+    const presets = [
+      { id: "recent7", label: "backfill.quickPresets.recent7" },
+      { id: "recent30", label: "backfill.quickPresets.recent30" },
+      { id: "thisMonth", label: "backfill.quickPresets.thisMonth" },
+      { id: "lastMonth", label: "backfill.quickPresets.lastMonth" }
+    ];
+    for (const preset of presets) {
+      const button = row.createEl("button", { text: this.tr(preset.label) });
+      button.onclick = () => {
+        const range = backfillPresetRange(preset.id);
+        this.startDate = range.startDate;
+        this.endDate = range.endDate;
+        this.previewResult = null;
+        this.render();
+      };
+    }
   }
   options() {
     return {
@@ -1337,13 +1373,35 @@ function updateSelection(values, value, checked) {
   }
   return values.filter((item) => item !== value);
 }
-function dateOffsetISO(days) {
-  const date = /* @__PURE__ */ new Date();
+function dateOffsetISO(days, from = /* @__PURE__ */ new Date()) {
+  const date = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   date.setDate(date.getDate() + days);
+  return localDateISO(date);
+}
+function localDateISO(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+function backfillPresetRange(preset, today = /* @__PURE__ */ new Date()) {
+  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (preset === "recent7") {
+    return { startDate: dateOffsetISO(-6, current), endDate: localDateISO(current) };
+  }
+  if (preset === "recent30") {
+    return { startDate: dateOffsetISO(-29, current), endDate: localDateISO(current) };
+  }
+  if (preset === "thisMonth") {
+    return {
+      startDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 1)),
+      endDate: localDateISO(current)
+    };
+  }
+  return {
+    startDate: localDateISO(new Date(current.getFullYear(), current.getMonth() - 1, 1)),
+    endDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 0))
+  };
 }
 
 // src/todoist-service.ts
@@ -4364,6 +4422,13 @@ function renderQueryBlock(source, el, plugin) {
 // src/release-log.ts
 var RELEASE_LOG = [
   {
+    version: "1.1.1",
+    titleEn: "Backfill date presets",
+    titleZh: "\u56DE\u586B\u65E5\u671F\u5FEB\u901F\u9009\u62E9",
+    en: "Adds quick date presets and date picker inputs to the historical Daily Note backfill modal.",
+    zh: "\u4E3A\u5386\u53F2 Daily Note \u56DE\u586B\u7A97\u53E3\u65B0\u589E\u5FEB\u901F\u65E5\u671F\u9009\u62E9\u548C date picker \u8F93\u5165\u3002"
+  },
+  {
     version: "1.1.0",
     titleEn: "Historical Daily Note backfill",
     titleZh: "\u5386\u53F2 Daily Note \u56DE\u586B",
@@ -4414,6 +4479,10 @@ var RELEASE_LOG = [
   }
 ];
 var RECENT_UPDATE_HIGHLIGHTS = [
+  {
+    en: "Backfill past Daily Notes now offers quick date presets and date picker inputs.",
+    zh: "\u56DE\u586B\u8FC7\u53BB Daily Note \u73B0\u5728\u652F\u6301\u5FEB\u901F\u65E5\u671F\u9009\u62E9\u548C date picker \u8F93\u5165\u3002"
+  },
   {
     en: "Past Daily Notes can be backfilled safely from available Todoist history without changing Todoist tasks.",
     zh: "\u8FC7\u53BB Daily Note \u73B0\u5728\u53EF\u4EE5\u57FA\u4E8E\u53EF\u7528 Todoist \u5386\u53F2\u5B89\u5168\u56DE\u586B\uFF0C\u4E14\u4E0D\u4F1A\u4FEE\u6539 Todoist \u4EFB\u52A1\u3002"

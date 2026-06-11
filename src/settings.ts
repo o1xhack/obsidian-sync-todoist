@@ -25,6 +25,7 @@ import {
 import { formatBuildDate, getBuildInfo } from './build-info';
 
 type SettingsTabId = 'general' | 'daily';
+type BackfillDatePreset = 'recent7' | 'recent30' | 'thisMonth' | 'lastMonth';
 const SETTINGS_TABS: SettingsTabId[] = ['general', 'daily'];
 const ACTIVE_TAB_STORAGE_KEY = 'sync-todoist:active-settings-tab';
 const ISO_DATE_PLACEHOLDER = 'YYYY-MM-DD';
@@ -847,31 +848,35 @@ class DailyNoteBackfillModal extends Modal {
       text: this.tr('backfill.limitations'),
     });
 
+    this.renderQuickPresets(contentEl);
+
     new Setting(contentEl)
       .setName(this.tr('backfill.startDate.name'))
       .setDesc(this.tr('backfill.date.desc'))
-      .addText((text) =>
+      .addText((text) => {
+        text.inputEl.type = 'date';
         text
           .setPlaceholder(ISO_DATE_PLACEHOLDER)
           .setValue(this.startDate)
           .onChange((value) => {
             this.startDate = value.trim();
             this.previewResult = null;
-          })
-      );
+          });
+      });
 
     new Setting(contentEl)
       .setName(this.tr('backfill.endDate.name'))
       .setDesc(this.tr('backfill.date.desc'))
-      .addText((text) =>
+      .addText((text) => {
+        text.inputEl.type = 'date';
         text
           .setPlaceholder(ISO_DATE_PLACEHOLDER)
           .setValue(this.endDate)
           .onChange((value) => {
             this.endDate = value.trim();
             this.previewResult = null;
-          })
-      );
+          });
+      });
 
     new Setting(contentEl)
       .setName(this.tr('backfill.createMissing.name'))
@@ -918,6 +923,32 @@ class DailyNoteBackfillModal extends Modal {
 
   private render(): void {
     this.onOpen();
+  }
+
+  private renderQuickPresets(contentEl: HTMLElement): void {
+    const row = contentEl.createDiv({ cls: 'sync-todoist-backfill-presets' });
+    row.createSpan({
+      cls: 'sync-todoist-backfill-presets-label',
+      text: `${this.tr('backfill.quickPresets.name')}:`,
+    });
+
+    const presets: Array<{ id: BackfillDatePreset; label: I18nKey }> = [
+      { id: 'recent7', label: 'backfill.quickPresets.recent7' },
+      { id: 'recent30', label: 'backfill.quickPresets.recent30' },
+      { id: 'thisMonth', label: 'backfill.quickPresets.thisMonth' },
+      { id: 'lastMonth', label: 'backfill.quickPresets.lastMonth' },
+    ];
+
+    for (const preset of presets) {
+      const button = row.createEl('button', { text: this.tr(preset.label) });
+      button.onclick = () => {
+        const range = backfillPresetRange(preset.id);
+        this.startDate = range.startDate;
+        this.endDate = range.endDate;
+        this.previewResult = null;
+        this.render();
+      };
+    }
   }
 
   private options(): DailyNoteBackfillOptions {
@@ -1034,11 +1065,35 @@ function updateSelection<T>(values: T[], value: T, checked: boolean): T[] {
   return values.filter(item => item !== value);
 }
 
-function dateOffsetISO(days: number): string {
-  const date = new Date();
+function dateOffsetISO(days: number, from = new Date()): string {
+  const date = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   date.setDate(date.getDate() + days);
+  return localDateISO(date);
+}
+
+function localDateISO(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function backfillPresetRange(preset: BackfillDatePreset, today = new Date()): { startDate: string; endDate: string } {
+  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (preset === 'recent7') {
+    return { startDate: dateOffsetISO(-6, current), endDate: localDateISO(current) };
+  }
+  if (preset === 'recent30') {
+    return { startDate: dateOffsetISO(-29, current), endDate: localDateISO(current) };
+  }
+  if (preset === 'thisMonth') {
+    return {
+      startDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 1)),
+      endDate: localDateISO(current),
+    };
+  }
+  return {
+    startDate: localDateISO(new Date(current.getFullYear(), current.getMonth() - 1, 1)),
+    endDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 0)),
+  };
 }

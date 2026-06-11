@@ -14,12 +14,11 @@
 
 Sync Todoist 已可通过 Obsidian Community Plugins 安装。如果你之前通过 BRAT 安装了 beta 版本，可以按下面的迁移步骤停止 BRAT 更新，并继续使用社区插件版本。
 
-## 1.1.0 新功能
+## 1.1.1 新功能
 
-- 新增 **Backfill past Daily Notes**，支持先预览再应用。
-- 只写入 Sync Todoist marker 区间，绝不修改 Todoist 任务。
-- 只有明确启用时，才会创建缺失的 Daily Notes。
-- 明确说明 Todoist 历史数据限制：只能使用 active tasks、completed-task archive 结果和可用 activity-log 快照。
+- **Backfill past Daily Notes** 新增快速日期选择：最近 7 天、最近 30 天、本月、上月。
+- 回填开始/结束日期改为 date picker，减少手动输入错误。
+- 保持原有先预览再应用、只写 marker 区间、绝不修改 Todoist 任务的安全边界。
 
 ## 为什么用它？
 

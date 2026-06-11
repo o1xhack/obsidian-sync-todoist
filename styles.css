@@ -108,6 +108,25 @@
   color: var(--text-error);
 }
 
+.sync-todoist-backfill-presets {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 1em 0;
+  padding-bottom: 0.75em;
+  border-bottom: 1px solid var(--background-modifier-border);
+  flex-wrap: wrap;
+}
+
+.sync-todoist-backfill-presets-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.sync-todoist-backfill-presets button {
+  min-height: 32px;
+}
+
 /* ─── Import Modal ─── */
 
 .syncist-import-suggestion {

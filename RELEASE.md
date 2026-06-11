@@ -27,6 +27,7 @@ Sync Todoist has an independent release line. Upstream Syncist tags and releases
 - `0.9.0`: past Daily Note cleanup release. Adds a manual preview-and-apply cleanup tool for Sync Todoist marker regions in past Daily Notes; removes unfinished historical rows whose active Todoist task no longer belongs to that date; marks historical rows completed when Todoist confirms completion; optionally removes completed historical rows; and keeps normal sync behavior unchanged unless the user runs cleanup.
 - `1.0.0`: first community-submission candidate after the test release line is stable.
 - `1.1.0`: historical Daily Note backfill test release. Adds a preview-and-apply backfill tool for past Daily Notes, optional missing-note creation, and explicit Todoist historical-data limits while keeping Todoist tasks untouched.
+- `1.1.1`: backfill date picker test release. Adds quick date presets and date picker inputs to the historical Daily Note backfill modal without changing the backfill data path.
 
 ## 0.1.0 Scope
 

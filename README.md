@@ -14,12 +14,11 @@
 
 Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
-## What's New in 1.1.0
+## What's New in 1.1.1
 
-- Adds **Backfill past Daily Notes** with preview/apply safety.
-- Writes only Sync Todoist marker regions and never mutates Todoist tasks.
-- Optionally creates missing Daily Notes when explicitly enabled.
-- Documents Todoist historical-data limits for active tasks, completed-task archive results, and activity-log snapshots.
+- Adds quick presets to **Backfill past Daily Notes**: recent 7 days, recent 30 days, this month, and last month.
+- Uses date picker inputs for the backfill start and end dates to reduce manual typing errors.
+- Keeps the existing preview/apply safety, marker-only writes, and no-Todoist-mutation behavior.
 
 ## Why Use It?
 

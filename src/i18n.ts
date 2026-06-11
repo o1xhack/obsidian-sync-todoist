@@ -112,6 +112,11 @@ export type I18nKey =
   | 'backfill.title'
   | 'backfill.intro'
   | 'backfill.limitations'
+  | 'backfill.quickPresets.name'
+  | 'backfill.quickPresets.recent7'
+  | 'backfill.quickPresets.recent30'
+  | 'backfill.quickPresets.thisMonth'
+  | 'backfill.quickPresets.lastMonth'
   | 'backfill.startDate.name'
   | 'backfill.endDate.name'
   | 'backfill.date.desc'
@@ -282,6 +287,11 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'backfill.title': 'Backfill past Daily Notes',
     'backfill.intro': 'Preview first, then apply. Backfill writes only the managed Sync Todoist marker region for past Daily Notes and never changes Todoist tasks.',
     'backfill.limitations': 'Historical backfill can only use active Todoist tasks, completed-task archive results, and available activity-log snapshots. It cannot reconstruct moved or unfinished historical rows that Todoist no longer proves.',
+    'backfill.quickPresets.name': 'Quick presets',
+    'backfill.quickPresets.recent7': 'Recent 7 days',
+    'backfill.quickPresets.recent30': 'Recent 30 days',
+    'backfill.quickPresets.thisMonth': 'This month',
+    'backfill.quickPresets.lastMonth': 'Last month',
     'backfill.startDate.name': 'Start date',
     'backfill.endDate.name': 'End date',
     'backfill.date.desc': 'Use YYYY-MM-DD. Today and future dates are skipped.',
@@ -451,6 +461,11 @@ const STRINGS: Record<UiLanguage, Record<I18nKey, string>> = {
     'backfill.title': '回填过去的 Daily Note',
     'backfill.intro': '先预览，再应用。回填只会写入过去 Daily Note 里的 Sync Todoist 受控 marker 区间，不会修改 Todoist 任务。',
     'backfill.limitations': '历史回填只能使用当前 active Todoist 任务、已完成任务归档查询，以及可用的活动日志快照；无法重建 Todoist 已不能证明的历史迁移或未完成任务行。',
+    'backfill.quickPresets.name': '快速选择',
+    'backfill.quickPresets.recent7': '最近 7 天',
+    'backfill.quickPresets.recent30': '最近 30 天',
+    'backfill.quickPresets.thisMonth': '本月',
+    'backfill.quickPresets.lastMonth': '上月',
     'backfill.startDate.name': '开始日期',
     'backfill.endDate.name': '结束日期',
     'backfill.date.desc': '使用 YYYY-MM-DD。今天和未来日期会被跳过。',
