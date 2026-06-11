@@ -312,6 +312,62 @@ function runDailyNoteTests(): void {
     datetime: undefined,
     isRecurring: true,
   });
+  const lateRecurringSnapshot = buildCompletedRecurringTaskSnapshots(
+    [recurringActive],
+    [
+      {
+        objectId: 'recurring',
+        eventDate: '2026-05-14T10:30:00Z',
+        extraData: {
+          content: 'Weekly review',
+          completed_due_date_local: '2026-05-13',
+        },
+      },
+    ],
+    '2026-05-13',
+    'due-today'
+  );
+  assert.equal(lateRecurringSnapshot.length, 1);
+  assert.equal(lateRecurringSnapshot[0].id, 'recurring');
+  assert.equal(lateRecurringSnapshot[0].completedAt, '2026-05-14T10:30:00Z');
+  assert.deepEqual(lateRecurringSnapshot[0].due, {
+    date: '2026-05-13',
+    datetime: undefined,
+    isRecurring: true,
+  });
+  assert.equal(
+    buildCompletedRecurringTaskSnapshots(
+      [recurringActive],
+      [
+        {
+          objectId: 'recurring',
+          eventDate: '2026-05-14T10:30:00Z',
+          extraData: {
+            content: 'Weekly review',
+            completed_due_date_local: '2026-05-13',
+          },
+        },
+      ],
+      '2026-05-13',
+      'completed-today'
+    ).length,
+    0
+  );
+  assert.equal(
+    buildCompletedRecurringTaskSnapshots(
+      [recurringActive],
+      [
+        {
+          objectId: 'recurring',
+          eventDate: '2026-05-14T10:30:00Z',
+          extraData: { content: 'Weekly review' },
+        },
+      ],
+      '2026-05-13',
+      'due-today'
+    ).length,
+    0
+  );
 
   const immediateSnapshot = buildRecentlyCompletedRecurringTaskSnapshot(
     recurringActive,

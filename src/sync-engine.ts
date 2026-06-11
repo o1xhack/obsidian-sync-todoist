@@ -811,7 +811,8 @@ export class SyncEngine {
     }
 
     if (this.settings.dailyNote.includeCompletedRecurring) {
-      for (const range of completedTaskCleanupRanges(earliestDate, latestDate)) {
+      const activityLatestDate = completedTaskMode === 'due-today' ? localTodayISODate() : latestDate;
+      for (const range of completedTaskCleanupRanges(earliestDate, activityLatestDate)) {
         try {
           completedActivities.push(...await this.todoistService.getCompletedTaskActivities(range.since, range.until));
         } catch (error) {
@@ -829,7 +830,12 @@ export class SyncEngine {
   private dailyNoteSourceTasksForDate(date: string, snapshot: DailyNoteSourceSnapshot): TodoistTask[] {
     const byId = new Map<string, TodoistTask>();
     const completedRecurringTasks = this.settings.dailyNote.includeCompletedRecurring
-      ? buildCompletedRecurringTaskSnapshots(snapshot.activeTasks, snapshot.completedActivities, date)
+      ? buildCompletedRecurringTaskSnapshots(
+        snapshot.activeTasks,
+        snapshot.completedActivities,
+        date,
+        this.settings.dailyNote.completedTaskMode === 'due-today' ? 'due-today' : 'completed-today'
+      )
       : [];
 
     for (const task of snapshot.activeTasks) byId.set(task.id, task);

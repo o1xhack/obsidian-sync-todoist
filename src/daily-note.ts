@@ -174,24 +174,26 @@ function datePrefix(value: string): string | null {
 export function buildCompletedRecurringTaskSnapshots(
   activeTasks: TodoistTask[],
   completedActivities: DailyNoteCompletionActivity[],
-  today: string
+  today: string,
+  matchMode: Exclude<DailyNoteCompletedTaskMode, 'off'> = 'completed-today'
 ): TodoistTask[] {
   const activeById = new Map(activeTasks.map(task => [task.id, task]));
   const snapshots: TodoistTask[] = [];
   const seen = new Set<string>();
 
   for (const activity of completedActivities) {
-    if (localDateFromTimestamp(activity.eventDate) !== today) continue;
+    const occurrenceDate = activityDueValue(activity.extraData);
+    if (matchMode === 'completed-today' && localDateFromTimestamp(activity.eventDate) !== today) continue;
+    if (matchMode === 'due-today' && localDateFromDueValue(occurrenceDate) !== today) continue;
     const activeTask = activeById.get(activity.objectId) ?? (activity.v2ObjectId ? activeById.get(activity.v2ObjectId) : undefined);
     if (!activeTask || !activeTask.due?.isRecurring || seen.has(activity.objectId)) continue;
 
-    const occurrenceDate = activityDueValue(activity.extraData) ?? today;
     snapshots.push({
       ...activeTask,
       content: activityContent(activity.extraData) ?? activeTask.content,
       due: {
         ...activeTask.due,
-        date: occurrenceDate,
+        date: occurrenceDate ?? today,
         datetime: undefined,
       },
       isCompleted: true,
@@ -227,6 +229,12 @@ function activityDueValue(extraData: Record<string, unknown> | null): string | n
     dueValueToDateTime(extraData?.last_due_date) ??
     dueValueToDateTime(extraData?.due_date)
   );
+}
+
+function localDateFromDueValue(value: string | null): string | null {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return localDateFromTimestamp(value) ?? datePrefix(value);
 }
 
 function dueValueToDateTime(value: unknown): string | null {

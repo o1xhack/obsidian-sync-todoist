@@ -637,8 +637,8 @@ function noticeDurationForDailyNote(result) {
 function getBuildInfo() {
   return {
     version: "1.1.1",
-    buildDate: "2026-06-11T22:35:00.681Z",
-    buildNumber: "202606112235"
+    buildDate: "2026-06-11T23:02:06.566Z",
+    buildNumber: "202606112302"
   };
 }
 function formatBuildDate(buildDate) {
@@ -2460,24 +2460,26 @@ function datePrefix2(value) {
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
   return (_a = match == null ? void 0 : match[1]) != null ? _a : null;
 }
-function buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today) {
-  var _a, _b, _c, _d;
+function buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today, matchMode = "completed-today") {
+  var _a, _b, _c;
   const activeById = new Map(activeTasks.map((task) => [task.id, task]));
   const snapshots = [];
   const seen = /* @__PURE__ */ new Set();
   for (const activity of completedActivities) {
-    if (localDateFromTimestamp(activity.eventDate) !== today)
+    const occurrenceDate = activityDueValue(activity.extraData);
+    if (matchMode === "completed-today" && localDateFromTimestamp(activity.eventDate) !== today)
+      continue;
+    if (matchMode === "due-today" && localDateFromDueValue(occurrenceDate) !== today)
       continue;
     const activeTask = (_a = activeById.get(activity.objectId)) != null ? _a : activity.v2ObjectId ? activeById.get(activity.v2ObjectId) : void 0;
     if (!activeTask || !((_b = activeTask.due) == null ? void 0 : _b.isRecurring) || seen.has(activity.objectId))
       continue;
-    const occurrenceDate = (_c = activityDueValue(activity.extraData)) != null ? _c : today;
     snapshots.push({
       ...activeTask,
-      content: (_d = activityContent(activity.extraData)) != null ? _d : activeTask.content,
+      content: (_c = activityContent(activity.extraData)) != null ? _c : activeTask.content,
       due: {
         ...activeTask.due,
-        date: occurrenceDate,
+        date: occurrenceDate != null ? occurrenceDate : today,
         datetime: void 0
       },
       isCompleted: true,
@@ -2504,6 +2506,14 @@ function activityContent(extraData) {
 function activityDueValue(extraData) {
   var _a, _b, _c;
   return (_c = (_b = (_a = dueValueToDateTime(extraData == null ? void 0 : extraData.completed_due_date_local)) != null ? _a : dueValueToDateTime(extraData == null ? void 0 : extraData.completed_due_date)) != null ? _b : dueValueToDateTime(extraData == null ? void 0 : extraData.last_due_date)) != null ? _c : dueValueToDateTime(extraData == null ? void 0 : extraData.due_date);
+}
+function localDateFromDueValue(value) {
+  var _a;
+  if (!value)
+    return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return value;
+  return (_a = localDateFromTimestamp(value)) != null ? _a : datePrefix2(value);
 }
 function dueValueToDateTime(value) {
   var _a, _b;
@@ -3329,7 +3339,8 @@ var SyncEngine = class {
       }
     }
     if (this.settings.dailyNote.includeCompletedRecurring) {
-      for (const range of completedTaskCleanupRanges(earliestDate, latestDate)) {
+      const activityLatestDate = completedTaskMode === "due-today" ? localTodayISODate() : latestDate;
+      for (const range of completedTaskCleanupRanges(earliestDate, activityLatestDate)) {
         try {
           completedActivities.push(...await this.todoistService.getCompletedTaskActivities(range.since, range.until));
         } catch (error) {
@@ -3345,7 +3356,12 @@ var SyncEngine = class {
   }
   dailyNoteSourceTasksForDate(date, snapshot) {
     const byId = /* @__PURE__ */ new Map();
-    const completedRecurringTasks = this.settings.dailyNote.includeCompletedRecurring ? buildCompletedRecurringTaskSnapshots(snapshot.activeTasks, snapshot.completedActivities, date) : [];
+    const completedRecurringTasks = this.settings.dailyNote.includeCompletedRecurring ? buildCompletedRecurringTaskSnapshots(
+      snapshot.activeTasks,
+      snapshot.completedActivities,
+      date,
+      this.settings.dailyNote.completedTaskMode === "due-today" ? "due-today" : "completed-today"
+    ) : [];
     for (const task of snapshot.activeTasks)
       byId.set(task.id, task);
     for (const task of snapshot.completedTasks)

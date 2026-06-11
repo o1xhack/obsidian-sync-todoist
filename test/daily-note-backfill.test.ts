@@ -8,7 +8,7 @@ import {
 import { localTodayISODate } from '../src/daily-note';
 import { SyncEngine } from '../src/sync-engine';
 import { DEFAULT_SETTINGS, DEFAULT_SYNC_STATE, TodoistPriority, TodoistTask } from '../src/types';
-import { TodoistService } from '../src/todoist-service';
+import { TodoistActivityEvent, TodoistService } from '../src/todoist-service';
 
 const START = '%% sync-todoist:daily:start %%';
 const END = '%% sync-todoist:daily:end %%';
@@ -86,6 +86,7 @@ class FakeTodoistService {
   constructor(
     private activeTasks: TodoistTask[],
     private completedTasks: TodoistTask[] = [],
+    private completedActivities: TodoistActivityEvent[] = [],
   ) {}
 
   isInitialized(): boolean {
@@ -102,8 +103,13 @@ class FakeTodoistService {
     return this.completedTasks;
   }
 
-  async getCompletedTaskActivities(): Promise<[]> {
-    return [];
+  async getCompletedTaskActivities(since: Date, until: Date): Promise<TodoistActivityEvent[]> {
+    const sinceTime = since.getTime();
+    const untilTime = until.getTime();
+    return this.completedActivities.filter(activity => {
+      const eventTime = new Date(activity.eventDate).getTime();
+      return eventTime >= sinceTime && eventTime < untilTime;
+    });
   }
 
   getProjectName(projectId: string): string | undefined {
@@ -249,6 +255,71 @@ async function runEngineBackfillTests(): Promise<void> {
 }
 
 await runEngineBackfillTests();
+
+async function runBackfillDueTodayRecurringActivityTests(): Promise<void> {
+  const vault = new FakeVault();
+  vault.addFile('Daily/2026-05-13.md', `# 2026-05-13\n${START}\n${END}\n`);
+
+  const app = {
+    vault,
+    internalPlugins: {
+      plugins: {
+        'daily-notes': {
+          enabled: true,
+          instance: { options: { folder: 'Daily', format: 'YYYY-MM-DD' } },
+        },
+      },
+    },
+  };
+  const service = new FakeTodoistService(
+    [
+      task({
+        id: 'recurring',
+        content: 'Weekly review',
+        due: { date: '2026-05-20', isRecurring: true },
+      }),
+    ],
+    [],
+    [
+      {
+        objectId: 'recurring',
+        eventDate: '2026-05-14T10:30:00Z',
+        extraData: {
+          content: 'Weekly review',
+          completed_due_date_local: '2026-05-13',
+        },
+      },
+    ]
+  );
+  const engine = new SyncEngine(
+    app as never,
+    service as unknown as TodoistService,
+    {
+      ...DEFAULT_SETTINGS,
+      dailyNote: {
+        ...DEFAULT_SETTINGS.dailyNote,
+        enabled: true,
+        completedTaskMode: 'due-today',
+        includeCompletedRecurring: true,
+      },
+    },
+    { ...DEFAULT_SYNC_STATE, tasks: {} }
+  );
+
+  const applied = await engine.applyDailyNoteBackfill({
+    startDate: '2026-05-13',
+    endDate: '2026-05-13',
+    createMissing: false,
+  });
+  assert.equal(applied.changedFiles, 1);
+  assert.equal(applied.taskRows, 1);
+  const updated = vault.files.get('Daily/2026-05-13.md')?.content ?? '';
+  assert.match(updated, /- \[x\] Weekly review/);
+  assert.match(updated, /📅 2026-05-13/);
+  assert.equal(service.mutations, 0);
+}
+
+await runBackfillDueTodayRecurringActivityTests();
 
 async function runFullSyncDailyNoteDateRegression(): Promise<void> {
   const today = localTodayISODate();
