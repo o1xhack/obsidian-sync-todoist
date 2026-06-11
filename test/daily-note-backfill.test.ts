@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { TFile } from 'obsidian';
 import {
   addDaysISO,
+  dailyNoteBackfillPresetRange,
   enumerateDailyNoteBackfillDates,
 } from '../src/daily-note-backfill';
 import { localTodayISODate } from '../src/daily-note';
@@ -136,6 +137,22 @@ assert.equal(dateList.skippedNonPastDates, 1);
 assert.equal(enumerateDailyNoteBackfillDates('2026-05-12', '2026-05-10', '2026-05-20').error, 'Backfill start date must be on or before end date.');
 assert.equal(enumerateDailyNoteBackfillDates('2026-02-30', '2026-03-01', '2026-03-10').error, 'Backfill dates must use YYYY-MM-DD.');
 assert.deepEqual(enumerateDailyNoteBackfillDates('2024-02-29', '2024-02-29', '2024-03-01').dates, ['2024-02-29']);
+assert.deepEqual(dailyNoteBackfillPresetRange('recent7', new Date(2026, 5, 11)), {
+  startDate: '2026-06-04',
+  endDate: '2026-06-10',
+});
+assert.deepEqual(dailyNoteBackfillPresetRange('recent30', new Date(2026, 5, 11)), {
+  startDate: '2026-05-12',
+  endDate: '2026-06-10',
+});
+assert.deepEqual(dailyNoteBackfillPresetRange('thisMonth', new Date(2026, 5, 11)), {
+  startDate: '2026-06-01',
+  endDate: '2026-06-10',
+});
+assert.deepEqual(dailyNoteBackfillPresetRange('lastMonth', new Date(2026, 5, 11)), {
+  startDate: '2026-05-01',
+  endDate: '2026-05-31',
+});
 
 const originalTimeZone = process.env.TZ;
 process.env.TZ = 'Asia/Shanghai';

@@ -4,6 +4,8 @@ export interface DailyNoteBackfillOptions {
   createMissing: boolean;
 }
 
+export type DailyNoteBackfillPreset = 'recent7' | 'recent30' | 'thisMonth' | 'lastMonth';
+
 export type DailyNoteBackfillFileStatus =
   | 'would_update'
   | 'updated'
@@ -83,6 +85,29 @@ export function addDaysISO(date: string, days: number): string {
   return value.toISOString().slice(0, 10);
 }
 
+export function dailyNoteBackfillPresetRange(
+  preset: DailyNoteBackfillPreset,
+  today = new Date()
+): { startDate: string; endDate: string } {
+  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (preset === 'recent7') {
+    return { startDate: dateOffsetISO(-7, current), endDate: dateOffsetISO(-1, current) };
+  }
+  if (preset === 'recent30') {
+    return { startDate: dateOffsetISO(-30, current), endDate: dateOffsetISO(-1, current) };
+  }
+  if (preset === 'thisMonth') {
+    return {
+      startDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 1)),
+      endDate: dateOffsetISO(-1, current),
+    };
+  }
+  return {
+    startDate: localDateISO(new Date(current.getFullYear(), current.getMonth() - 1, 1)),
+    endDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 0)),
+  };
+}
+
 export function enumerateDailyNoteBackfillDates(
   startDate: string,
   endDate: string,
@@ -121,6 +146,19 @@ export function enumerateDailyNoteBackfillDates(
   }
 
   return { dates, scannedDates, skippedNonPastDates };
+}
+
+function dateOffsetISO(days: number, from = new Date()): string {
+  const date = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  date.setDate(date.getDate() + days);
+  return localDateISO(date);
+}
+
+function localDateISO(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function countDailyNoteBackfillFile(

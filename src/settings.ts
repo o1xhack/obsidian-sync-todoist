@@ -5,7 +5,9 @@ import { DailyNoteCleanupResult } from './sync-engine';
 import {
   DAILY_NOTE_BACKFILL_LIMITATION,
   DailyNoteBackfillOptions,
+  DailyNoteBackfillPreset,
   DailyNoteBackfillResult,
+  dailyNoteBackfillPresetRange,
 } from './daily-note-backfill';
 import {
   ConflictResolution,
@@ -25,7 +27,6 @@ import {
 import { formatBuildDate, getBuildInfo } from './build-info';
 
 type SettingsTabId = 'general' | 'daily';
-type BackfillDatePreset = 'recent7' | 'recent30' | 'thisMonth' | 'lastMonth';
 const SETTINGS_TABS: SettingsTabId[] = ['general', 'daily'];
 const ACTIVE_TAB_STORAGE_KEY = 'sync-todoist:active-settings-tab';
 const ISO_DATE_PLACEHOLDER = 'YYYY-MM-DD';
@@ -932,7 +933,7 @@ class DailyNoteBackfillModal extends Modal {
       text: `${this.tr('backfill.quickPresets.name')}:`,
     });
 
-    const presets: Array<{ id: BackfillDatePreset; label: I18nKey }> = [
+    const presets: Array<{ id: DailyNoteBackfillPreset; label: I18nKey }> = [
       { id: 'recent7', label: 'backfill.quickPresets.recent7' },
       { id: 'recent30', label: 'backfill.quickPresets.recent30' },
       { id: 'thisMonth', label: 'backfill.quickPresets.thisMonth' },
@@ -942,7 +943,7 @@ class DailyNoteBackfillModal extends Modal {
     for (const preset of presets) {
       const button = row.createEl('button', { text: this.tr(preset.label) });
       button.onclick = () => {
-        const range = backfillPresetRange(preset.id);
+        const range = dailyNoteBackfillPresetRange(preset.id);
         this.startDate = range.startDate;
         this.endDate = range.endDate;
         this.previewResult = null;
@@ -1076,24 +1077,4 @@ function localDateISO(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function backfillPresetRange(preset: BackfillDatePreset, today = new Date()): { startDate: string; endDate: string } {
-  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  if (preset === 'recent7') {
-    return { startDate: dateOffsetISO(-6, current), endDate: localDateISO(current) };
-  }
-  if (preset === 'recent30') {
-    return { startDate: dateOffsetISO(-29, current), endDate: localDateISO(current) };
-  }
-  if (preset === 'thisMonth') {
-    return {
-      startDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 1)),
-      endDate: localDateISO(current),
-    };
-  }
-  return {
-    startDate: localDateISO(new Date(current.getFullYear(), current.getMonth() - 1, 1)),
-    endDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 0)),
-  };
 }

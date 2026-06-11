@@ -67,6 +67,25 @@ function addDaysISO(date, days) {
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString().slice(0, 10);
 }
+function dailyNoteBackfillPresetRange(preset, today = /* @__PURE__ */ new Date()) {
+  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (preset === "recent7") {
+    return { startDate: dateOffsetISO(-7, current), endDate: dateOffsetISO(-1, current) };
+  }
+  if (preset === "recent30") {
+    return { startDate: dateOffsetISO(-30, current), endDate: dateOffsetISO(-1, current) };
+  }
+  if (preset === "thisMonth") {
+    return {
+      startDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 1)),
+      endDate: dateOffsetISO(-1, current)
+    };
+  }
+  return {
+    startDate: localDateISO(new Date(current.getFullYear(), current.getMonth() - 1, 1)),
+    endDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 0))
+  };
+}
 function enumerateDailyNoteBackfillDates(startDate, endDate, today) {
   if (!isISODate(startDate) || !isISODate(endDate)) {
     return {
@@ -98,6 +117,17 @@ function enumerateDailyNoteBackfillDates(startDate, endDate, today) {
     cursor = addDaysISO(cursor, 1);
   }
   return { dates, scannedDates, skippedNonPastDates };
+}
+function dateOffsetISO(days, from = /* @__PURE__ */ new Date()) {
+  const date = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  date.setDate(date.getDate() + days);
+  return localDateISO(date);
+}
+function localDateISO(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 function countDailyNoteBackfillFile(result, file) {
   result.files.push(file);
@@ -607,8 +637,8 @@ function noticeDurationForDailyNote(result) {
 function getBuildInfo() {
   return {
     version: "1.1.1",
-    buildDate: "2026-06-11T21:25:09.442Z",
-    buildNumber: "202606112125"
+    buildDate: "2026-06-11T22:35:00.681Z",
+    buildNumber: "202606112235"
   };
 }
 function formatBuildDate(buildDate) {
@@ -1181,8 +1211,8 @@ var DailyNoteBackfillModal = class extends import_obsidian2.Modal {
   constructor(app, plugin) {
     super(app);
     this.plugin = plugin;
-    this.startDate = dateOffsetISO(-7);
-    this.endDate = dateOffsetISO(-1);
+    this.startDate = dateOffsetISO2(-7);
+    this.endDate = dateOffsetISO2(-1);
     this.createMissing = false;
     this.previewResult = null;
     this.resultEl = null;
@@ -1265,7 +1295,7 @@ var DailyNoteBackfillModal = class extends import_obsidian2.Modal {
     for (const preset of presets) {
       const button = row.createEl("button", { text: this.tr(preset.label) });
       button.onclick = () => {
-        const range = backfillPresetRange(preset.id);
+        const range = dailyNoteBackfillPresetRange(preset.id);
         this.startDate = range.startDate;
         this.endDate = range.endDate;
         this.previewResult = null;
@@ -1373,35 +1403,16 @@ function updateSelection(values, value, checked) {
   }
   return values.filter((item) => item !== value);
 }
-function dateOffsetISO(days, from = /* @__PURE__ */ new Date()) {
+function dateOffsetISO2(days, from = /* @__PURE__ */ new Date()) {
   const date = new Date(from.getFullYear(), from.getMonth(), from.getDate());
   date.setDate(date.getDate() + days);
-  return localDateISO(date);
+  return localDateISO2(date);
 }
-function localDateISO(date) {
+function localDateISO2(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-function backfillPresetRange(preset, today = /* @__PURE__ */ new Date()) {
-  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  if (preset === "recent7") {
-    return { startDate: dateOffsetISO(-6, current), endDate: localDateISO(current) };
-  }
-  if (preset === "recent30") {
-    return { startDate: dateOffsetISO(-29, current), endDate: localDateISO(current) };
-  }
-  if (preset === "thisMonth") {
-    return {
-      startDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 1)),
-      endDate: localDateISO(current)
-    };
-  }
-  return {
-    startDate: localDateISO(new Date(current.getFullYear(), current.getMonth() - 1, 1)),
-    endDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 0))
-  };
 }
 
 // src/todoist-service.ts
