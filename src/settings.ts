@@ -3,6 +3,13 @@ import TodoistSyncPlugin from './main';
 import { DailyNoteCleanupMode, DailyNoteCleanupOptions } from './daily-note-cleanup';
 import { DailyNoteCleanupResult } from './sync-engine';
 import {
+  DAILY_NOTE_BACKFILL_LIMITATION,
+  DailyNoteBackfillOptions,
+  DailyNoteBackfillPreset,
+  DailyNoteBackfillResult,
+  dailyNoteBackfillPresetRange,
+} from './daily-note-backfill';
+import {
   ConflictResolution,
   DailyNoteCompletedTaskMode,
   DailyNoteSortMode,
@@ -22,6 +29,7 @@ import { formatBuildDate, getBuildInfo } from './build-info';
 type SettingsTabId = 'general' | 'daily';
 const SETTINGS_TABS: SettingsTabId[] = ['general', 'daily'];
 const ACTIVE_TAB_STORAGE_KEY = 'sync-todoist:active-settings-tab';
+const ISO_DATE_PLACEHOLDER = 'YYYY-MM-DD';
 
 const PRIORITY_OPTIONS: Array<{ value: TodoistPriority; labelKey: I18nKey }> = [
   { value: TodoistPriority.HIGH, labelKey: 'priority.urgent' },
@@ -457,6 +465,17 @@ export class TodoistSyncSettingTab extends PluginSettingTab {
           })
       );
 
+    new Setting(containerEl)
+      .setName(this.tr('daily.backfill.name'))
+      .setDesc(this.tr('daily.backfill.desc'))
+      .addButton((button) =>
+        button
+          .setButtonText(this.tr('daily.backfill.button'))
+          .onClick(() => {
+            new DailyNoteBackfillModal(this.app, this.plugin).open();
+          })
+      );
+
     new Setting(containerEl).setName(this.tr('daily.filters')).setHeading();
     new Setting(containerEl).setDesc(this.tr('daily.filters.desc'));
 
@@ -802,9 +821,260 @@ class DailyNoteCleanupModal extends Modal {
   }
 }
 
+class DailyNoteBackfillModal extends Modal {
+  private startDate = dateOffsetISO(-7);
+  private endDate = dateOffsetISO(-1);
+  private createMissing = false;
+  private previewResult: DailyNoteBackfillResult | null = null;
+  private resultEl: HTMLElement | null = null;
+
+  constructor(app: App, private plugin: TodoistSyncPlugin) {
+    super(app);
+  }
+
+  private tr(key: I18nKey, values?: Record<string, string | number>): string {
+    return t(this.plugin.settings.uiLanguage, key, values);
+  }
+
+  onOpen(): void {
+    const { contentEl, titleEl } = this;
+    titleEl.setText(this.tr('backfill.title'));
+    contentEl.empty();
+    contentEl.createEl('p', {
+      cls: 'sync-todoist-cleanup-intro',
+      text: this.tr('backfill.intro'),
+    });
+    contentEl.createEl('p', {
+      cls: 'sync-todoist-cleanup-intro',
+      text: this.tr('backfill.limitations'),
+    });
+
+    this.renderQuickPresets(contentEl);
+
+    new Setting(contentEl)
+      .setName(this.tr('backfill.startDate.name'))
+      .setDesc(this.tr('backfill.date.desc'))
+      .addText((text) => {
+        text.inputEl.type = 'date';
+        text
+          .setPlaceholder(ISO_DATE_PLACEHOLDER)
+          .setValue(this.startDate)
+          .onChange((value) => {
+            this.startDate = value.trim();
+            this.previewResult = null;
+          });
+      });
+
+    new Setting(contentEl)
+      .setName(this.tr('backfill.endDate.name'))
+      .setDesc(this.tr('backfill.date.desc'))
+      .addText((text) => {
+        text.inputEl.type = 'date';
+        text
+          .setPlaceholder(ISO_DATE_PLACEHOLDER)
+          .setValue(this.endDate)
+          .onChange((value) => {
+            this.endDate = value.trim();
+            this.previewResult = null;
+          });
+      });
+
+    new Setting(contentEl)
+      .setName(this.tr('backfill.createMissing.name'))
+      .setDesc(this.tr('backfill.createMissing.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.createMissing)
+          .onChange((value) => {
+            this.createMissing = value;
+            this.previewResult = null;
+            this.render();
+          })
+      );
+
+    this.resultEl = contentEl.createDiv({ cls: 'sync-todoist-cleanup-result' });
+    if (this.previewResult) {
+      this.renderResult(this.previewResult);
+    }
+
+    const buttons = contentEl.createDiv({ cls: 'sync-todoist-modal-buttons' });
+    const previewButton = buttons.createEl('button', { text: this.tr('backfill.preview') });
+    previewButton.onclick = async () => {
+      await this.preview(previewButton);
+    };
+
+    const applyButton = buttons.createEl('button', {
+      text: this.tr('backfill.apply'),
+      cls: 'mod-cta',
+    });
+    applyButton.disabled = !this.previewResult ||
+      this.previewResult.errors.length > 0 ||
+      (this.previewResult.changedFiles + this.previewResult.createdFiles) === 0;
+    applyButton.onclick = async () => {
+      await this.apply(applyButton);
+    };
+
+    const closeButton = buttons.createEl('button', { text: this.tr('backfill.close') });
+    closeButton.onclick = () => this.close();
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+
+  private render(): void {
+    this.onOpen();
+  }
+
+  private renderQuickPresets(contentEl: HTMLElement): void {
+    const row = contentEl.createDiv({ cls: 'sync-todoist-backfill-presets' });
+    row.createSpan({
+      cls: 'sync-todoist-backfill-presets-label',
+      text: `${this.tr('backfill.quickPresets.name')}:`,
+    });
+
+    const presets: Array<{ id: DailyNoteBackfillPreset; label: I18nKey }> = [
+      { id: 'recent7', label: 'backfill.quickPresets.recent7' },
+      { id: 'recent30', label: 'backfill.quickPresets.recent30' },
+      { id: 'thisMonth', label: 'backfill.quickPresets.thisMonth' },
+      { id: 'lastMonth', label: 'backfill.quickPresets.lastMonth' },
+    ];
+
+    for (const preset of presets) {
+      const button = row.createEl('button', { text: this.tr(preset.label) });
+      button.onclick = () => {
+        const range = dailyNoteBackfillPresetRange(preset.id);
+        this.startDate = range.startDate;
+        this.endDate = range.endDate;
+        this.previewResult = null;
+        this.render();
+      };
+    }
+  }
+
+  private options(): DailyNoteBackfillOptions {
+    return {
+      startDate: this.startDate,
+      endDate: this.endDate,
+      createMissing: this.createMissing,
+    };
+  }
+
+  private async preview(button: HTMLButtonElement): Promise<void> {
+    if (!this.plugin.settings.apiToken) {
+      showSyncTodoistNotice(this.tr('backfill.noToken'));
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = this.tr('backfill.previewing');
+    try {
+      this.previewResult = await this.plugin.previewDailyNoteBackfill(this.options());
+      this.render();
+    } catch (error) {
+      showSyncTodoistNotice(`Sync Todoist: ${error}`, 10000);
+    }
+  }
+
+  private async apply(button: HTMLButtonElement): Promise<void> {
+    if (!this.previewResult ||
+      this.previewResult.errors.length > 0 ||
+      (this.previewResult.changedFiles + this.previewResult.createdFiles) === 0) {
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = this.tr('backfill.applying');
+    try {
+      const result = await this.plugin.applyDailyNoteBackfill(this.options());
+      this.previewResult = result;
+      this.render();
+      showSyncTodoistNotice(this.tr('backfill.applied', {
+        updated: result.changedFiles,
+        created: result.createdFiles,
+      }));
+    } catch (error) {
+      showSyncTodoistNotice(`Sync Todoist: ${error}`, 10000);
+    }
+  }
+
+  private renderResult(result: DailyNoteBackfillResult): void {
+    if (!this.resultEl) return;
+    this.resultEl.empty();
+    this.resultEl.createEl('h3', { text: this.tr('backfill.summary') });
+
+    const lines = [
+      this.tr('backfill.range', { start: result.startDate, end: result.endDate }),
+      this.tr('backfill.scannedDates', { count: result.scannedDates }),
+      this.tr('backfill.eligibleDates', { count: result.eligibleDates }),
+      this.tr('backfill.changedFiles', { count: result.changedFiles }),
+      this.tr('backfill.createdFiles', { count: result.createdFiles }),
+      this.tr('backfill.missingFiles', { count: result.missingFiles }),
+      this.tr('backfill.unchangedFiles', { count: result.unchangedFiles }),
+      this.tr('backfill.invalidMarkers', { count: result.invalidMarkerFiles }),
+      this.tr('backfill.skippedNonPast', { count: result.skippedNonPastDates }),
+      this.tr('backfill.taskRows', { count: result.taskRows }),
+    ];
+
+    const list = this.resultEl.createEl('ul', { cls: 'sync-todoist-cleanup-summary' });
+    for (const line of lines) {
+      list.createEl('li', { text: line });
+    }
+
+    if ((result.changedFiles + result.createdFiles) === 0 && result.errors.length === 0) {
+      this.resultEl.createEl('p', { text: this.tr('backfill.noChanges') });
+    }
+
+    if (result.warnings.length > 0) {
+      this.resultEl.createEl('p', {
+        cls: 'sync-todoist-cleanup-errors',
+        text: this.tr('backfill.warnings', { count: result.warnings.length }),
+      });
+      const warnings = this.resultEl.createEl('ul', { cls: 'sync-todoist-cleanup-summary' });
+      for (const warning of result.warnings.slice(0, 5)) {
+        warnings.createEl('li', { text: warning === DAILY_NOTE_BACKFILL_LIMITATION ? this.tr('backfill.limitations') : warning });
+      }
+    }
+
+    if (result.errors.length > 0) {
+      this.resultEl.createEl('p', {
+        cls: 'sync-todoist-cleanup-errors',
+        text: this.tr('backfill.errors', { count: result.errors.length }),
+      });
+      const errors = this.resultEl.createEl('ul', { cls: 'sync-todoist-cleanup-summary' });
+      for (const error of result.errors.slice(0, 5)) {
+        errors.createEl('li', { text: error });
+      }
+    }
+
+    if (result.files.length > 0) {
+      this.resultEl.createEl('h4', { text: this.tr('backfill.fileDetails') });
+      const files = this.resultEl.createEl('ul', { cls: 'sync-todoist-cleanup-summary' });
+      for (const file of result.files.slice(0, 10)) {
+        files.createEl('li', {
+          text: `${file.date} - ${this.tr(`backfill.status.${file.status}`)} - ${file.filePath} (${file.taskCount})`,
+        });
+      }
+    }
+  }
+}
+
 function updateSelection<T>(values: T[], value: T, checked: boolean): T[] {
   if (checked) {
     return values.includes(value) ? values : [...values, value];
   }
   return values.filter(item => item !== value);
+}
+
+function dateOffsetISO(days: number, from = new Date()): string {
+  const date = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  date.setDate(date.getDate() + days);
+  return localDateISO(date);
+}
+
+function localDateISO(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

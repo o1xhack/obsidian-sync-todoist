@@ -553,6 +553,19 @@ Test each of these query blocks (create one block per filter):
 5. **Expected**: The recurring task is removed from the marker block, while the normal task remains.
 - [ ] **PASS** / **FAIL**
 
+### G15. Past Daily Note backfill
+
+1. In the test vault, create one past Daily Note file with no Sync Todoist marker block and one past Daily Note file with only the start marker.
+2. In Todoist, create or choose one active overdue task due on the first past date, and complete one task whose completion date belongs to that same past date.
+3. Open **Settings -> Sync Todoist -> Daily Note -> Backfill past Daily Notes**.
+4. Enter a date range covering both past Daily Notes and preview with **Create missing Daily Notes** off.
+5. **Expected**: The preview reports the first file as an update, the invalid-marker file as skipped, and any missing date in the range as missing but not created.
+6. Apply the backfill.
+7. **Expected**: Only the valid Daily Note marker region is written; the invalid-marker file is unchanged; no Todoist task is created, updated, completed, reopened, or deleted.
+8. Repeat a preview for a missing past Daily Note with **Create missing Daily Notes** on.
+9. **Expected**: The preview reports a file to create; applying creates that Daily Note with the managed marker block.
+- [ ] **PASS** / **FAIL**
+
 ---
 
 ## Part H: Structured Due, Time, and Recurring Safety
@@ -648,9 +661,9 @@ Test each of these query blocks (create one block per filter):
 | D. Projects & Labels | 6 | | |
 | E. Query Blocks | 10 | | |
 | F. Edge Cases | 6 | | |
-| G. Daily Notes & Notices | 14 | | |
+| G. Daily Notes & Notices | 15 | | |
 | H. Structured Due Safety | 8 | | |
-| **Total** | **63** | | |
+| **Total** | **64** | | |
 
 **Tested by**: ___________________
 **Date**: ___________________

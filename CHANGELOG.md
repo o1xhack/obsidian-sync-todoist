@@ -2,6 +2,21 @@
 
 All notable Sync Todoist changes are tracked here.
 
+## 1.1.1 - 2026-06-11
+
+- Added quick date presets to the **Backfill past Daily Notes** modal: recent 7 days,
+  recent 30 days, this month, and last month.
+- Switched the backfill date fields to date picker inputs to reduce manual typing errors.
+
+## 1.1.0 - 2026-06-11
+
+- Added a manual **Backfill past Daily Notes** tool with preview/apply safety.
+- Backfill writes only Sync Todoist marker regions, can optionally create missing
+  Daily Notes, and never mutates Todoist tasks.
+- Documented historical-data limits: backfill can use active tasks, completed-task
+  archive results, and available activity-log snapshots, but cannot reconstruct
+  moved or unfinished rows that Todoist no longer proves.
+
 ## 1.0.0 - 2026-05-16
 
 - Added a Daily Note option to include or hide incomplete recurring tasks whose current

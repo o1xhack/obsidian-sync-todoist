@@ -22,6 +22,14 @@ import {
   mergeCleanupContentStats,
 } from './daily-note-cleanup';
 import {
+  countDailyNoteBackfillFile,
+  createDailyNoteBackfillResult,
+  DailyNoteBackfillFileResult,
+  DailyNoteBackfillOptions,
+  DailyNoteBackfillResult,
+  enumerateDailyNoteBackfillDates,
+} from './daily-note-backfill';
+import {
   parseTasksFromContent,
   buildTaskLine,
   addTodoistIdToLine,
@@ -57,6 +65,27 @@ interface DailyNotesCorePlugin {
 interface DailyNoteConfig {
   folder: string;
   format: string;
+}
+
+interface DailyNoteSourceSnapshot {
+  activeTasks: TodoistTask[];
+  completedTasks: TodoistTask[];
+  completedActivities: Parameters<typeof buildCompletedRecurringTaskSnapshots>[1];
+}
+
+interface DailyNoteWriteOptions {
+  date: string;
+  dryRun: boolean;
+  createMissing: boolean;
+}
+
+interface DailyNoteWriteResult {
+  filePath?: string;
+  taskCount: number;
+  status: DailyNoteSyncResult['status'] | 'would_update' | 'would_create' | 'created' | 'unchanged' | 'missing';
+  content?: string;
+  staleIds: string[];
+  message?: string;
 }
 
 export interface DailyNoteCleanupFileResult {
@@ -286,8 +315,9 @@ export class SyncEngine {
 
       if (this.settings.dailyNote.enabled) {
         try {
-          const freshTasks = await this.getDailyNoteSourceTasks();
-          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks);
+          const today = localTodayISODate();
+          const freshTasks = await this.getDailyNoteSourceTasks(today);
+          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks, today);
           if (result.dailyNote.status === 'error' || result.dailyNote.status === 'invalid_markers') {
             result.errors.push(result.dailyNote.message ?? 'Daily Note sync failed');
           }
@@ -401,8 +431,17 @@ export class SyncEngine {
       return { status: 'error', taskCount: 0, message: 'Todoist API not configured' };
     }
     await this.todoistService.ensureProjectCache();
-    const tasks = await this.getDailyNoteSourceTasks();
-    return this.syncTasksIntoDailyNote(tasks);
+    const today = localTodayISODate();
+    const tasks = await this.getDailyNoteSourceTasks(today);
+    return this.syncTasksIntoDailyNote(tasks, today);
+  }
+
+  async previewDailyNoteBackfill(options: DailyNoteBackfillOptions): Promise<DailyNoteBackfillResult> {
+    return this.backfillDailyNotes(options, true);
+  }
+
+  async applyDailyNoteBackfill(options: DailyNoteBackfillOptions): Promise<DailyNoteBackfillResult> {
+    return this.backfillDailyNotes(options, false);
   }
 
   async previewPastDailyNoteCleanup(options: DailyNoteCleanupOptions): Promise<DailyNoteCleanupResult> {
@@ -523,6 +562,133 @@ export class SyncEngine {
     return result;
   }
 
+  private async backfillDailyNotes(
+    options: DailyNoteBackfillOptions,
+    dryRun: boolean
+  ): Promise<DailyNoteBackfillResult> {
+    const result = createDailyNoteBackfillResult(options, dryRun);
+
+    if (!this.todoistService.isInitialized()) {
+      result.errors.push('Todoist API not configured');
+      return result;
+    }
+
+    const config = this.getDailyNoteConfig();
+    if (!config) {
+      result.errors.push('Enable Obsidian core Daily notes plugin first.');
+      return result;
+    }
+
+    const today = localTodayISODate();
+    const dateList = enumerateDailyNoteBackfillDates(options.startDate, options.endDate, today);
+    result.scannedDates = dateList.scannedDates;
+    result.skippedNonPastDates = dateList.skippedNonPastDates;
+    if (dateList.error) {
+      result.errors.push(dateList.error);
+      return result;
+    }
+    if (dateList.dates.length === 0) {
+      result.errors.push('Backfill range does not contain any past dates.');
+      return result;
+    }
+    result.eligibleDates = dateList.dates.length;
+
+    try {
+      await this.todoistService.ensureProjectCache();
+    } catch (error) {
+      result.errors.push(`Failed to load Todoist projects for Daily Note backfill: ${error}`);
+      return result;
+    }
+
+    let sourceSnapshot: DailyNoteSourceSnapshot;
+    try {
+      sourceSnapshot = await this.getDailyNoteSourceSnapshotForDates(dateList.dates, result.errors, result.warnings);
+    } catch (error) {
+      result.errors.push(`Failed to fetch Todoist tasks for Daily Note backfill: ${error}`);
+      return result;
+    }
+    if (result.errors.length > 0) {
+      return result;
+    }
+
+    for (const date of dateList.dates) {
+      const tasks = this.dailyNoteSourceTasksForDate(date, sourceSnapshot);
+      const write = await this.writeTasksIntoDailyNote(tasks, {
+        date,
+        dryRun,
+        createMissing: options.createMissing,
+      });
+      const fileResult = this.dailyNoteWriteResultToBackfillFile(date, write, dryRun);
+      countDailyNoteBackfillFile(result, fileResult);
+    }
+
+    return result;
+  }
+
+  private dailyNoteWriteResultToBackfillFile(
+    date: string,
+    write: DailyNoteWriteResult,
+    dryRun: boolean
+  ): DailyNoteBackfillFileResult {
+    if (write.status === 'updated' || write.status === 'would_update') {
+      return {
+        date,
+        filePath: write.filePath ?? '',
+        status: dryRun ? 'would_update' : 'updated',
+        taskCount: write.taskCount,
+        message: write.message,
+      };
+    }
+
+    if (write.status === 'created' || write.status === 'would_create') {
+      return {
+        date,
+        filePath: write.filePath ?? '',
+        status: dryRun ? 'would_create' : 'created',
+        taskCount: write.taskCount,
+        message: write.message,
+      };
+    }
+
+    if (write.status === 'skipped_no_file' || write.status === 'missing') {
+      return {
+        date,
+        filePath: write.filePath ?? '',
+        status: 'missing',
+        taskCount: write.taskCount,
+        message: write.message,
+      };
+    }
+
+    if (write.status === 'invalid_markers') {
+      return {
+        date,
+        filePath: write.filePath ?? '',
+        status: 'invalid_markers',
+        taskCount: write.taskCount,
+        message: write.message,
+      };
+    }
+
+    if (write.status === 'error' || write.status === 'daily_plugin_disabled' || write.status === 'disabled') {
+      return {
+        date,
+        filePath: write.filePath ?? '',
+        status: 'error',
+        taskCount: write.taskCount,
+        message: write.message ?? `Daily Note backfill failed for ${date}: ${write.status}`,
+      };
+    }
+
+    return {
+      date,
+      filePath: write.filePath ?? '',
+      status: 'unchanged',
+      taskCount: write.taskCount,
+      message: write.message,
+    };
+  }
+
   private getDailyNoteConfig(): DailyNoteConfig | null {
     const appWithInternal = this.app as App & {
       internalPlugins?: {
@@ -609,97 +775,172 @@ export class SyncEngine {
     return null;
   }
 
-  private async getDailyNoteSourceTasks(): Promise<TodoistTask[]> {
+  private async getDailyNoteSourceTasks(date: string): Promise<TodoistTask[]> {
+    const snapshot = await this.getDailyNoteSourceSnapshotForDates([date]);
+    return this.dailyNoteSourceTasksForDate(date, snapshot);
+  }
+
+  private async getDailyNoteSourceSnapshotForDates(
+    dates: string[],
+    errors?: string[],
+    warnings?: string[]
+  ): Promise<DailyNoteSourceSnapshot> {
     const activeTasks = await this.todoistService.getTasks();
     const completedTaskMode = this.settings.dailyNote.completedTaskMode;
+    const completedTasks: TodoistTask[] = [];
+    const completedActivities: DailyNoteSourceSnapshot['completedActivities'] = [];
     if (completedTaskMode === 'off') {
-      return activeTasks;
+      return { activeTasks, completedTasks, completedActivities };
     }
 
-    const today = localTodayISODate();
-    const since = new Date(`${today}T00:00:00`);
-    const until = new Date(since);
-    until.setDate(since.getDate() + 1);
-
-    const completedTasks = (await this.todoistService.getCompletedTasks({
-      by: completedTaskMode === 'due-today' ? 'due_date' : 'completion_date',
-      since,
-      until,
-    })).filter(task => this.settings.dailyNote.includeCompletedRecurring || !task.due?.isRecurring);
-
-    let completedRecurringTasks: TodoistTask[] = [];
-    if (this.settings.dailyNote.includeCompletedRecurring) {
+    const earliestDate = dates[0];
+    const latestDate = dates[dates.length - 1];
+    for (const range of completedTaskCleanupRanges(earliestDate, latestDate)) {
       try {
-        const completedActivities = await this.todoistService.getCompletedTaskActivities(since, until);
-        completedRecurringTasks = buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today);
+        const tasks = await this.todoistService.getCompletedTasks({
+          by: completedTaskMode === 'due-today' ? 'due_date' : 'completion_date',
+          since: range.since,
+          until: range.until,
+        });
+        completedTasks.push(...tasks.filter(task => this.settings.dailyNote.includeCompletedRecurring || !task.due?.isRecurring));
       } catch (error) {
-        console.warn('Todoist Sync: Failed to fetch completed recurring task activities:', error);
+        if (!errors) throw error;
+        errors.push(`Failed to fetch completed tasks for Daily Note backfill: ${error}`);
+        break;
       }
     }
 
-    const byId = new Map<string, TodoistTask>();
-    for (const task of activeTasks) byId.set(task.id, task);
-    for (const task of completedTasks) byId.set(task.id, task);
-    for (const task of completedRecurringTasks) byId.set(task.id, task);
     if (this.settings.dailyNote.includeCompletedRecurring) {
+      const activityLatestDate = completedTaskMode === 'due-today' ? localTodayISODate() : latestDate;
+      for (const range of completedTaskCleanupRanges(earliestDate, activityLatestDate)) {
+        try {
+          completedActivities.push(...await this.todoistService.getCompletedTaskActivities(range.since, range.until));
+        } catch (error) {
+          const message = `Completed recurring activity lookup unavailable for Daily Note backfill: ${error}`;
+          if (warnings) warnings.push(message);
+          console.warn('Todoist Sync:', message);
+          break;
+        }
+      }
+    }
+
+    return { activeTasks, completedTasks, completedActivities };
+  }
+
+  private dailyNoteSourceTasksForDate(date: string, snapshot: DailyNoteSourceSnapshot): TodoistTask[] {
+    const byId = new Map<string, TodoistTask>();
+    const completedRecurringTasks = this.settings.dailyNote.includeCompletedRecurring
+      ? buildCompletedRecurringTaskSnapshots(
+        snapshot.activeTasks,
+        snapshot.completedActivities,
+        date,
+        this.settings.dailyNote.completedTaskMode === 'due-today' ? 'due-today' : 'completed-today'
+      )
+      : [];
+
+    for (const task of snapshot.activeTasks) byId.set(task.id, task);
+    for (const task of snapshot.completedTasks) byId.set(task.id, task);
+    for (const task of completedRecurringTasks) byId.set(task.id, task);
+    if (this.settings.dailyNote.includeCompletedRecurring && date === localTodayISODate()) {
       for (const task of this.recentlyCompletedRecurringTasks) byId.set(task.id, task);
     }
     return [...byId.values()];
   }
 
   private getDailyNotePath(date: string): { status: 'ok'; path: string } | { status: 'daily_plugin_disabled'; message: string } {
-    const appWithInternal = this.app as App & {
-      internalPlugins?: {
-        plugins?: Record<string, DailyNotesCorePlugin>;
-      };
-    };
-    const dailyNotesPlugin = appWithInternal.internalPlugins?.plugins?.['daily-notes'];
-    if (!dailyNotesPlugin?.enabled) {
+    const config = this.getDailyNoteConfig();
+    if (!config) {
       return {
         status: 'daily_plugin_disabled',
         message: 'Enable Obsidian core Daily notes plugin first.',
       };
     }
 
-    const options = dailyNotesPlugin.instance?.options ?? {};
-    const format = options.format?.trim() || 'YYYY-MM-DD';
-    const folder = (options.folder ?? '').trim().replace(/^\/+|\/+$/g, '');
-    const filename = moment(date, 'YYYY-MM-DD').format(format);
     return {
       status: 'ok',
-      path: normalizePath(folder ? `${folder}/${filename}.md` : `${filename}.md`),
+      path: this.dailyNotePathForDate(date, config),
     };
   }
 
-  private async syncTasksIntoDailyNote(tasks: TodoistTask[]): Promise<DailyNoteSyncResult> {
-    const settings = this.settings.dailyNote;
-    if (!settings.enabled) {
+  private dailyNotePathForDate(date: string, config: DailyNoteConfig): string {
+    const filename = moment(date, 'YYYY-MM-DD').format(config.format);
+    return normalizePath(config.folder ? `${config.folder}/${filename}.md` : `${filename}.md`);
+  }
+
+  private async syncTasksIntoDailyNote(tasks: TodoistTask[], date: string): Promise<DailyNoteSyncResult> {
+    const write = await this.writeTasksIntoDailyNote(tasks, {
+      date,
+      dryRun: false,
+      createMissing: false,
+    });
+
+    if (write.status === 'disabled') {
       return { status: 'disabled', taskCount: 0 };
     }
-
-    const today = localTodayISODate();
-    const pathResult = this.getDailyNotePath(today);
-    if (pathResult.status !== 'ok') {
-      return { status: pathResult.status, taskCount: 0, message: pathResult.message };
+    if (write.status === 'daily_plugin_disabled') {
+      return { status: 'daily_plugin_disabled', taskCount: 0, message: write.message };
     }
-
-    const file = this.app.vault.getAbstractFileByPath(pathResult.path);
-    if (!(file instanceof TFile)) {
+    if (write.status === 'skipped_no_file' || write.status === 'missing') {
       return {
         status: 'skipped_no_file',
-        filePath: pathResult.path,
-        taskCount: 0,
-        message: `Daily Note not found: ${pathResult.path}`,
+        filePath: write.filePath,
+        taskCount: write.taskCount,
+        message: write.message,
+      };
+    }
+    if (write.status === 'invalid_markers') {
+      return {
+        status: 'invalid_markers',
+        filePath: write.filePath,
+        taskCount: write.taskCount,
+        message: write.message,
+      };
+    }
+    if (write.status === 'error') {
+      return {
+        status: 'error',
+        filePath: write.filePath,
+        taskCount: write.taskCount,
+        message: write.message,
       };
     }
 
+    if (write.taskCount === 0) {
+      return {
+        status: 'skipped_no_tasks',
+        filePath: write.filePath,
+        taskCount: 0,
+        message: `No matching Todoist tasks due on ${date}.`,
+      };
+    }
+
+    return {
+      status: 'updated',
+      filePath: write.filePath,
+      taskCount: write.taskCount,
+      message: `Updated Daily Note with ${write.taskCount} Todoist task(s).`,
+    };
+  }
+
+  private async writeTasksIntoDailyNote(
+    tasks: TodoistTask[],
+    options: DailyNoteWriteOptions
+  ): Promise<DailyNoteWriteResult> {
+    const settings = this.settings.dailyNote;
+    if (!settings.enabled) {
+      return { status: 'disabled', taskCount: 0, staleIds: [] };
+    }
+
+    const pathResult = this.getDailyNotePath(options.date);
+    if (pathResult.status !== 'ok') {
+      return { status: pathResult.status, taskCount: 0, message: pathResult.message, staleIds: [] };
+    }
+
     const filteredTasks = sortDailyNoteTasks(
-      filterDailyNoteTasks(tasks, settings, today),
+      filterDailyNoteTasks(tasks, settings, options.date),
       settings,
       (projectId) => this.resolveProjectName(projectId)
     );
-    const oldContent = await this.app.vault.read(file);
-    const staleIds = extractTodoistIdsFromMarkerRegion(oldContent, settings.markerStart, settings.markerEnd);
     const block = renderDailyNoteTaskBlock(
       filteredTasks,
       settings.markerStart,
@@ -708,6 +949,39 @@ export class SyncEngine {
       (projectId) => this.resolveProjectName(projectId),
       pathResult.path
     );
+
+    const abstractFile = this.app.vault.getAbstractFileByPath(pathResult.path);
+    if (!(abstractFile instanceof TFile)) {
+      if (!options.createMissing) {
+        return {
+          status: 'skipped_no_file',
+          filePath: pathResult.path,
+          taskCount: filteredTasks.length,
+          staleIds: [],
+          message: `Daily Note not found: ${pathResult.path}`,
+        };
+      }
+
+      const content = `${block}\n`;
+      if (!options.dryRun) {
+        await this.ensureParentFolders(pathResult.path);
+        await this.app.vault.create(pathResult.path, content);
+        this.recordDailyNoteSyncState(filteredTasks, pathResult.path, content);
+      }
+      return {
+        status: options.dryRun ? 'would_create' : 'created',
+        filePath: pathResult.path,
+        taskCount: filteredTasks.length,
+        content,
+        staleIds: [],
+        message: options.dryRun
+          ? `Would create Daily Note: ${pathResult.path}`
+          : `Created Daily Note: ${pathResult.path}`,
+      };
+    }
+
+    const oldContent = await this.app.vault.read(abstractFile);
+    const staleIds = extractTodoistIdsFromMarkerRegion(oldContent, settings.markerStart, settings.markerEnd);
     const update = updateDailyNoteContent(oldContent, settings.markerStart, settings.markerEnd, block);
 
     if (update.status === 'invalid_markers') {
@@ -715,41 +989,53 @@ export class SyncEngine {
         status: 'invalid_markers',
         filePath: pathResult.path,
         taskCount: filteredTasks.length,
+        staleIds,
         message: 'Daily Note markers are missing a pair, inverted, empty, or identical.',
       };
     }
 
-    if (update.content !== oldContent) {
-      await this.app.vault.modify(file, update.content);
+    const changed = update.content !== oldContent;
+    if (!options.dryRun) {
+      if (changed) {
+        await this.app.vault.modify(abstractFile, update.content);
+      }
+      for (const id of staleIds) {
+        delete this.syncState.tasks[id];
+      }
+      this.recordDailyNoteSyncState(filteredTasks, pathResult.path, update.content);
     }
 
-    for (const id of staleIds) {
-      delete this.syncState.tasks[id];
-    }
+    return {
+      status: changed ? (options.dryRun ? 'would_update' : 'updated') : 'unchanged',
+      filePath: pathResult.path,
+      taskCount: filteredTasks.length,
+      content: update.content,
+      staleIds,
+      message: changed
+        ? options.dryRun
+          ? `Would update Daily Note: ${pathResult.path}`
+          : `Updated Daily Note: ${pathResult.path}`
+        : `Daily Note already current: ${pathResult.path}`,
+    };
+  }
 
-    if (filteredTasks.length === 0) {
-      return {
-        status: 'skipped_no_tasks',
-        filePath: pathResult.path,
-        taskCount: 0,
-        message: 'No matching Todoist tasks due today.',
-      };
-    }
-
-    const markerLine = this.findMarkerLine(update.content, settings.markerStart);
+  private recordDailyNoteSyncState(tasks: TodoistTask[], filePath: string, content: string): void {
+    const settings = this.settings.dailyNote;
+    if (tasks.length === 0) return;
+    const markerLine = this.findMarkerLine(content, settings.markerStart);
     const firstTaskLine = markerLine + 1;
-    for (let i = 0; i < filteredTasks.length; i++) {
-      const todoistTask = filteredTasks[i];
+    for (let i = 0; i < tasks.length; i++) {
+      const todoistTask = tasks[i];
       const obsidianTask = buildDailyNoteParsedTask(
         todoistTask,
-        pathResult.path,
+        filePath,
         firstTaskLine + i,
         (projectId) => this.resolveProjectName(projectId)
       );
       this.syncState.tasks[todoistTask.id] = {
         todoistId: todoistTask.id,
         parentId: todoistTask.parentId,
-        filePath: pathResult.path,
+        filePath,
         lineNumber: firstTaskLine + i,
         contentHash: generateContentHash(obsidianTask),
         lastSynced: Date.now(),
@@ -758,13 +1044,21 @@ export class SyncEngine {
         projectId: todoistTask.projectId,
       };
     }
+  }
 
-    return {
-      status: 'updated',
-      filePath: pathResult.path,
-      taskCount: filteredTasks.length,
-      message: `Updated Daily Note with ${filteredTasks.length} Todoist task(s).`,
-    };
+  private async ensureParentFolders(path: string): Promise<void> {
+    const parts = path.split('/').slice(0, -1);
+    let current = '';
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      const existing = this.app.vault.getAbstractFileByPath(current);
+      if (existing instanceof TFile) {
+        throw new Error(`Cannot create Daily Note folder because a file exists at ${current}`);
+      }
+      if (!existing) {
+        await this.app.vault.createFolder(current);
+      }
+    }
   }
 
   private findMarkerLine(content: string, markerStart: string): number {

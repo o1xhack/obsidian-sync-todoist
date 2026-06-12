@@ -1,4 +1,5 @@
 import './build-info.test';
+import './daily-note-backfill.test';
 import './daily-note-cleanup.test';
 import './daily-note.test';
 import './due.test';

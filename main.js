@@ -32,6 +32,123 @@ var import_obsidian7 = require("obsidian");
 // src/settings.ts
 var import_obsidian2 = require("obsidian");
 
+// src/daily-note-backfill.ts
+var DAILY_NOTE_BACKFILL_LIMITATION = "Historical backfill can only use active Todoist tasks, completed-task archive results, and available activity-log snapshots. It cannot reconstruct moved or unfinished historical rows that Todoist no longer proves.";
+function createDailyNoteBackfillResult(options, dryRun) {
+  return {
+    dryRun,
+    startDate: options.startDate,
+    endDate: options.endDate,
+    scannedDates: 0,
+    eligibleDates: 0,
+    changedFiles: 0,
+    createdFiles: 0,
+    missingFiles: 0,
+    unchangedFiles: 0,
+    invalidMarkerFiles: 0,
+    skippedNonPastDates: 0,
+    taskRows: 0,
+    files: [],
+    errors: [],
+    warnings: [DAILY_NOTE_BACKFILL_LIMITATION]
+  };
+}
+function isISODate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return false;
+  const parsed = /* @__PURE__ */ new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+function compareISODate(a, b) {
+  return a.localeCompare(b);
+}
+function addDaysISO(date, days) {
+  const value = /* @__PURE__ */ new Date(`${date}T00:00:00.000Z`);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+function dailyNoteBackfillPresetRange(preset, today = /* @__PURE__ */ new Date()) {
+  const current = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (preset === "recent7") {
+    return { startDate: dateOffsetISO(-7, current), endDate: dateOffsetISO(-1, current) };
+  }
+  if (preset === "recent30") {
+    return { startDate: dateOffsetISO(-30, current), endDate: dateOffsetISO(-1, current) };
+  }
+  if (preset === "thisMonth") {
+    return {
+      startDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 1)),
+      endDate: dateOffsetISO(-1, current)
+    };
+  }
+  return {
+    startDate: localDateISO(new Date(current.getFullYear(), current.getMonth() - 1, 1)),
+    endDate: localDateISO(new Date(current.getFullYear(), current.getMonth(), 0))
+  };
+}
+function enumerateDailyNoteBackfillDates(startDate, endDate, today) {
+  if (!isISODate(startDate) || !isISODate(endDate)) {
+    return {
+      dates: [],
+      scannedDates: 0,
+      skippedNonPastDates: 0,
+      error: "Backfill dates must use YYYY-MM-DD."
+    };
+  }
+  if (compareISODate(startDate, endDate) > 0) {
+    return {
+      dates: [],
+      scannedDates: 0,
+      skippedNonPastDates: 0,
+      error: "Backfill start date must be on or before end date."
+    };
+  }
+  const dates = [];
+  let scannedDates = 0;
+  let skippedNonPastDates = 0;
+  let cursor = startDate;
+  while (compareISODate(cursor, endDate) <= 0) {
+    scannedDates++;
+    if (compareISODate(cursor, today) < 0) {
+      dates.push(cursor);
+    } else {
+      skippedNonPastDates++;
+    }
+    cursor = addDaysISO(cursor, 1);
+  }
+  return { dates, scannedDates, skippedNonPastDates };
+}
+function dateOffsetISO(days, from = /* @__PURE__ */ new Date()) {
+  const date = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  date.setDate(date.getDate() + days);
+  return localDateISO(date);
+}
+function localDateISO(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+function countDailyNoteBackfillFile(result, file) {
+  result.files.push(file);
+  result.taskRows += file.taskCount;
+  if (file.status === "would_update" || file.status === "updated") {
+    result.changedFiles++;
+  } else if (file.status === "would_create" || file.status === "created") {
+    result.createdFiles++;
+  } else if (file.status === "missing") {
+    result.missingFiles++;
+  } else if (file.status === "unchanged") {
+    result.unchangedFiles++;
+  } else if (file.status === "invalid_markers") {
+    result.invalidMarkerFiles++;
+  } else if (file.status === "skipped_not_past") {
+    result.skippedNonPastDates++;
+  } else if (file.status === "error" && file.message) {
+    result.errors.push(file.message);
+  }
+}
+
 // src/types.ts
 var DEFAULT_DAILY_NOTE_MARKER_START = "%% sync-todoist:daily:start %%";
 var DEFAULT_DAILY_NOTE_MARKER_END = "%% sync-todoist:daily:end %%";
@@ -173,6 +290,9 @@ var STRINGS = {
     "daily.cleanup.name": "Clean up past Daily Notes",
     "daily.cleanup.desc": "Preview and remove or update stale generated rows from past Daily Notes.",
     "daily.cleanup.button": "Open cleanup",
+    "daily.backfill.name": "Backfill past Daily Notes",
+    "daily.backfill.desc": "Preview and write managed Sync Todoist blocks into a past Daily Note date range.",
+    "daily.backfill.button": "Open backfill",
     "cleanup.title": "Clean up past Daily Notes",
     "cleanup.intro": "Only Sync Todoist marker regions in past Daily Notes are changed. Todoist tasks are never deleted. Preview first, then apply the selected cleanup.",
     "cleanup.mode.name": "Cleanup mode",
@@ -202,6 +322,50 @@ var STRINGS = {
     "cleanup.errors": "Errors: {{count}}",
     "cleanup.noChanges": "No past Daily Note rows need cleanup.",
     "cleanup.applied": "Cleanup applied: {{count}} file(s) updated.",
+    "backfill.title": "Backfill past Daily Notes",
+    "backfill.intro": "Preview first, then apply. Backfill writes only the managed Sync Todoist marker region for past Daily Notes and never changes Todoist tasks.",
+    "backfill.limitations": "Historical backfill can only use active Todoist tasks, completed-task archive results, and available activity-log snapshots. It cannot reconstruct moved or unfinished historical rows that Todoist no longer proves.",
+    "backfill.quickPresets.name": "Quick presets",
+    "backfill.quickPresets.recent7": "Recent 7 days",
+    "backfill.quickPresets.recent30": "Recent 30 days",
+    "backfill.quickPresets.thisMonth": "This month",
+    "backfill.quickPresets.lastMonth": "Last month",
+    "backfill.startDate.name": "Start date",
+    "backfill.endDate.name": "End date",
+    "backfill.date.desc": "Use YYYY-MM-DD. Today and future dates are skipped.",
+    "backfill.createMissing.name": "Create missing Daily Notes",
+    "backfill.createMissing.desc": "Off by default. When off, missing Daily Note files are reported but not created.",
+    "backfill.preview": "Preview",
+    "backfill.apply": "Apply backfill",
+    "backfill.close": "Close",
+    "backfill.noToken": "Configure your Todoist API token first.",
+    "backfill.previewing": "Previewing backfill...",
+    "backfill.applying": "Applying backfill...",
+    "backfill.summary": "Preview summary",
+    "backfill.range": "Range: {{start}} to {{end}}",
+    "backfill.scannedDates": "Dates scanned: {{count}}",
+    "backfill.eligibleDates": "Past dates eligible: {{count}}",
+    "backfill.changedFiles": "Files that would be updated: {{count}}",
+    "backfill.createdFiles": "Files that would be created: {{count}}",
+    "backfill.missingFiles": "Missing files reported: {{count}}",
+    "backfill.unchangedFiles": "Files already current: {{count}}",
+    "backfill.invalidMarkers": "Files with invalid markers skipped: {{count}}",
+    "backfill.skippedNonPast": "Today/future dates skipped: {{count}}",
+    "backfill.taskRows": "Generated task rows: {{count}}",
+    "backfill.errors": "Errors: {{count}}",
+    "backfill.warnings": "Warnings: {{count}}",
+    "backfill.noChanges": "No past Daily Notes need backfill.",
+    "backfill.applied": "Backfill applied: {{updated}} updated, {{created}} created.",
+    "backfill.fileDetails": "File details",
+    "backfill.status.would_update": "would update",
+    "backfill.status.updated": "updated",
+    "backfill.status.would_create": "would create",
+    "backfill.status.created": "created",
+    "backfill.status.unchanged": "unchanged",
+    "backfill.status.missing": "missing",
+    "backfill.status.invalid_markers": "invalid markers",
+    "backfill.status.skipped_not_past": "not a past date",
+    "backfill.status.error": "error",
     "daily.filters": "Task filters",
     "daily.filters.desc": "Each dimension defaults to all. If you select values in multiple dimensions, a task must match every selected dimension.",
     "daily.filters.verifyFirst": "Verify your Todoist API token in General settings first to load projects and labels.",
@@ -300,6 +464,9 @@ var STRINGS = {
     "daily.cleanup.name": "\u6E05\u7406\u8FC7\u53BB\u7684 Daily Note",
     "daily.cleanup.desc": "\u9884\u89C8\u5E76\u79FB\u9664\u6216\u66F4\u65B0\u8FC7\u53BB Daily Note \u4E2D\u8FC7\u671F\u7684\u751F\u6210\u884C\u3002",
     "daily.cleanup.button": "\u6253\u5F00\u6E05\u7406",
+    "daily.backfill.name": "\u56DE\u586B\u8FC7\u53BB\u7684 Daily Note",
+    "daily.backfill.desc": "\u9884\u89C8\u5E76\u5411\u8FC7\u53BB\u65E5\u671F\u8303\u56F4\u5185\u7684 Daily Note \u5199\u5165\u53D7\u63A7\u7684 Sync Todoist \u533A\u5757\u3002",
+    "daily.backfill.button": "\u6253\u5F00\u56DE\u586B",
     "cleanup.title": "\u6E05\u7406\u8FC7\u53BB\u7684 Daily Note",
     "cleanup.intro": "\u53EA\u4F1A\u4FEE\u6539\u8FC7\u53BB Daily Note \u91CC\u7684 Sync Todoist marker \u533A\u95F4\uFF0C\u4E0D\u4F1A\u5220\u9664 Todoist \u4EFB\u52A1\u3002\u5148\u9884\u89C8\uFF0C\u518D\u786E\u8BA4\u5E94\u7528\u6240\u9009\u6E05\u7406\u65B9\u5F0F\u3002",
     "cleanup.mode.name": "\u6E05\u7406\u65B9\u5F0F",
@@ -329,6 +496,50 @@ var STRINGS = {
     "cleanup.errors": "\u9519\u8BEF\uFF1A{{count}}",
     "cleanup.noChanges": "\u6CA1\u6709\u9700\u8981\u6E05\u7406\u7684\u8FC7\u53BB Daily Note \u884C\u3002",
     "cleanup.applied": "\u6E05\u7406\u5DF2\u5B8C\u6210\uFF1A\u66F4\u65B0 {{count}} \u4E2A\u6587\u4EF6\u3002",
+    "backfill.title": "\u56DE\u586B\u8FC7\u53BB\u7684 Daily Note",
+    "backfill.intro": "\u5148\u9884\u89C8\uFF0C\u518D\u5E94\u7528\u3002\u56DE\u586B\u53EA\u4F1A\u5199\u5165\u8FC7\u53BB Daily Note \u91CC\u7684 Sync Todoist \u53D7\u63A7 marker \u533A\u95F4\uFF0C\u4E0D\u4F1A\u4FEE\u6539 Todoist \u4EFB\u52A1\u3002",
+    "backfill.limitations": "\u5386\u53F2\u56DE\u586B\u53EA\u80FD\u4F7F\u7528\u5F53\u524D active Todoist \u4EFB\u52A1\u3001\u5DF2\u5B8C\u6210\u4EFB\u52A1\u5F52\u6863\u67E5\u8BE2\uFF0C\u4EE5\u53CA\u53EF\u7528\u7684\u6D3B\u52A8\u65E5\u5FD7\u5FEB\u7167\uFF1B\u65E0\u6CD5\u91CD\u5EFA Todoist \u5DF2\u4E0D\u80FD\u8BC1\u660E\u7684\u5386\u53F2\u8FC1\u79FB\u6216\u672A\u5B8C\u6210\u4EFB\u52A1\u884C\u3002",
+    "backfill.quickPresets.name": "\u5FEB\u901F\u9009\u62E9",
+    "backfill.quickPresets.recent7": "\u6700\u8FD1 7 \u5929",
+    "backfill.quickPresets.recent30": "\u6700\u8FD1 30 \u5929",
+    "backfill.quickPresets.thisMonth": "\u672C\u6708",
+    "backfill.quickPresets.lastMonth": "\u4E0A\u6708",
+    "backfill.startDate.name": "\u5F00\u59CB\u65E5\u671F",
+    "backfill.endDate.name": "\u7ED3\u675F\u65E5\u671F",
+    "backfill.date.desc": "\u4F7F\u7528 YYYY-MM-DD\u3002\u4ECA\u5929\u548C\u672A\u6765\u65E5\u671F\u4F1A\u88AB\u8DF3\u8FC7\u3002",
+    "backfill.createMissing.name": "\u521B\u5EFA\u7F3A\u5931\u7684 Daily Note",
+    "backfill.createMissing.desc": "\u9ED8\u8BA4\u5173\u95ED\u3002\u5173\u95ED\u65F6\uFF0C\u7F3A\u5931\u7684 Daily Note \u6587\u4EF6\u53EA\u4F1A\u62A5\u544A\uFF0C\u4E0D\u4F1A\u521B\u5EFA\u3002",
+    "backfill.preview": "\u9884\u89C8",
+    "backfill.apply": "\u5E94\u7528\u56DE\u586B",
+    "backfill.close": "\u5173\u95ED",
+    "backfill.noToken": "\u8BF7\u5148\u914D\u7F6E Todoist API Token\u3002",
+    "backfill.previewing": "\u6B63\u5728\u9884\u89C8\u56DE\u586B...",
+    "backfill.applying": "\u6B63\u5728\u5E94\u7528\u56DE\u586B...",
+    "backfill.summary": "\u9884\u89C8\u6458\u8981",
+    "backfill.range": "\u8303\u56F4\uFF1A{{start}} \u5230 {{end}}",
+    "backfill.scannedDates": "\u5DF2\u626B\u63CF\u65E5\u671F\uFF1A{{count}}",
+    "backfill.eligibleDates": "\u53EF\u56DE\u586B\u7684\u8FC7\u53BB\u65E5\u671F\uFF1A{{count}}",
+    "backfill.changedFiles": "\u5C06\u66F4\u65B0\u7684\u6587\u4EF6\uFF1A{{count}}",
+    "backfill.createdFiles": "\u5C06\u521B\u5EFA\u7684\u6587\u4EF6\uFF1A{{count}}",
+    "backfill.missingFiles": "\u62A5\u544A\u7F3A\u5931\u6587\u4EF6\uFF1A{{count}}",
+    "backfill.unchangedFiles": "\u5DF2\u662F\u6700\u65B0\u7684\u6587\u4EF6\uFF1A{{count}}",
+    "backfill.invalidMarkers": "\u8DF3\u8FC7 marker \u65E0\u6548\u6587\u4EF6\uFF1A{{count}}",
+    "backfill.skippedNonPast": "\u8DF3\u8FC7\u4ECA\u5929/\u672A\u6765\u65E5\u671F\uFF1A{{count}}",
+    "backfill.taskRows": "\u751F\u6210\u4EFB\u52A1\u884C\uFF1A{{count}}",
+    "backfill.errors": "\u9519\u8BEF\uFF1A{{count}}",
+    "backfill.warnings": "\u8B66\u544A\uFF1A{{count}}",
+    "backfill.noChanges": "\u6CA1\u6709\u9700\u8981\u56DE\u586B\u7684\u8FC7\u53BB Daily Note\u3002",
+    "backfill.applied": "\u56DE\u586B\u5DF2\u5B8C\u6210\uFF1A\u66F4\u65B0 {{updated}} \u4E2A\uFF0C\u521B\u5EFA {{created}} \u4E2A\u3002",
+    "backfill.fileDetails": "\u6587\u4EF6\u660E\u7EC6",
+    "backfill.status.would_update": "\u5C06\u66F4\u65B0",
+    "backfill.status.updated": "\u5DF2\u66F4\u65B0",
+    "backfill.status.would_create": "\u5C06\u521B\u5EFA",
+    "backfill.status.created": "\u5DF2\u521B\u5EFA",
+    "backfill.status.unchanged": "\u672A\u53D8\u5316",
+    "backfill.status.missing": "\u7F3A\u5931",
+    "backfill.status.invalid_markers": "marker \u65E0\u6548",
+    "backfill.status.skipped_not_past": "\u4E0D\u662F\u8FC7\u53BB\u65E5\u671F",
+    "backfill.status.error": "\u9519\u8BEF",
     "daily.filters": "\u4EFB\u52A1\u7B5B\u9009",
     "daily.filters.desc": "\u6BCF\u4E2A\u7EF4\u5EA6\u9ED8\u8BA4\u90FD\u662F\u5168\u90E8\u3002\u591A\u4E2A\u7EF4\u5EA6\u540C\u65F6\u9009\u62E9\u65F6\uFF0C\u4EFB\u52A1\u5FC5\u987B\u540C\u65F6\u6EE1\u8DB3\u6BCF\u4E2A\u5DF2\u9009\u62E9\u7684\u7EF4\u5EA6\u3002",
     "daily.filters.verifyFirst": "\u8BF7\u5148\u5728\u901A\u7528\u8BBE\u7F6E\u4E2D\u9A8C\u8BC1 Todoist API Token\uFF0C\u4EE5\u52A0\u8F7D\u9879\u76EE\u548C\u6807\u7B7E\u3002",
@@ -425,9 +636,9 @@ function noticeDurationForDailyNote(result) {
 // src/build-info.ts
 function getBuildInfo() {
   return {
-    version: "1.0.0",
-    buildDate: "2026-05-16T23:45:32.557Z",
-    buildNumber: "202605162345"
+    version: "1.1.1",
+    buildDate: "2026-06-11T23:02:06.566Z",
+    buildNumber: "202606112302"
   };
 }
 function formatBuildDate(buildDate) {
@@ -440,6 +651,7 @@ function formatBuildDate(buildDate) {
 // src/settings.ts
 var SETTINGS_TABS = ["general", "daily"];
 var ACTIVE_TAB_STORAGE_KEY = "sync-todoist:active-settings-tab";
+var ISO_DATE_PLACEHOLDER = "YYYY-MM-DD";
 var PRIORITY_OPTIONS = [
   { value: 4 /* HIGH */, labelKey: "priority.urgent" },
   { value: 3 /* MEDIUM */, labelKey: "priority.high" },
@@ -696,6 +908,11 @@ var TodoistSyncSettingTab = class extends import_obsidian2.PluginSettingTab {
     new import_obsidian2.Setting(containerEl).setName(this.tr("daily.cleanup.name")).setDesc(this.tr("daily.cleanup.desc")).addButton(
       (button) => button.setButtonText(this.tr("daily.cleanup.button")).onClick(() => {
         new DailyNoteCleanupModal(this.app, this.plugin).open();
+      })
+    );
+    new import_obsidian2.Setting(containerEl).setName(this.tr("daily.backfill.name")).setDesc(this.tr("daily.backfill.desc")).addButton(
+      (button) => button.setButtonText(this.tr("daily.backfill.button")).onClick(() => {
+        new DailyNoteBackfillModal(this.app, this.plugin).open();
       })
     );
     new import_obsidian2.Setting(containerEl).setName(this.tr("daily.filters")).setHeading();
@@ -990,11 +1207,212 @@ var DailyNoteCleanupModal = class extends import_obsidian2.Modal {
     }
   }
 };
+var DailyNoteBackfillModal = class extends import_obsidian2.Modal {
+  constructor(app, plugin) {
+    super(app);
+    this.plugin = plugin;
+    this.startDate = dateOffsetISO2(-7);
+    this.endDate = dateOffsetISO2(-1);
+    this.createMissing = false;
+    this.previewResult = null;
+    this.resultEl = null;
+  }
+  tr(key, values) {
+    return t(this.plugin.settings.uiLanguage, key, values);
+  }
+  onOpen() {
+    const { contentEl, titleEl } = this;
+    titleEl.setText(this.tr("backfill.title"));
+    contentEl.empty();
+    contentEl.createEl("p", {
+      cls: "sync-todoist-cleanup-intro",
+      text: this.tr("backfill.intro")
+    });
+    contentEl.createEl("p", {
+      cls: "sync-todoist-cleanup-intro",
+      text: this.tr("backfill.limitations")
+    });
+    this.renderQuickPresets(contentEl);
+    new import_obsidian2.Setting(contentEl).setName(this.tr("backfill.startDate.name")).setDesc(this.tr("backfill.date.desc")).addText((text) => {
+      text.inputEl.type = "date";
+      text.setPlaceholder(ISO_DATE_PLACEHOLDER).setValue(this.startDate).onChange((value) => {
+        this.startDate = value.trim();
+        this.previewResult = null;
+      });
+    });
+    new import_obsidian2.Setting(contentEl).setName(this.tr("backfill.endDate.name")).setDesc(this.tr("backfill.date.desc")).addText((text) => {
+      text.inputEl.type = "date";
+      text.setPlaceholder(ISO_DATE_PLACEHOLDER).setValue(this.endDate).onChange((value) => {
+        this.endDate = value.trim();
+        this.previewResult = null;
+      });
+    });
+    new import_obsidian2.Setting(contentEl).setName(this.tr("backfill.createMissing.name")).setDesc(this.tr("backfill.createMissing.desc")).addToggle(
+      (toggle) => toggle.setValue(this.createMissing).onChange((value) => {
+        this.createMissing = value;
+        this.previewResult = null;
+        this.render();
+      })
+    );
+    this.resultEl = contentEl.createDiv({ cls: "sync-todoist-cleanup-result" });
+    if (this.previewResult) {
+      this.renderResult(this.previewResult);
+    }
+    const buttons = contentEl.createDiv({ cls: "sync-todoist-modal-buttons" });
+    const previewButton = buttons.createEl("button", { text: this.tr("backfill.preview") });
+    previewButton.onclick = async () => {
+      await this.preview(previewButton);
+    };
+    const applyButton = buttons.createEl("button", {
+      text: this.tr("backfill.apply"),
+      cls: "mod-cta"
+    });
+    applyButton.disabled = !this.previewResult || this.previewResult.errors.length > 0 || this.previewResult.changedFiles + this.previewResult.createdFiles === 0;
+    applyButton.onclick = async () => {
+      await this.apply(applyButton);
+    };
+    const closeButton = buttons.createEl("button", { text: this.tr("backfill.close") });
+    closeButton.onclick = () => this.close();
+  }
+  onClose() {
+    this.contentEl.empty();
+  }
+  render() {
+    this.onOpen();
+  }
+  renderQuickPresets(contentEl) {
+    const row = contentEl.createDiv({ cls: "sync-todoist-backfill-presets" });
+    row.createSpan({
+      cls: "sync-todoist-backfill-presets-label",
+      text: `${this.tr("backfill.quickPresets.name")}:`
+    });
+    const presets = [
+      { id: "recent7", label: "backfill.quickPresets.recent7" },
+      { id: "recent30", label: "backfill.quickPresets.recent30" },
+      { id: "thisMonth", label: "backfill.quickPresets.thisMonth" },
+      { id: "lastMonth", label: "backfill.quickPresets.lastMonth" }
+    ];
+    for (const preset of presets) {
+      const button = row.createEl("button", { text: this.tr(preset.label) });
+      button.onclick = () => {
+        const range = dailyNoteBackfillPresetRange(preset.id);
+        this.startDate = range.startDate;
+        this.endDate = range.endDate;
+        this.previewResult = null;
+        this.render();
+      };
+    }
+  }
+  options() {
+    return {
+      startDate: this.startDate,
+      endDate: this.endDate,
+      createMissing: this.createMissing
+    };
+  }
+  async preview(button) {
+    if (!this.plugin.settings.apiToken) {
+      showSyncTodoistNotice(this.tr("backfill.noToken"));
+      return;
+    }
+    button.disabled = true;
+    button.textContent = this.tr("backfill.previewing");
+    try {
+      this.previewResult = await this.plugin.previewDailyNoteBackfill(this.options());
+      this.render();
+    } catch (error) {
+      showSyncTodoistNotice(`Sync Todoist: ${error}`, 1e4);
+    }
+  }
+  async apply(button) {
+    if (!this.previewResult || this.previewResult.errors.length > 0 || this.previewResult.changedFiles + this.previewResult.createdFiles === 0) {
+      return;
+    }
+    button.disabled = true;
+    button.textContent = this.tr("backfill.applying");
+    try {
+      const result = await this.plugin.applyDailyNoteBackfill(this.options());
+      this.previewResult = result;
+      this.render();
+      showSyncTodoistNotice(this.tr("backfill.applied", {
+        updated: result.changedFiles,
+        created: result.createdFiles
+      }));
+    } catch (error) {
+      showSyncTodoistNotice(`Sync Todoist: ${error}`, 1e4);
+    }
+  }
+  renderResult(result) {
+    if (!this.resultEl)
+      return;
+    this.resultEl.empty();
+    this.resultEl.createEl("h3", { text: this.tr("backfill.summary") });
+    const lines = [
+      this.tr("backfill.range", { start: result.startDate, end: result.endDate }),
+      this.tr("backfill.scannedDates", { count: result.scannedDates }),
+      this.tr("backfill.eligibleDates", { count: result.eligibleDates }),
+      this.tr("backfill.changedFiles", { count: result.changedFiles }),
+      this.tr("backfill.createdFiles", { count: result.createdFiles }),
+      this.tr("backfill.missingFiles", { count: result.missingFiles }),
+      this.tr("backfill.unchangedFiles", { count: result.unchangedFiles }),
+      this.tr("backfill.invalidMarkers", { count: result.invalidMarkerFiles }),
+      this.tr("backfill.skippedNonPast", { count: result.skippedNonPastDates }),
+      this.tr("backfill.taskRows", { count: result.taskRows })
+    ];
+    const list = this.resultEl.createEl("ul", { cls: "sync-todoist-cleanup-summary" });
+    for (const line of lines) {
+      list.createEl("li", { text: line });
+    }
+    if (result.changedFiles + result.createdFiles === 0 && result.errors.length === 0) {
+      this.resultEl.createEl("p", { text: this.tr("backfill.noChanges") });
+    }
+    if (result.warnings.length > 0) {
+      this.resultEl.createEl("p", {
+        cls: "sync-todoist-cleanup-errors",
+        text: this.tr("backfill.warnings", { count: result.warnings.length })
+      });
+      const warnings = this.resultEl.createEl("ul", { cls: "sync-todoist-cleanup-summary" });
+      for (const warning of result.warnings.slice(0, 5)) {
+        warnings.createEl("li", { text: warning === DAILY_NOTE_BACKFILL_LIMITATION ? this.tr("backfill.limitations") : warning });
+      }
+    }
+    if (result.errors.length > 0) {
+      this.resultEl.createEl("p", {
+        cls: "sync-todoist-cleanup-errors",
+        text: this.tr("backfill.errors", { count: result.errors.length })
+      });
+      const errors = this.resultEl.createEl("ul", { cls: "sync-todoist-cleanup-summary" });
+      for (const error of result.errors.slice(0, 5)) {
+        errors.createEl("li", { text: error });
+      }
+    }
+    if (result.files.length > 0) {
+      this.resultEl.createEl("h4", { text: this.tr("backfill.fileDetails") });
+      const files = this.resultEl.createEl("ul", { cls: "sync-todoist-cleanup-summary" });
+      for (const file of result.files.slice(0, 10)) {
+        files.createEl("li", {
+          text: `${file.date} - ${this.tr(`backfill.status.${file.status}`)} - ${file.filePath} (${file.taskCount})`
+        });
+      }
+    }
+  }
+};
 function updateSelection(values, value, checked) {
   if (checked) {
     return values.includes(value) ? values : [...values, value];
   }
   return values.filter((item) => item !== value);
+}
+function dateOffsetISO2(days, from = /* @__PURE__ */ new Date()) {
+  const date = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  date.setDate(date.getDate() + days);
+  return localDateISO2(date);
+}
+function localDateISO2(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 // src/todoist-service.ts
@@ -2042,24 +2460,26 @@ function datePrefix2(value) {
   const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
   return (_a = match == null ? void 0 : match[1]) != null ? _a : null;
 }
-function buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today) {
-  var _a, _b, _c, _d;
+function buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today, matchMode = "completed-today") {
+  var _a, _b, _c;
   const activeById = new Map(activeTasks.map((task) => [task.id, task]));
   const snapshots = [];
   const seen = /* @__PURE__ */ new Set();
   for (const activity of completedActivities) {
-    if (localDateFromTimestamp(activity.eventDate) !== today)
+    const occurrenceDate = activityDueValue(activity.extraData);
+    if (matchMode === "completed-today" && localDateFromTimestamp(activity.eventDate) !== today)
+      continue;
+    if (matchMode === "due-today" && localDateFromDueValue(occurrenceDate) !== today)
       continue;
     const activeTask = (_a = activeById.get(activity.objectId)) != null ? _a : activity.v2ObjectId ? activeById.get(activity.v2ObjectId) : void 0;
     if (!activeTask || !((_b = activeTask.due) == null ? void 0 : _b.isRecurring) || seen.has(activity.objectId))
       continue;
-    const occurrenceDate = (_c = activityDueValue(activity.extraData)) != null ? _c : today;
     snapshots.push({
       ...activeTask,
-      content: (_d = activityContent(activity.extraData)) != null ? _d : activeTask.content,
+      content: (_c = activityContent(activity.extraData)) != null ? _c : activeTask.content,
       due: {
         ...activeTask.due,
-        date: occurrenceDate,
+        date: occurrenceDate != null ? occurrenceDate : today,
         datetime: void 0
       },
       isCompleted: true,
@@ -2086,6 +2506,14 @@ function activityContent(extraData) {
 function activityDueValue(extraData) {
   var _a, _b, _c;
   return (_c = (_b = (_a = dueValueToDateTime(extraData == null ? void 0 : extraData.completed_due_date_local)) != null ? _a : dueValueToDateTime(extraData == null ? void 0 : extraData.completed_due_date)) != null ? _b : dueValueToDateTime(extraData == null ? void 0 : extraData.last_due_date)) != null ? _c : dueValueToDateTime(extraData == null ? void 0 : extraData.due_date);
+}
+function localDateFromDueValue(value) {
+  var _a;
+  if (!value)
+    return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return value;
+  return (_a = localDateFromTimestamp(value)) != null ? _a : datePrefix2(value);
 }
 function dueValueToDateTime(value) {
   var _a, _b;
@@ -2489,8 +2917,9 @@ var SyncEngine = class {
       this.syncState.lastFullSync = Date.now();
       if (this.settings.dailyNote.enabled) {
         try {
-          const freshTasks = await this.getDailyNoteSourceTasks();
-          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks);
+          const today = localTodayISODate();
+          const freshTasks = await this.getDailyNoteSourceTasks(today);
+          result.dailyNote = await this.syncTasksIntoDailyNote(freshTasks, today);
           if (result.dailyNote.status === "error" || result.dailyNote.status === "invalid_markers") {
             result.errors.push((_b = result.dailyNote.message) != null ? _b : "Daily Note sync failed");
           }
@@ -2590,8 +3019,15 @@ var SyncEngine = class {
       return { status: "error", taskCount: 0, message: "Todoist API not configured" };
     }
     await this.todoistService.ensureProjectCache();
-    const tasks = await this.getDailyNoteSourceTasks();
-    return this.syncTasksIntoDailyNote(tasks);
+    const today = localTodayISODate();
+    const tasks = await this.getDailyNoteSourceTasks(today);
+    return this.syncTasksIntoDailyNote(tasks, today);
+  }
+  async previewDailyNoteBackfill(options) {
+    return this.backfillDailyNotes(options, true);
+  }
+  async applyDailyNoteBackfill(options) {
+    return this.backfillDailyNotes(options, false);
   }
   async previewPastDailyNoteCleanup(options) {
     return this.cleanupPastDailyNotes(options, true);
@@ -2696,6 +3132,113 @@ var SyncEngine = class {
     }
     return result;
   }
+  async backfillDailyNotes(options, dryRun) {
+    const result = createDailyNoteBackfillResult(options, dryRun);
+    if (!this.todoistService.isInitialized()) {
+      result.errors.push("Todoist API not configured");
+      return result;
+    }
+    const config = this.getDailyNoteConfig();
+    if (!config) {
+      result.errors.push("Enable Obsidian core Daily notes plugin first.");
+      return result;
+    }
+    const today = localTodayISODate();
+    const dateList = enumerateDailyNoteBackfillDates(options.startDate, options.endDate, today);
+    result.scannedDates = dateList.scannedDates;
+    result.skippedNonPastDates = dateList.skippedNonPastDates;
+    if (dateList.error) {
+      result.errors.push(dateList.error);
+      return result;
+    }
+    if (dateList.dates.length === 0) {
+      result.errors.push("Backfill range does not contain any past dates.");
+      return result;
+    }
+    result.eligibleDates = dateList.dates.length;
+    try {
+      await this.todoistService.ensureProjectCache();
+    } catch (error) {
+      result.errors.push(`Failed to load Todoist projects for Daily Note backfill: ${error}`);
+      return result;
+    }
+    let sourceSnapshot;
+    try {
+      sourceSnapshot = await this.getDailyNoteSourceSnapshotForDates(dateList.dates, result.errors, result.warnings);
+    } catch (error) {
+      result.errors.push(`Failed to fetch Todoist tasks for Daily Note backfill: ${error}`);
+      return result;
+    }
+    if (result.errors.length > 0) {
+      return result;
+    }
+    for (const date of dateList.dates) {
+      const tasks = this.dailyNoteSourceTasksForDate(date, sourceSnapshot);
+      const write = await this.writeTasksIntoDailyNote(tasks, {
+        date,
+        dryRun,
+        createMissing: options.createMissing
+      });
+      const fileResult = this.dailyNoteWriteResultToBackfillFile(date, write, dryRun);
+      countDailyNoteBackfillFile(result, fileResult);
+    }
+    return result;
+  }
+  dailyNoteWriteResultToBackfillFile(date, write, dryRun) {
+    var _a, _b, _c, _d, _e, _f, _g;
+    if (write.status === "updated" || write.status === "would_update") {
+      return {
+        date,
+        filePath: (_a = write.filePath) != null ? _a : "",
+        status: dryRun ? "would_update" : "updated",
+        taskCount: write.taskCount,
+        message: write.message
+      };
+    }
+    if (write.status === "created" || write.status === "would_create") {
+      return {
+        date,
+        filePath: (_b = write.filePath) != null ? _b : "",
+        status: dryRun ? "would_create" : "created",
+        taskCount: write.taskCount,
+        message: write.message
+      };
+    }
+    if (write.status === "skipped_no_file" || write.status === "missing") {
+      return {
+        date,
+        filePath: (_c = write.filePath) != null ? _c : "",
+        status: "missing",
+        taskCount: write.taskCount,
+        message: write.message
+      };
+    }
+    if (write.status === "invalid_markers") {
+      return {
+        date,
+        filePath: (_d = write.filePath) != null ? _d : "",
+        status: "invalid_markers",
+        taskCount: write.taskCount,
+        message: write.message
+      };
+    }
+    if (write.status === "error" || write.status === "daily_plugin_disabled" || write.status === "disabled") {
+      return {
+        date,
+        filePath: (_e = write.filePath) != null ? _e : "",
+        status: "error",
+        taskCount: write.taskCount,
+        message: (_f = write.message) != null ? _f : `Daily Note backfill failed for ${date}: ${write.status}`
+      };
+    }
+    return {
+      date,
+      filePath: (_g = write.filePath) != null ? _g : "",
+      status: "unchanged",
+      taskCount: write.taskCount,
+      message: write.message
+    };
+  }
   getDailyNoteConfig() {
     var _a, _b, _c, _d, _e, _f;
     const appWithInternal = this.app;
@@ -2763,91 +3306,156 @@ var SyncEngine = class {
     }
     return null;
   }
-  async getDailyNoteSourceTasks() {
+  async getDailyNoteSourceTasks(date) {
+    const snapshot = await this.getDailyNoteSourceSnapshotForDates([date]);
+    return this.dailyNoteSourceTasksForDate(date, snapshot);
+  }
+  async getDailyNoteSourceSnapshotForDates(dates, errors, warnings) {
     const activeTasks = await this.todoistService.getTasks();
     const completedTaskMode = this.settings.dailyNote.completedTaskMode;
+    const completedTasks = [];
+    const completedActivities = [];
     if (completedTaskMode === "off") {
-      return activeTasks;
+      return { activeTasks, completedTasks, completedActivities };
     }
-    const today = localTodayISODate();
-    const since = /* @__PURE__ */ new Date(`${today}T00:00:00`);
-    const until = new Date(since);
-    until.setDate(since.getDate() + 1);
-    const completedTasks = (await this.todoistService.getCompletedTasks({
-      by: completedTaskMode === "due-today" ? "due_date" : "completion_date",
-      since,
-      until
-    })).filter((task) => {
-      var _a;
-      return this.settings.dailyNote.includeCompletedRecurring || !((_a = task.due) == null ? void 0 : _a.isRecurring);
-    });
-    let completedRecurringTasks = [];
-    if (this.settings.dailyNote.includeCompletedRecurring) {
+    const earliestDate = dates[0];
+    const latestDate = dates[dates.length - 1];
+    for (const range of completedTaskCleanupRanges(earliestDate, latestDate)) {
       try {
-        const completedActivities = await this.todoistService.getCompletedTaskActivities(since, until);
-        completedRecurringTasks = buildCompletedRecurringTaskSnapshots(activeTasks, completedActivities, today);
+        const tasks = await this.todoistService.getCompletedTasks({
+          by: completedTaskMode === "due-today" ? "due_date" : "completion_date",
+          since: range.since,
+          until: range.until
+        });
+        completedTasks.push(...tasks.filter((task) => {
+          var _a;
+          return this.settings.dailyNote.includeCompletedRecurring || !((_a = task.due) == null ? void 0 : _a.isRecurring);
+        }));
       } catch (error) {
-        console.warn("Todoist Sync: Failed to fetch completed recurring task activities:", error);
+        if (!errors)
+          throw error;
+        errors.push(`Failed to fetch completed tasks for Daily Note backfill: ${error}`);
+        break;
       }
     }
+    if (this.settings.dailyNote.includeCompletedRecurring) {
+      const activityLatestDate = completedTaskMode === "due-today" ? localTodayISODate() : latestDate;
+      for (const range of completedTaskCleanupRanges(earliestDate, activityLatestDate)) {
+        try {
+          completedActivities.push(...await this.todoistService.getCompletedTaskActivities(range.since, range.until));
+        } catch (error) {
+          const message = `Completed recurring activity lookup unavailable for Daily Note backfill: ${error}`;
+          if (warnings)
+            warnings.push(message);
+          console.warn("Todoist Sync:", message);
+          break;
+        }
+      }
+    }
+    return { activeTasks, completedTasks, completedActivities };
+  }
+  dailyNoteSourceTasksForDate(date, snapshot) {
     const byId = /* @__PURE__ */ new Map();
-    for (const task of activeTasks)
+    const completedRecurringTasks = this.settings.dailyNote.includeCompletedRecurring ? buildCompletedRecurringTaskSnapshots(
+      snapshot.activeTasks,
+      snapshot.completedActivities,
+      date,
+      this.settings.dailyNote.completedTaskMode === "due-today" ? "due-today" : "completed-today"
+    ) : [];
+    for (const task of snapshot.activeTasks)
       byId.set(task.id, task);
-    for (const task of completedTasks)
+    for (const task of snapshot.completedTasks)
       byId.set(task.id, task);
     for (const task of completedRecurringTasks)
       byId.set(task.id, task);
-    if (this.settings.dailyNote.includeCompletedRecurring) {
+    if (this.settings.dailyNote.includeCompletedRecurring && date === localTodayISODate()) {
       for (const task of this.recentlyCompletedRecurringTasks)
         byId.set(task.id, task);
     }
     return [...byId.values()];
   }
   getDailyNotePath(date) {
-    var _a, _b, _c, _d, _e, _f;
-    const appWithInternal = this.app;
-    const dailyNotesPlugin = (_b = (_a = appWithInternal.internalPlugins) == null ? void 0 : _a.plugins) == null ? void 0 : _b["daily-notes"];
-    if (!(dailyNotesPlugin == null ? void 0 : dailyNotesPlugin.enabled)) {
+    const config = this.getDailyNoteConfig();
+    if (!config) {
       return {
         status: "daily_plugin_disabled",
         message: "Enable Obsidian core Daily notes plugin first."
       };
     }
-    const options = (_d = (_c = dailyNotesPlugin.instance) == null ? void 0 : _c.options) != null ? _d : {};
-    const format = ((_e = options.format) == null ? void 0 : _e.trim()) || "YYYY-MM-DD";
-    const folder = ((_f = options.folder) != null ? _f : "").trim().replace(/^\/+|\/+$/g, "");
-    const filename = (0, import_obsidian4.moment)(date, "YYYY-MM-DD").format(format);
     return {
       status: "ok",
-      path: (0, import_obsidian4.normalizePath)(folder ? `${folder}/${filename}.md` : `${filename}.md`)
+      path: this.dailyNotePathForDate(date, config)
     };
   }
-  async syncTasksIntoDailyNote(tasks) {
-    const settings = this.settings.dailyNote;
-    if (!settings.enabled) {
+  dailyNotePathForDate(date, config) {
+    const filename = (0, import_obsidian4.moment)(date, "YYYY-MM-DD").format(config.format);
+    return (0, import_obsidian4.normalizePath)(config.folder ? `${config.folder}/${filename}.md` : `${filename}.md`);
+  }
+  async syncTasksIntoDailyNote(tasks, date) {
+    const write = await this.writeTasksIntoDailyNote(tasks, {
+      date,
+      dryRun: false,
+      createMissing: false
+    });
+    if (write.status === "disabled") {
       return { status: "disabled", taskCount: 0 };
     }
-    const today = localTodayISODate();
-    const pathResult = this.getDailyNotePath(today);
-    if (pathResult.status !== "ok") {
-      return { status: pathResult.status, taskCount: 0, message: pathResult.message };
+    if (write.status === "daily_plugin_disabled") {
+      return { status: "daily_plugin_disabled", taskCount: 0, message: write.message };
     }
-    const file = this.app.vault.getAbstractFileByPath(pathResult.path);
-    if (!(file instanceof import_obsidian4.TFile)) {
+    if (write.status === "skipped_no_file" || write.status === "missing") {
       return {
         status: "skipped_no_file",
-        filePath: pathResult.path,
-        taskCount: 0,
-        message: `Daily Note not found: ${pathResult.path}`
+        filePath: write.filePath,
+        taskCount: write.taskCount,
+        message: write.message
       };
     }
+    if (write.status === "invalid_markers") {
+      return {
+        status: "invalid_markers",
+        filePath: write.filePath,
+        taskCount: write.taskCount,
+        message: write.message
+      };
+    }
+    if (write.status === "error") {
+      return {
+        status: "error",
+        filePath: write.filePath,
+        taskCount: write.taskCount,
+        message: write.message
+      };
+    }
+    if (write.taskCount === 0) {
+      return {
+        status: "skipped_no_tasks",
+        filePath: write.filePath,
+        taskCount: 0,
+        message: `No matching Todoist tasks due on ${date}.`
+      };
+    }
+    return {
+      status: "updated",
+      filePath: write.filePath,
+      taskCount: write.taskCount,
+      message: `Updated Daily Note with ${write.taskCount} Todoist task(s).`
+    };
+  }
+  async writeTasksIntoDailyNote(tasks, options) {
+    const settings = this.settings.dailyNote;
+    if (!settings.enabled) {
+      return { status: "disabled", taskCount: 0, staleIds: [] };
+    }
+    const pathResult = this.getDailyNotePath(options.date);
+    if (pathResult.status !== "ok") {
+      return { status: pathResult.status, taskCount: 0, message: pathResult.message, staleIds: [] };
+    }
     const filteredTasks = sortDailyNoteTasks(
-      filterDailyNoteTasks(tasks, settings, today),
+      filterDailyNoteTasks(tasks, settings, options.date),
       settings,
       (projectId) => this.resolveProjectName(projectId)
     );
-    const oldContent = await this.app.vault.read(file);
-    const staleIds = extractTodoistIdsFromMarkerRegion(oldContent, settings.markerStart, settings.markerEnd);
     const block = renderDailyNoteTaskBlock(
       filteredTasks,
       settings.markerStart,
@@ -2856,43 +3464,82 @@ var SyncEngine = class {
       (projectId) => this.resolveProjectName(projectId),
       pathResult.path
     );
+    const abstractFile = this.app.vault.getAbstractFileByPath(pathResult.path);
+    if (!(abstractFile instanceof import_obsidian4.TFile)) {
+      if (!options.createMissing) {
+        return {
+          status: "skipped_no_file",
+          filePath: pathResult.path,
+          taskCount: filteredTasks.length,
+          staleIds: [],
+          message: `Daily Note not found: ${pathResult.path}`
+        };
+      }
+      const content = `${block}
+`;
+      if (!options.dryRun) {
+        await this.ensureParentFolders(pathResult.path);
+        await this.app.vault.create(pathResult.path, content);
+        this.recordDailyNoteSyncState(filteredTasks, pathResult.path, content);
+      }
+      return {
+        status: options.dryRun ? "would_create" : "created",
+        filePath: pathResult.path,
+        taskCount: filteredTasks.length,
+        content,
+        staleIds: [],
+        message: options.dryRun ? `Would create Daily Note: ${pathResult.path}` : `Created Daily Note: ${pathResult.path}`
+      };
+    }
+    const oldContent = await this.app.vault.read(abstractFile);
+    const staleIds = extractTodoistIdsFromMarkerRegion(oldContent, settings.markerStart, settings.markerEnd);
     const update = updateDailyNoteContent(oldContent, settings.markerStart, settings.markerEnd, block);
     if (update.status === "invalid_markers") {
       return {
         status: "invalid_markers",
         filePath: pathResult.path,
         taskCount: filteredTasks.length,
+        staleIds,
         message: "Daily Note markers are missing a pair, inverted, empty, or identical."
       };
     }
-    if (update.content !== oldContent) {
-      await this.app.vault.modify(file, update.content);
+    const changed = update.content !== oldContent;
+    if (!options.dryRun) {
+      if (changed) {
+        await this.app.vault.modify(abstractFile, update.content);
+      }
+      for (const id of staleIds) {
+        delete this.syncState.tasks[id];
+      }
+      this.recordDailyNoteSyncState(filteredTasks, pathResult.path, update.content);
     }
-    for (const id of staleIds) {
-      delete this.syncState.tasks[id];
-    }
-    if (filteredTasks.length === 0) {
-      return {
-        status: "skipped_no_tasks",
-        filePath: pathResult.path,
-        taskCount: 0,
-        message: "No matching Todoist tasks due today."
-      };
-    }
-    const markerLine = this.findMarkerLine(update.content, settings.markerStart);
+    return {
+      status: changed ? options.dryRun ? "would_update" : "updated" : "unchanged",
+      filePath: pathResult.path,
+      taskCount: filteredTasks.length,
+      content: update.content,
+      staleIds,
+      message: changed ? options.dryRun ? `Would update Daily Note: ${pathResult.path}` : `Updated Daily Note: ${pathResult.path}` : `Daily Note already current: ${pathResult.path}`
+    };
+  }
+  recordDailyNoteSyncState(tasks, filePath, content) {
+    const settings = this.settings.dailyNote;
+    if (tasks.length === 0)
+      return;
+    const markerLine = this.findMarkerLine(content, settings.markerStart);
     const firstTaskLine = markerLine + 1;
-    for (let i = 0; i < filteredTasks.length; i++) {
-      const todoistTask = filteredTasks[i];
+    for (let i = 0; i < tasks.length; i++) {
+      const todoistTask = tasks[i];
       const obsidianTask = buildDailyNoteParsedTask(
         todoistTask,
-        pathResult.path,
+        filePath,
         firstTaskLine + i,
         (projectId) => this.resolveProjectName(projectId)
       );
       this.syncState.tasks[todoistTask.id] = {
         todoistId: todoistTask.id,
         parentId: todoistTask.parentId,
-        filePath: pathResult.path,
+        filePath,
         lineNumber: firstTaskLine + i,
         contentHash: generateContentHash(obsidianTask),
         lastSynced: Date.now(),
@@ -2901,12 +3548,20 @@ var SyncEngine = class {
         projectId: todoistTask.projectId
       };
     }
-    return {
-      status: "updated",
-      filePath: pathResult.path,
-      taskCount: filteredTasks.length,
-      message: `Updated Daily Note with ${filteredTasks.length} Todoist task(s).`
-    };
+  }
+  async ensureParentFolders(path) {
+    const parts = path.split("/").slice(0, -1);
+    let current = "";
+    for (const part of parts) {
+      current = current ? `${current}/${part}` : part;
+      const existing = this.app.vault.getAbstractFileByPath(current);
+      if (existing instanceof import_obsidian4.TFile) {
+        throw new Error(`Cannot create Daily Note folder because a file exists at ${current}`);
+      }
+      if (!existing) {
+        await this.app.vault.createFolder(current);
+      }
+    }
   }
   findMarkerLine(content, markerStart) {
     const idx = content.indexOf(markerStart);
@@ -3794,6 +4449,20 @@ function renderQueryBlock(source, el, plugin) {
 // src/release-log.ts
 var RELEASE_LOG = [
   {
+    version: "1.1.1",
+    titleEn: "Backfill date presets",
+    titleZh: "\u56DE\u586B\u65E5\u671F\u5FEB\u901F\u9009\u62E9",
+    en: "Adds quick date presets and date picker inputs to the historical Daily Note backfill modal.",
+    zh: "\u4E3A\u5386\u53F2 Daily Note \u56DE\u586B\u7A97\u53E3\u65B0\u589E\u5FEB\u901F\u65E5\u671F\u9009\u62E9\u548C date picker \u8F93\u5165\u3002"
+  },
+  {
+    version: "1.1.0",
+    titleEn: "Historical Daily Note backfill",
+    titleZh: "\u5386\u53F2 Daily Note \u56DE\u586B",
+    en: "Adds a preview-and-apply backfill tool for past Daily Notes, with optional missing-file creation and explicit Todoist historical-data limits.",
+    zh: "\u65B0\u589E\u8FC7\u53BB Daily Note \u7684\u9884\u89C8/\u5E94\u7528\u56DE\u586B\u5DE5\u5177\uFF0C\u652F\u6301\u53EF\u9009\u521B\u5EFA\u7F3A\u5931\u6587\u4EF6\uFF0C\u5E76\u660E\u786E Todoist \u5386\u53F2\u6570\u636E\u9650\u5236\u3002"
+  },
+  {
     version: "1.0.0",
     titleEn: "Recurring controls for Daily Notes",
     titleZh: "Daily Note \u5FAA\u73AF\u4EFB\u52A1\u63A7\u5236",
@@ -3837,6 +4506,14 @@ var RELEASE_LOG = [
   }
 ];
 var RECENT_UPDATE_HIGHLIGHTS = [
+  {
+    en: "Backfill past Daily Notes now offers quick date presets and date picker inputs.",
+    zh: "\u56DE\u586B\u8FC7\u53BB Daily Note \u73B0\u5728\u652F\u6301\u5FEB\u901F\u65E5\u671F\u9009\u62E9\u548C date picker \u8F93\u5165\u3002"
+  },
+  {
+    en: "Past Daily Notes can be backfilled safely from available Todoist history without changing Todoist tasks.",
+    zh: "\u8FC7\u53BB Daily Note \u73B0\u5728\u53EF\u4EE5\u57FA\u4E8E\u53EF\u7528 Todoist \u5386\u53F2\u5B89\u5168\u56DE\u586B\uFF0C\u4E14\u4E0D\u4F1A\u4FEE\u6539 Todoist \u4EFB\u52A1\u3002"
+  },
   {
     en: "Daily Note recurring tasks now have separate controls for incomplete tasks and completed occurrences.",
     zh: "Daily Note \u5FAA\u73AF\u4EFB\u52A1\u73B0\u5728\u53EF\u5206\u522B\u63A7\u5236\u672A\u5B8C\u6210\u4EFB\u52A1\u548C\u5DF2\u5B8C\u6210 occurrence\u3002"
@@ -4237,6 +4914,15 @@ var TodoistSyncPlugin = class extends import_obsidian7.Plugin {
   }
   async applyPastDailyNoteCleanup(options) {
     const result = await this.syncEngine.applyPastDailyNoteCleanup(options);
+    await this.saveSyncState();
+    this.updateStatusBar();
+    return result;
+  }
+  async previewDailyNoteBackfill(options) {
+    return this.syncEngine.previewDailyNoteBackfill(options);
+  }
+  async applyDailyNoteBackfill(options) {
+    const result = await this.syncEngine.applyDailyNoteBackfill(options);
     await this.saveSyncState();
     this.updateStatusBar();
     return result;
