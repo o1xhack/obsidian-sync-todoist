@@ -107,12 +107,12 @@ Sync Todoist reads and writes plain Markdown task lines. The `todoist-id` commen
 | Marker | Meaning | Todoist mapping |
 |---|---|---|
 | `#todoist` | Sync marker | Marks a top-level task for sync |
-| `<!-- todoist-id:... -->` | Task identity | Keeps future syncs attached to the same Todoist task |
+| `<!-- todoist-id:8765432109 -->` | Task identity | Keeps future syncs attached to the same Todoist task |
 | `📅 2026-01-28` | Due date | Todoist due date |
 | `📅 2026-01-28 15:00` | Floating due time | Todoist local wall-clock due time |
 | `due:2026-01-28` | Due date | Todoist due date |
 | `due:2026-01-28 15:00` | Floating due time | Todoist local wall-clock due time |
-| `<!-- todoist-due:{...} -->` | Protected due metadata | Preserves fixed-time and recurring Todoist rules |
+| `<!-- todoist-due:{"kind":"recurring","date":"2026-01-26","visibleDate":"2026-01-26","visibleTime":null,"timezone":null,"string":"every monday","lang":"en","isRecurring":true} -->` | Protected due metadata | Preserves fixed-time and recurring Todoist rules |
 | `🔺` | Urgent priority | Priority 4 |
 | `⏫` | High priority | Priority 3 |
 | `🔼` | Medium priority | Priority 2 |

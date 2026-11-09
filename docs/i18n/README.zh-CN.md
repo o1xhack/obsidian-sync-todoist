@@ -107,12 +107,12 @@ Sync Todoist 读取和写入普通 Markdown task line。`todoist-id` 注释是 O
 | 标记 | 含义 | Todoist 映射 |
 |---|---|---|
 | `#todoist` | 同步标记 | 标记顶层任务需要同步 |
-| `<!-- todoist-id:... -->` | 任务身份 | 后续同步继续关联同一个 Todoist 任务 |
+| `<!-- todoist-id:8765432109 -->` | 任务身份 | 后续同步继续关联同一个 Todoist 任务 |
 | `📅 2026-01-28` | 截止日期 | Todoist due date |
 | `📅 2026-01-28 15:00` | 浮动截止时间 | Todoist 本地墙钟时间 |
 | `due:2026-01-28` | 截止日期 | Todoist due date |
 | `due:2026-01-28 15:00` | 浮动截止时间 | Todoist 本地墙钟时间 |
-| `<!-- todoist-due:{...} -->` | 受保护 due 元数据 | 保留固定时间和循环任务规则 |
+| `<!-- todoist-due:{"kind":"recurring","date":"2026-01-26","visibleDate":"2026-01-26","visibleTime":null,"timezone":null,"string":"every monday","lang":"en","isRecurring":true} -->` | 受保护 due 元数据 | 保留固定时间和循环任务规则 |
 | `🔺` | 紧急优先级 | Priority 4 |
 | `⏫` | 高优先级 | Priority 3 |
 | `🔼` | 中优先级 | Priority 2 |
