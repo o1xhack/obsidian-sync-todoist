@@ -2,6 +2,20 @@
 
 All notable Sync Todoist changes are tracked here.
 
+## Unreleased
+
+- Added `completed_only` to query blocks. It lists only tasks from the completed-task lookup,
+  skips the active-task lookup, and reports lookup failures as errors instead of an empty
+  list. Requested in [#2](https://github.com/o1xhack/obsidian-sync-todoist/issues/2).
+- Completed rows in query blocks now show their completion date as `✅ YYYY-MM-DD`.
+- Fixed completed-task windows across daylight saving time changes: dates such as
+  `completed_until`, `today`, and `yesterday`, and durations such as `30d`, now follow local
+  calendar days, including in time zones that skip midnight. The 6-week and 3-month limits
+  count calendar days, and a window at the limit that a DST change makes slightly longer is
+  fetched in two requests instead of being shortened.
+- The completed-window footer now shows the last included day instead of the exclusive end date.
+- Query blocks now show sub-subtasks instead of dropping tasks deeper than one subtask level.
+
 ## 1.1.1 - 2026-06-11
 
 - Added quick date presets to the **Backfill past Daily Notes** modal: recent 7 days,

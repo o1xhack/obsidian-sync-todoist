@@ -183,12 +183,13 @@ Query blocks use [Todoist filter syntax](https://todoist.com/help/articles/intro
 
 ### Completed Tasks in Query Blocks
 
-`include_completed` adds a second completed-task lookup and merges those results with the active tasks returned by `filter`. It does not automatically mean "completed today."
+`include_completed` adds a second completed-task lookup and merges those results with the active tasks returned by `filter`. It does not automatically mean "completed today." Use `completed_only` when the block should list completed tasks without the active ones.
 
 | Option | Description |
 |---|---|
 | `filter: today` | Active tasks matching a Todoist filter. |
 | `include_completed: true` | Merge matching completed tasks into active results. |
+| `completed_only: true` | Show only completed tasks from the completed-task lookup; active tasks are not loaded. Turns the completed-task lookup on by itself, so `include_completed` is optional and `completed_only: true` wins over `include_completed: false`. Accepts `true`/`false`, `yes`/`no`, `on`/`off`, or `1`/`0`; any other value, including an empty one, shows an error. |
 | `completed_by: due_date` | Search completed tasks by Todoist due date. |
 | `completed_by: completion_date` | Search completed tasks by completion time. |
 | `completed_since: 30d` | Start of completed-task window: `30d`, `6w`, `3m`, `today`, `yesterday`, or `YYYY-MM-DD`. |
@@ -223,6 +224,30 @@ completed_range: today
 ````
 
 Shows active `@writing` tasks and `@writing` tasks completed today.
+
+#### Completed-only reviews
+
+````markdown
+```sync-todoist
+filter: #Work
+completed_only: true
+completed_by: completion_date
+completed_since: 2026-10-01
+completed_until: 2026-10-31
+```
+````
+
+Shows only `#Work` tasks completed from October 1 through October 31, for example in a monthly review. For a rolling window, use `completed_since: 30d` instead of the two dates.
+
+- `completed_only` only hides active tasks. It uses the same `completed_by` default and the same window limits as `include_completed`: up to 3 months by completion date and up to 6 weeks by due date. Set `completed_by: completion_date` explicitly for reviews of when work was done.
+- Dates and durations use calendar days in your device's time zone. `completed_until` includes that day. A duration such as `30d` counts back from the end of the window: without `completed_until`, it covers today and the 29 days before it; with `completed_until: now`, it starts at the same time 30 days ago. The 6-week and 3-month limits also count calendar days. If a daylight saving change makes a window at the limit slightly longer than that many 24-hour days, Sync Todoist fetches it in two requests instead of shortening it. The footer shows the window that was used.
+- Completed rows show the completion date as `✅ YYYY-MM-DD` next to the due date.
+- If the completed lookup fails, for example because of an invalid filter, range, or plan restriction, the block shows an error instead of an empty list.
+- Completed occurrences of recurring tasks are not listed. Todoist moves a recurring task to its next date instead of archiving it, so the completed-task lookup does not return those occurrences.
+- Todoist documents that the Beginner plan keeps up to seven days of history, so longer windows may return fewer completed tasks on that plan.
+- A completed subtask whose parent is still active is listed on its own.
+- Unchecking a task in the list reopens it in Todoist. Todoist also reopens its parent tasks. On the next refresh, the reopened tasks leave a `completed_only` block.
+- Plugin versions without `completed_only` ignore the option, so the block behaves as if the line were not there: with `include_completed: true` it shows the merged list, and without it, as in the example above, it shows active tasks only. Add `include_completed: true` if the note may also be opened with an older plugin version.
 
 ## Daily Notes
 

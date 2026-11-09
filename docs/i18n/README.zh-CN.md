@@ -183,12 +183,13 @@ filter: today | overdue
 
 ### 查询块里的已完成任务
 
-`include_completed` 会额外发起一次已完成任务查询，并把结果合并到 `filter` 返回的未完成任务中。它不自动等于“今天完成”。
+`include_completed` 会额外发起一次已完成任务查询，并把结果合并到 `filter` 返回的未完成任务中。它不自动等于“今天完成”。如果只想列出已完成任务、不显示未完成任务，使用 `completed_only`。
 
 | 选项 | 说明 |
 |---|---|
 | `filter: today` | 匹配 Todoist filter 的未完成任务。 |
 | `include_completed: true` | 把匹配的已完成任务合并到未完成结果中。 |
+| `completed_only: true` | 只显示已完成任务查询的结果，不加载未完成任务。它会自动开启已完成任务查询，所以 `include_completed` 可省略；与 `include_completed: false` 同时出现时以 `completed_only: true` 为准。可用值：`true`/`false`、`yes`/`no`、`on`/`off` 或 `1`/`0`；其他值（包括空值）会报错。 |
 | `completed_by: due_date` | 按 Todoist 截止日期搜索已完成任务。 |
 | `completed_by: completion_date` | 按完成时间搜索已完成任务。 |
 | `completed_since: 30d` | 已完成任务窗口开始：`30d`、`6w`、`3m`、`today`、`yesterday` 或 `YYYY-MM-DD`。 |
@@ -223,6 +224,30 @@ completed_range: today
 ````
 
 显示未完成的 `@writing` 任务，并合并今天完成的 `@writing` 任务。
+
+#### 只看已完成任务（回顾）
+
+````markdown
+```sync-todoist
+filter: #Work
+completed_only: true
+completed_by: completion_date
+completed_since: 2026-10-01
+completed_until: 2026-10-31
+```
+````
+
+只显示 10 月 1 日至 10 月 31 日完成的 `#Work` 任务，适合月度回顾。想用滚动窗口时，把两个日期换成 `completed_since: 30d`。
+
+- `completed_only` 只是隐藏未完成任务。`completed_by` 的默认推断和时间窗口上限都与 `include_completed` 相同：按完成时间最多 3 个月，按截止日期最多 6 周。回顾“什么时候做完”时，建议显式写 `completed_by: completion_date`。
+- 日期和时长都按设备时区的日历日计算。`completed_until` 包含当天。`30d` 这类时长从窗口末尾往回数：不写 `completed_until` 时，表示今天及之前的 29 天；写 `completed_until: now` 时，从 30 天前的同一时刻开始。6 周和 3 个月的上限同样按日历日计算。如果夏令时切换让达到上限的窗口略长于对应天数的 24 小时，Sync Todoist 会分两次请求取回，而不是缩短窗口。页脚会显示实际使用的时间窗口。
+- 已完成任务会在截止日期旁显示完成日期 `✅ YYYY-MM-DD`。
+- 已完成任务查询失败时（例如 filter 或日期范围无效、套餐限制），查询块会显示错误，而不是空列表。
+- 不包含循环任务的已完成记录。Todoist 完成循环任务时会把它移到下一个日期，而不是归档，所以已完成任务查询不会返回这些记录。
+- Todoist 说明 Beginner 套餐最多保留七天历史，因此在该套餐上，较长的窗口可能返回较少的已完成任务。
+- 父任务仍未完成、子任务已完成时，子任务会单独显示。
+- 在列表里取消勾选会在 Todoist 中重新打开该任务，Todoist 也会同时重新打开它的父任务。刷新后，这些被重新打开的任务会从 `completed_only` 查询块中消失。
+- 不支持 `completed_only` 的旧版插件会忽略这一行，查询块按没有这一行处理：同时写了 `include_completed: true` 时显示合并后的列表；没写时（如上面的示例）只显示未完成任务。如果笔记也可能在旧版插件中打开，建议同时写上 `include_completed: true`。
 
 ## Daily Notes
 
