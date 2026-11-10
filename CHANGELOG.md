@@ -2,7 +2,7 @@
 
 All notable Sync Todoist changes are tracked here.
 
-## Unreleased
+## 1.2.0 - 2026-11-09
 
 - Added `completed_only` to query blocks. It lists only tasks from the completed-task lookup,
   skips the active-task lookup, and reports lookup failures as errors instead of an empty

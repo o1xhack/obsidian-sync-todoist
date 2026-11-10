@@ -14,11 +14,12 @@
 
 Sync Todoist is available through Obsidian Community Plugins. If you installed an earlier beta through BRAT, use the migration steps below to stop BRAT updates and continue with the community version.
 
-## What's New in 1.1.1
+## What's New in 1.2.0
 
-- Adds quick presets to **Backfill past Daily Notes**: recent 7 days, recent 30 days, this month, and last month.
-- Uses date picker inputs for the backfill start and end dates to reduce manual typing errors.
-- Keeps the existing preview/apply safety, marker-only writes, and no-Todoist-mutation behavior.
+- Adds `completed_only` to query blocks: list only completed tasks, without loading active tasks.
+- Shows the completion date as `✅ YYYY-MM-DD` on completed query block rows.
+- Fixes completed-task windows across daylight saving time changes so dates and durations follow local calendar days.
+- Shows sub-subtasks in query blocks instead of dropping tasks deeper than one subtask level.
 
 ## Why Use It?
 

@@ -636,9 +636,9 @@ function noticeDurationForDailyNote(result) {
 // src/build-info.ts
 function getBuildInfo() {
   return {
-    version: "1.1.1",
-    buildDate: "2026-11-09T21:08:29.021Z",
-    buildNumber: "202611092108"
+    version: "1.2.0",
+    buildDate: "2026-11-10T00:16:24.591Z",
+    buildNumber: "202611100016"
   };
 }
 function formatBuildDate(buildDate) {
@@ -4571,6 +4571,13 @@ function renderQueryBlock(source, el, plugin) {
 
 // src/release-log.ts
 var RELEASE_LOG = [
+  {
+    version: "1.2.0",
+    titleEn: "Completed-only query blocks",
+    titleZh: "\u53EA\u663E\u793A\u5DF2\u5B8C\u6210\u4EFB\u52A1\u7684\u67E5\u8BE2\u5757",
+    en: "Adds completed_only to query blocks to list only completed tasks, shows completion dates on completed rows, keeps completed-task windows on local calendar days across daylight saving time changes, and shows sub-subtasks.",
+    zh: "\u67E5\u8BE2\u5757\u65B0\u589E completed_only\uFF0C\u53EF\u53EA\u5217\u51FA\u5DF2\u5B8C\u6210\u4EFB\u52A1\uFF1B\u5DF2\u5B8C\u6210\u884C\u663E\u793A\u5B8C\u6210\u65E5\u671F\uFF1B\u5DF2\u5B8C\u6210\u4EFB\u52A1\u65F6\u95F4\u7A97\u53E3\u8DE8\u590F\u4EE4\u65F6\u4ECD\u6309\u672C\u5730\u65E5\u5386\u65E5\u8BA1\u7B97\uFF1B\u5E76\u663E\u793A\u591A\u7EA7\u5B50\u4EFB\u52A1\u3002"
+  },
   {
     version: "1.1.1",
     titleEn: "Backfill date presets",

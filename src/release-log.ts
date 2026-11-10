@@ -13,6 +13,13 @@ export interface ReleaseHighlight {
 
 export const RELEASE_LOG: ReleaseLogEntry[] = [
   {
+    version: '1.2.0',
+    titleEn: 'Completed-only query blocks',
+    titleZh: '只显示已完成任务的查询块',
+    en: 'Adds completed_only to query blocks to list only completed tasks, shows completion dates on completed rows, keeps completed-task windows on local calendar days across daylight saving time changes, and shows sub-subtasks.',
+    zh: '查询块新增 completed_only，可只列出已完成任务；已完成行显示完成日期；已完成任务时间窗口跨夏令时仍按本地日历日计算；并显示多级子任务。',
+  },
+  {
     version: '1.1.1',
     titleEn: 'Backfill date presets',
     titleZh: '回填日期快速选择',
