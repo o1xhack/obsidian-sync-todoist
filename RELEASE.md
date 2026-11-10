@@ -28,6 +28,7 @@ Sync Todoist has an independent release line. Upstream Syncist tags and releases
 - `1.0.0`: first community-submission candidate after the test release line is stable.
 - `1.1.0`: historical Daily Note backfill test release. Adds a preview-and-apply backfill tool for past Daily Notes, optional missing-note creation, and explicit Todoist historical-data limits while keeping Todoist tasks untouched.
 - `1.1.1`: backfill date picker test release. Adds quick date presets and date picker inputs to the historical Daily Note backfill modal without changing the backfill data path.
+- `1.2.0`: completed-only query block release. Adds `completed_only` to query blocks so a block can list only completed-task lookup results without loading active tasks, shows completion dates on completed rows, makes completed-task windows follow local calendar days across daylight saving time changes, shows the last included day in the completed-window footer, and shows sub-subtasks in query blocks.
 
 ## 0.1.0 Scope
 

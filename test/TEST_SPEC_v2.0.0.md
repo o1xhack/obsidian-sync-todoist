@@ -367,6 +367,61 @@ Test each of these query blocks (create one block per filter):
 4. **Expected**: Recently completed tasks with that label are merged with any active matching tasks, without duplicate rows.
 - [ ] **PASS** / **FAIL**
 
+### E11. Completed-only review block
+
+Use a test project, such as `#SyncTodoistTest`, not real work tasks.
+
+1. In the test project, prepare everything on the same day:
+   - One active task.
+   - One task due next month, then complete it today.
+   - A parent task with a subtask and a sub-subtask. Complete the parent, which completes all three.
+   - An active parent task with one subtask. Complete only the subtask.
+2. Add or refresh, with the first and last dates of the current month:
+   ````
+   ```sync-todoist
+   filter: #SyncTodoistTest
+   completed_only: true
+   completed_by: completion_date
+   completed_since: YYYY-MM-01
+   completed_until: YYYY-MM-DD
+   ```
+   ````
+3. **Expected**:
+   - The header says `completed only`.
+   - The active task and the active parent are not listed.
+   - The task due next month is listed, because the window is by completion date. Its row shows both `📅` with next month's date and `✅` with today's date.
+   - The completed parent, subtask, and sub-subtask are listed with increasing indentation, and each row shows `✅` with today's date.
+   - The completed subtask of the active parent is listed on its own, without indentation.
+   - The footer shows the first and last dates of the month, not the first day of the next month.
+4. Uncheck the sub-subtask.
+5. **Expected**: Todoist reopens the sub-subtask and its parent tasks. Their rows stay until refresh. After refresh, the parent, subtask, and sub-subtask are no longer listed.
+6. Change the block to `completed_since: 2025-01-01` and refresh.
+7. **Expected**: An error says completed tasks were not loaded, because the range is longer than 3 months. The block does not show "No completed tasks" or active tasks.
+8. Change the block to `completed_only: tru` and refresh, then to `completed_only:` with no value and refresh.
+9. **Expected**: Both times, the block shows `Invalid completed_only. Use true or false.`
+- [ ] **PASS** / **FAIL**
+
+### E12. Completed-only with no matches
+
+1. Add, with a date before the test project was created:
+   ````
+   ```sync-todoist
+   filter: #SyncTodoistTest
+   completed_only: true
+   completed_range: YYYY-MM-DD
+   ```
+   ````
+2. **Expected**: The block shows `No completed tasks match this filter in this date range.` Active tasks are not shown, and the footer shows that date as both the start and the end.
+- [ ] **PASS** / **FAIL**
+
+### E13. Older plugin compatibility
+
+1. On a build without `completed_only`, open a note with the E11 block.
+2. **Expected**: The block ignores `completed_only` and shows active tasks only, because the block has no `include_completed: true`.
+3. Add `include_completed: true` to the block and refresh.
+4. **Expected**: The block shows the merged list of active and completed tasks.
+- [ ] **PASS** / **FAIL**
+
 ---
 
 ## Part F: Edge Cases & Error Handling

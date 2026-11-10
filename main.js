@@ -636,9 +636,9 @@ function noticeDurationForDailyNote(result) {
 // src/build-info.ts
 function getBuildInfo() {
   return {
-    version: "1.1.1",
-    buildDate: "2026-06-12T04:12:54.659Z",
-    buildNumber: "202606120412"
+    version: "1.2.0",
+    buildDate: "2026-11-10T00:16:24.591Z",
+    buildNumber: "202611100016"
   };
 }
 function formatBuildDate(buildDate) {
@@ -4120,15 +4120,25 @@ var ImportTaskModal = class extends import_obsidian5.SuggestModal {
 };
 
 // src/query-renderer.ts
+var CompletedTaskLookupError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "CompletedTaskLookupError";
+  }
+};
 var DAY_MS = 24 * 60 * 60 * 1e3;
 var MAX_COMPLETED_WINDOW_DAYS = {
   due_date: 42,
   completion_date: 93
 };
+var MAX_SUBTASK_DEPTH_CLASS = 4;
+var TRUE_VALUES = ["true", "yes", "1", "on"];
+var FALSE_VALUES = ["false", "no", "0", "off"];
 function parseQueryConfig(source) {
   const lines = source.trim().split("\n");
   let filter = "";
   let includeCompleted = false;
+  let completedOnly = false;
   let completedBy = null;
   let completedSince = null;
   let completedUntil = null;
@@ -4136,6 +4146,9 @@ function parseQueryConfig(source) {
   for (const line of lines) {
     const match = line.match(/^\s*([a-z_]+)\s*:\s*(.+)$/i);
     if (!match) {
+      if (/^\s*completed_only\s*:\s*$/i.test(line)) {
+        return { config: null, error: "Invalid completed_only. Use true or false." };
+      }
       continue;
     }
     const key = match[1].toLowerCase();
@@ -4143,7 +4156,16 @@ function parseQueryConfig(source) {
     if (key === "filter") {
       filter = value;
     } else if (key === "include_completed") {
-      includeCompleted = ["true", "yes", "1", "on"].includes(value.toLowerCase());
+      includeCompleted = TRUE_VALUES.includes(value.toLowerCase());
+    } else if (key === "completed_only") {
+      const normalized = value.toLowerCase();
+      if (TRUE_VALUES.includes(normalized)) {
+        completedOnly = true;
+      } else if (FALSE_VALUES.includes(normalized)) {
+        completedOnly = false;
+      } else {
+        return { config: null, error: "Invalid completed_only. Use true or false." };
+      }
     } else if (key === "completed_by") {
       if (value !== "due_date" && value !== "completion_date") {
         return { config: null, error: "Invalid completed_by. Use due_date or completion_date." };
@@ -4163,7 +4185,9 @@ function parseQueryConfig(source) {
   return {
     config: {
       filter,
-      includeCompleted,
+      // completed_only needs the completed lookup, so it implies include_completed.
+      includeCompleted: includeCompleted || completedOnly,
+      completedOnly,
       completedBy,
       completedSince,
       completedUntil,
@@ -4173,26 +4197,30 @@ function parseQueryConfig(source) {
   };
 }
 function buildTaskTree(tasks) {
-  var _a, _b;
+  var _a;
   const taskMap = /* @__PURE__ */ new Map();
   const childrenMap = /* @__PURE__ */ new Map();
   for (const t2 of tasks) {
     taskMap.set(t2.id, t2);
   }
   for (const t2 of tasks) {
-    if (t2.parentId && taskMap.has(t2.parentId)) {
+    if (t2.parentId && t2.parentId !== t2.id && taskMap.has(t2.parentId)) {
       const existing = (_a = childrenMap.get(t2.parentId)) != null ? _a : [];
       existing.push(t2);
       childrenMap.set(t2.parentId, existing);
     }
   }
+  const buildNode = (task, ancestors) => {
+    var _a2;
+    return {
+      task,
+      children: ((_a2 = childrenMap.get(task.id)) != null ? _a2 : []).filter((child) => !ancestors.has(child.id)).map((child) => buildNode(child, /* @__PURE__ */ new Set([...ancestors, child.id])))
+    };
+  };
   const roots = [];
   for (const t2 of tasks) {
-    if (!t2.parentId || !taskMap.has(t2.parentId)) {
-      roots.push({
-        task: t2,
-        children: (_b = childrenMap.get(t2.id)) != null ? _b : []
-      });
+    if (!t2.parentId || t2.parentId === t2.id || !taskMap.has(t2.parentId)) {
+      roots.push(buildNode(t2, /* @__PURE__ */ new Set([t2.id])));
     }
   }
   return roots;
@@ -4215,11 +4243,46 @@ function inferCompletedBy(filter) {
   const hasProjectOrLabelIntent = /(^|\s)[@#][^\s)]+/.test(filter);
   return hasProjectOrLabelIntent && !hasDateIntent ? "completion_date" : "due_date";
 }
-function startOfDay(date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+function calendarDay(year, month, day, offset = 0) {
+  const date = new Date(Date.UTC(year, month, day + offset));
+  return { kind: "day", year: date.getUTCFullYear(), month: date.getUTCMonth(), day: date.getUTCDate() };
 }
-function addDays(date, days) {
-  return new Date(date.getTime() + days * DAY_MS);
+function localDay(date, offset = 0) {
+  return calendarDay(date.getFullYear(), date.getMonth(), date.getDate(), offset);
+}
+function shiftBoundary(boundary, days) {
+  if (boundary.kind === "day")
+    return calendarDay(boundary.year, boundary.month, boundary.day, days);
+  const date = boundary.date;
+  return {
+    kind: "instant",
+    date: new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate() + days,
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds(),
+      date.getMilliseconds()
+    )
+  };
+}
+function boundaryInstant(boundary) {
+  return boundary.kind === "day" ? new Date(boundary.year, boundary.month, boundary.day) : boundary.date;
+}
+function wallClock(boundary) {
+  if (boundary.kind === "day")
+    return Date.UTC(boundary.year, boundary.month, boundary.day);
+  const date = boundary.date;
+  return Date.UTC(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds(),
+    date.getMilliseconds()
+  );
 }
 function parseDurationDays(value) {
   const match = value.trim().toLowerCase().match(/^(\d+)\s*([dwm])$/);
@@ -4235,32 +4298,32 @@ function parseDurationDays(value) {
 }
 function parseDateBoundary(value, now, boundary) {
   const lower = value.trim().toLowerCase();
-  let date = null;
+  let day = null;
   if (lower === "now") {
-    return new Date(now);
+    return { kind: "instant", date: new Date(now) };
   }
   if (lower === "today") {
-    date = startOfDay(now);
+    day = localDay(now);
   } else if (lower === "yesterday") {
-    date = addDays(startOfDay(now), -1);
+    day = localDay(now, -1);
   } else if (lower === "tomorrow") {
-    date = addDays(startOfDay(now), 1);
+    day = localDay(now, 1);
   } else {
     const match = lower.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (match) {
-      date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      day = calendarDay(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
     }
   }
-  if (!date)
+  if (!day)
     return null;
-  return boundary === "start" ? date : addDays(date, 1);
+  return boundary === "start" ? day : shiftBoundary(day, 1);
 }
 function resolveCompletedRange(value, now) {
   const lower = value.trim().toLowerCase();
   const durationDays = parseDurationDays(lower);
-  const until = addDays(startOfDay(now), 1);
+  const until = localDay(now, 1);
   if (durationDays !== null) {
-    return { since: addDays(until, -durationDays), until };
+    return { since: shiftBoundary(until, -durationDays), until };
   }
   const since = parseDateBoundary(lower, now, "start");
   const rangeUntil = parseDateBoundary(lower, now, "end");
@@ -4284,26 +4347,42 @@ function resolveCompletedWindow(config, now) {
   } else {
     until = config.completedUntil ? (_b = parseDateBoundary(config.completedUntil, now, "end")) != null ? _b : (() => {
       throw new Error("Invalid completed_until. Use today, now, or YYYY-MM-DD.");
-    })() : addDays(startOfDay(now), 1);
+    })() : localDay(now, 1);
     if (config.completedSince) {
       const durationDays = parseDurationDays(config.completedSince);
-      since = durationDays !== null ? addDays(until, -durationDays) : (_c = parseDateBoundary(config.completedSince, now, "start")) != null ? _c : (() => {
+      since = durationDays !== null ? shiftBoundary(until, -durationDays) : (_c = parseDateBoundary(config.completedSince, now, "start")) != null ? _c : (() => {
         throw new Error("Invalid completed_since. Use YYYY-MM-DD, today, yesterday, or a duration like 30d/6w.");
       })();
     } else {
-      since = addDays(until, -defaultDays);
+      since = shiftBoundary(until, -defaultDays);
     }
   }
-  if (since >= until) {
+  const sinceInstant = boundaryInstant(since);
+  const untilInstant = boundaryInstant(until);
+  if (sinceInstant >= untilInstant) {
     throw new Error("Completed task range must start before it ends.");
   }
   const maxDays = MAX_COMPLETED_WINDOW_DAYS[by];
-  const rangeDays = Math.ceil((until.getTime() - since.getTime()) / DAY_MS);
-  if (rangeDays > maxDays) {
+  if (Math.ceil((wallClock(until) - wallClock(since)) / DAY_MS) > maxDays) {
     const maxLabel = by === "due_date" ? "6w" : "3m";
     throw new Error(`Completed ${by} queries can cover at most ${maxLabel}.`);
   }
-  return { by, since, until };
+  return { by, since: sinceInstant, until: untilInstant };
+}
+function completedWindowRequests(window2) {
+  const maxDays = MAX_COMPLETED_WINDOW_DAYS[window2.by];
+  if (window2.until.getTime() - window2.since.getTime() <= maxDays * DAY_MS) {
+    return [{ since: window2.since, until: window2.until }];
+  }
+  const requests = [];
+  let cursor = window2.since;
+  while (cursor < window2.until) {
+    const next = boundaryInstant(localDay(cursor, maxDays - 1));
+    const segmentUntil = next < window2.until ? next : window2.until;
+    requests.push({ since: cursor, until: segmentUntil });
+    cursor = segmentUntil;
+  }
+  return requests;
 }
 function formatDateForLabel(date) {
   const year = date.getFullYear();
@@ -4311,9 +4390,57 @@ function formatDateForLabel(date) {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
-function renderTaskRow(task, container, plugin, indent) {
+function formatCompletedWindowLabel(window2) {
+  const lastIncluded = new Date(window2.until.getTime() - 1);
+  return `Completed: ${window2.by.replace("_", " ")} ${formatDateForLabel(window2.since)} to ${formatDateForLabel(lastIncluded)}`;
+}
+function formatQueryHeader(config) {
+  if (config.completedOnly)
+    return `Filter: ${config.filter} \xB7 completed only`;
+  if (config.includeCompleted)
+    return `Filter: ${config.filter} \xB7 including completed`;
+  return `Filter: ${config.filter}`;
+}
+function formatCompletedAt(completedAt) {
+  if (!completedAt)
+    return null;
+  const date = new Date(completedAt);
+  return Number.isNaN(date.getTime()) ? null : formatDateForLabel(date);
+}
+async function loadQueryTasks(config, source, now = /* @__PURE__ */ new Date()) {
+  const activeTasks = config.completedOnly ? [] : await source.getFilteredTasks(config.filter);
+  let completedTasks = [];
+  let completedWarning = null;
+  let completedWindow = null;
+  if (config.includeCompleted) {
+    try {
+      const window2 = resolveCompletedWindow(config, now);
+      completedWindow = window2;
+      const results = [];
+      for (const request of completedWindowRequests(window2)) {
+        results.push(...await source.getCompletedTasks({
+          filterQuery: config.filter,
+          by: window2.by,
+          since: request.since,
+          until: request.until
+        }));
+      }
+      completedTasks = results;
+    } catch (completedError) {
+      const message = completedError instanceof Error ? completedError.message : String(completedError);
+      if (config.completedOnly)
+        throw new CompletedTaskLookupError(message);
+      completedWarning = message;
+      console.warn("Sync Todoist query block completed task lookup failed:", completedError);
+    }
+  }
+  const tasks = config.completedOnly ? mergeTasks([], completedTasks.filter((task) => task.isCompleted)) : mergeTasks(activeTasks, completedTasks);
+  return { tasks, completedWindow, completedWarning };
+}
+function renderTaskRow(task, container, plugin, depth) {
   var _a;
-  const row = container.createDiv({ cls: `syncist-query-task${indent ? " syncist-query-subtask" : ""}` });
+  const depthClass = depth > 0 ? ` syncist-query-subtask syncist-query-depth-${Math.min(depth, MAX_SUBTASK_DEPTH_CLASS)}` : "";
+  const row = container.createDiv({ cls: `syncist-query-task${depthClass}` });
   const checkbox = row.createEl("input", { type: "checkbox", cls: "syncist-query-checkbox" });
   checkbox.checked = task.isCompleted;
   checkbox.addEventListener("change", () => {
@@ -4346,10 +4473,19 @@ function renderTaskRow(task, container, plugin, indent) {
     badges.push(`\u{1F4C1} ${projectName}`);
   if (task.due)
     badges.push(`\u{1F4C5} ${(_a = formatDueForMarkdown(normalizeTodoistDue(task.due))) != null ? _a : task.due.date}`);
+  const completedDate = task.isCompleted ? formatCompletedAt(task.completedAt) : null;
+  if (completedDate)
+    badges.push(`\u2705 ${completedDate}`);
   if (task.labels.length)
     badges.push(task.labels.map((l) => `#${l}`).join(" "));
   if (badges.length > 0) {
     metaEl.createSpan({ text: badges.join("  \xB7  "), cls: "syncist-query-badge" });
+  }
+}
+function renderTaskTree(nodes, container, plugin, depth) {
+  for (const node of nodes) {
+    renderTaskRow(node.task, container, plugin, depth);
+    renderTaskTree(node.children, container, plugin, depth + 1);
   }
 }
 function renderQueryBlock(source, el, plugin) {
@@ -4365,7 +4501,7 @@ function renderQueryBlock(source, el, plugin) {
   const wrapper = el.createDiv({ cls: "syncist-query-block" });
   const header = wrapper.createDiv({ cls: "syncist-query-header" });
   header.createSpan({
-    text: config.includeCompleted ? `Filter: ${config.filter} \xB7 including completed` : `Filter: ${config.filter}`,
+    text: formatQueryHeader(config),
     cls: "syncist-query-filter-label"
   });
   const refreshBtn = header.createEl("button", { text: "\u21BB", cls: "syncist-query-refresh" });
@@ -4378,36 +4514,15 @@ function renderQueryBlock(source, el, plugin) {
     listContainer.createDiv({ cls: "syncist-query-loading", text: "Loading tasks..." });
     try {
       await plugin.todoistService.ensureProjectCache();
-      const activeTasks = await plugin.todoistService.getFilteredTasks(config.filter);
-      let completedTasks = [];
-      let completedWarning = null;
-      let completedWindow = null;
-      if (config.includeCompleted) {
-        try {
-          completedWindow = resolveCompletedWindow(config, /* @__PURE__ */ new Date());
-          completedTasks = await plugin.todoistService.getCompletedTasks({
-            filterQuery: config.filter,
-            by: completedWindow.by,
-            since: completedWindow.since,
-            until: completedWindow.until
-          });
-        } catch (completedError) {
-          completedWarning = completedError instanceof Error ? completedError.message : String(completedError);
-          console.warn("Sync Todoist query block completed task lookup failed:", completedError);
-        }
-      }
-      const tasks = mergeTasks(activeTasks, completedTasks);
+      const { tasks, completedWindow, completedWarning } = await loadQueryTasks(config, plugin.todoistService);
       listContainer.empty();
       if (tasks.length === 0) {
-        listContainer.createDiv({ cls: "syncist-query-empty", text: "No tasks match this filter." });
+        listContainer.createDiv({
+          cls: "syncist-query-empty",
+          text: config.completedOnly ? "No completed tasks match this filter in this date range." : "No tasks match this filter."
+        });
       } else {
-        const tree = buildTaskTree(tasks);
-        for (const node of tree) {
-          renderTaskRow(node.task, listContainer, plugin, false);
-          for (const child of node.children) {
-            renderTaskRow(child, listContainer, plugin, true);
-          }
-        }
+        renderTaskTree(buildTaskTree(tasks), listContainer, plugin, 0);
       }
       footerEl.createSpan({
         text: `Updated: ${(/* @__PURE__ */ new Date()).toLocaleTimeString()}`,
@@ -4415,7 +4530,7 @@ function renderQueryBlock(source, el, plugin) {
       });
       if (completedWindow) {
         footerEl.createDiv({
-          text: `Completed: ${completedWindow.by.replace("_", " ")} ${formatDateForLabel(completedWindow.since)} to ${formatDateForLabel(completedWindow.until)}`,
+          text: formatCompletedWindowLabel(completedWindow),
           cls: "syncist-query-completed-window"
         });
       }
@@ -4428,6 +4543,14 @@ function renderQueryBlock(source, el, plugin) {
     } catch (error2) {
       listContainer.empty();
       const message = error2 instanceof Error ? error2.message : String(error2);
+      if (error2 instanceof CompletedTaskLookupError) {
+        console.warn("Sync Todoist query block completed task lookup failed:", message);
+        listContainer.createDiv({
+          cls: "syncist-query-error",
+          text: `Completed tasks not loaded: ${message}`
+        });
+        return;
+      }
       const isFilterError = message.toLowerCase().startsWith("invalid filter");
       if (isFilterError) {
         console.warn("Sync Todoist query block: invalid filter \u2014", message);
@@ -4448,6 +4571,13 @@ function renderQueryBlock(source, el, plugin) {
 
 // src/release-log.ts
 var RELEASE_LOG = [
+  {
+    version: "1.2.0",
+    titleEn: "Completed-only query blocks",
+    titleZh: "\u53EA\u663E\u793A\u5DF2\u5B8C\u6210\u4EFB\u52A1\u7684\u67E5\u8BE2\u5757",
+    en: "Adds completed_only to query blocks to list only completed tasks, shows completion dates on completed rows, keeps completed-task windows on local calendar days across daylight saving time changes, and shows sub-subtasks.",
+    zh: "\u67E5\u8BE2\u5757\u65B0\u589E completed_only\uFF0C\u53EF\u53EA\u5217\u51FA\u5DF2\u5B8C\u6210\u4EFB\u52A1\uFF1B\u5DF2\u5B8C\u6210\u884C\u663E\u793A\u5B8C\u6210\u65E5\u671F\uFF1B\u5DF2\u5B8C\u6210\u4EFB\u52A1\u65F6\u95F4\u7A97\u53E3\u8DE8\u590F\u4EE4\u65F6\u4ECD\u6309\u672C\u5730\u65E5\u5386\u65E5\u8BA1\u7B97\uFF1B\u5E76\u663E\u793A\u591A\u7EA7\u5B50\u4EFB\u52A1\u3002"
+  },
   {
     version: "1.1.1",
     titleEn: "Backfill date presets",

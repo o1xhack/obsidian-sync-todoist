@@ -214,6 +214,18 @@
   padding-left: 24px;
 }
 
+.syncist-query-subtask.syncist-query-depth-2 {
+  padding-left: 48px;
+}
+
+.syncist-query-subtask.syncist-query-depth-3 {
+  padding-left: 72px;
+}
+
+.syncist-query-subtask.syncist-query-depth-4 {
+  padding-left: 96px;
+}
+
 .syncist-query-checkbox {
   margin-top: 3px;
   flex-shrink: 0;
